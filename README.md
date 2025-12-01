@@ -6,7 +6,7 @@ A UI-perfect Minecraft Java Edition launcher (XianYuLauncher) - Unofficial, no a
 
 ## Preview
 
-![Launch Page Screenshot](./image/LaunchPage.png)
+![XianYu Launcher Launch Page](image/LaunchPage.png)
 *A preview of the current launcher's main interface.*
 
 ## Status
