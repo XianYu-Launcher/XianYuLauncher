@@ -24,6 +24,7 @@ public class PageService : IPageService
             Configure<版本管理ViewModel, 版本管理Page>();
             Configure<ResourceDownloadViewModel, ResourceDownloadPage>();
             Configure<角色ViewModel, 角色Page>();
+            Configure<角色管理ViewModel, 角色管理Page>();
         }
 
     public Type GetPageType(string key)
