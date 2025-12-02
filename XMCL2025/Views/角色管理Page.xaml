@@ -6,13 +6,11 @@
     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
     xmlns:viewModels="using:XMCL2025.ViewModels"
     xmlns:helpers="using:XMCL2025.Helpers"
+    xmlns:local="using:XMCL2025.ViewModels"
     mc:Ignorable="d">
-
-
 
     <Grid x:Name="ContentArea" Padding="20">
         <Grid.RowDefinitions>
-            <RowDefinition Height="Auto" />
             <RowDefinition Height="Auto" />
             <RowDefinition Height="*" />
         </Grid.RowDefinitions>
@@ -67,39 +65,9 @@
             </Grid>
         </Border>
 
-        <!-- 3D模型展示区域 -->
-        <Border
-            Grid.Row="1"
-            Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
-            BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
-            BorderThickness="1"
-            CornerRadius="8"
-            Height="300"
-            Margin="0,0,0,20">
-            <StackPanel
-                HorizontalAlignment="Center"
-                VerticalAlignment="Center"
-                Orientation="Vertical"
-                Spacing="12">
-                <FontIcon
-                    FontFamily="{StaticResource SymbolThemeFontFamily}"
-                    Glyph="&#xE77B;"
-                    FontSize="64"
-                    Foreground="{ThemeResource TextFillColorSecondary}" />
-                <TextBlock
-                    Text="3D模型展示区域"
-                    Style="{StaticResource BodyTextBlockStyle}"
-                    Foreground="{ThemeResource TextFillColorSecondary}" />
-                <TextBlock
-                    Text="未来将支持可旋转的玩家皮肤3D模型"
-                    Style="{StaticResource CaptionTextBlockStyle}"
-                    Foreground="{ThemeResource TextFillColorTertiary}" />
-            </StackPanel>
-        </Border>
-
         <!-- 功能选项区域 -->
         <ScrollViewer
-            Grid.Row="2"
+            Grid.Row="1"
             VerticalScrollBarVisibility="Auto"
             HorizontalScrollBarVisibility="Disabled">
             <StackPanel Spacing="20">
@@ -113,7 +81,7 @@
                     <StackPanel Spacing="16">
                         <StackPanel Spacing="8">
                             <TextBlock
-                                Text="改名功能"
+                                Text="改名"
                                 Style="{StaticResource TitleTextBlockStyle}"
                                 FontSize="18"
                                 FontWeight="SemiBold" />
@@ -145,6 +113,48 @@
                     </StackPanel>
                 </Border>
 
+                <!-- 修改UUID功能卡片 -->
+                <Border
+                    Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
+                    BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+                    BorderThickness="1"
+                    CornerRadius="8"
+                    Padding="20">
+                    <StackPanel Spacing="16">
+                        <StackPanel Spacing="8">
+                            <TextBlock
+                                Text="修改UUID"
+                                Style="{StaticResource TitleTextBlockStyle}"
+                                FontSize="18"
+                                FontWeight="SemiBold" />
+                            <TextBlock
+                                Text="仅对离线角色启用"
+                                Style="{StaticResource CaptionTextBlockStyle}"
+                                Foreground="{ThemeResource TextFillColorSecondary}" />
+                        </StackPanel>
+                        
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="Auto" />
+                            </Grid.ColumnDefinitions>
+                            
+                            <TextBox
+                                Grid.Column="0"
+                                Text="{x:Bind ViewModel.NewUUID, Mode=TwoWay}"
+                                PlaceholderText="输入新UUID"
+                                IsEnabled="{x:Bind ViewModel.CurrentProfile.IsOffline, Mode=OneWay}"
+                                Margin="0,0,12,0" />
+                            
+                            <Button
+                                Grid.Column="1"
+                                Content="保存"
+                                Command="{x:Bind ViewModel.SaveUUIDCommand}"
+                                IsEnabled="{x:Bind ViewModel.CurrentProfile.IsOffline, Mode=OneWay}" />
+                        </Grid>
+                    </StackPanel>
+                </Border>
+
                 <!-- 设置皮肤功能卡片 -->
                 <Border
                     Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
@@ -154,25 +164,42 @@
                     Padding="20">
                     <StackPanel Spacing="16">
                         <TextBlock
-                            Text="设置皮肤功能"
+                            Text="设置皮肤"
                             Style="{StaticResource TitleTextBlockStyle}"
                             FontSize="18"
                             FontWeight="SemiBold" />
                         
-                        <StackPanel Spacing="12">
-                            <TextBlock
-                                Text="上传或选择新皮肤"
-                                Style="{StaticResource BodyTextBlockStyle}"
-                                Foreground="{ThemeResource TextFillColorSecondary}" />
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="160" />
+                            </Grid.ColumnDefinitions>
                             
-                            <Button
-                                Content="浏览皮肤文件"
-                                Command="{x:Bind ViewModel.SetSkinCommand}" />
+                            <!-- 左侧：皮肤上传区域，保持居左 -->
+                            <StackPanel Grid.Column="0" Spacing="12">
+                                <TextBlock
+                                    Text="上传或选择新皮肤"
+                                    Style="{StaticResource BodyTextBlockStyle}"
+                                    Foreground="{ThemeResource TextFillColorSecondary}" />
+                                
+                                <Button
+                                    Content="浏览皮肤文件"
+                                    Click="BrowseSkinFileButton_Click"
+                                    IsEnabled="{x:Bind ViewModel.CurrentProfile.IsOffline, Mode=OneWay, Converter={StaticResource BoolNegationConverter}}" />
+                            </StackPanel>
                             
-                            <Button
-                                Content="使用默认皮肤"
-                                Command="{x:Bind ViewModel.SetSkinCommand}" />
-                        </StackPanel>
+                            <!-- 右侧：皮肤预览区域，在按钮文字右边一点 -->
+                            <Image
+                                x:Name="SkinTextureImage"
+                                Grid.Column="1"
+                                Source="{x:Bind ViewModel.CurrentSkinTexture, Mode=OneWay}"
+                                Width="128"
+                                Height="128"
+                                Stretch="Uniform"
+                                HorizontalAlignment="Right"
+                                VerticalAlignment="Top"
+                                PointerPressed="SkinTextureImage_PointerPressed" />
+                        </Grid>
                     </StackPanel>
                 </Border>
 
@@ -185,28 +212,63 @@
                     Padding="20">
                     <StackPanel Spacing="16">
                         <TextBlock
-                            Text="设置披风功能"
+                            Text="设置披风"
                             Style="{StaticResource TitleTextBlockStyle}"
                             FontSize="18"
                             FontWeight="SemiBold" />
                         
                         <StackPanel Spacing="12">
                             <TextBlock
-                                Text="上传或选择新披风"
+                                Text="选择当前账号的披风"
                                 Style="{StaticResource BodyTextBlockStyle}"
                                 Foreground="{ThemeResource TextFillColorSecondary}" />
                             
-                            <Button
-                                Content="浏览披风文件"
-                                Command="{x:Bind ViewModel.SetCapeCommand}" />
+                            <ComboBox
+                                x:Name="CapeComboBox"
+                                ItemsSource="{x:Bind ViewModel.CapeList, Mode=OneWay}"
+                                SelectedItem="{x:Bind ViewModel.SelectedCape, Mode=TwoWay}"
+                                IsEnabled="{x:Bind ViewModel.IsCapeSelectionEnabled, Mode=OneWay}"
+                                PlaceholderText="选择披风">
+                                <ComboBox.ItemTemplate>
+                                    <DataTemplate>
+                                        <StackPanel Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
+                                            <!-- 披风图标 -->
+                                            <Image
+                                                Source="{Binding Icon}"
+                                                Width="10"
+                                                Height="16"
+                                                Stretch="Uniform"
+                                                VerticalAlignment="Center"/>
+                                            <!-- 披风名称 -->
+                                            <TextBlock Text="{Binding DisplayName}" VerticalAlignment="Center" />
+                                        </StackPanel>
+                                    </DataTemplate>
+                                </ComboBox.ItemTemplate>
+                            </ComboBox>
                             
                             <Button
-                                Content="使用默认披风"
-                                Command="{x:Bind ViewModel.SetCapeCommand}" />
+                                Content="应用所选披风"
+                                Command="{x:Bind ViewModel.SetCapeCommand}"
+                                IsEnabled="{x:Bind ViewModel.IsCapeApplyEnabled, Mode=OneWay}" />
                         </StackPanel>
                     </StackPanel>
                 </Border>
             </StackPanel>
         </ScrollViewer>
+        
+        <!-- 皮肤信息TeachingTip - 移到ScrollViewer之外，避免Content多次设置错误 -->
+        <TeachingTip
+            x:Name="SkinTeachingTip"
+            Title="皮肤信息"
+            Subtitle="当前皮肤的详细信息"
+            Target="{x:Bind SkinTextureImage}">
+            <StackPanel Spacing="8">
+                <TextBlock Text="适用的模型:" />
+                <TextBlock Text="{x:Bind ViewModel.CurrentSkinModel, Mode=OneWay}" />
+                <Button
+                    Content="保存皮肤纹理"
+                    Click="SaveSkinTextureButton_Click" />
+            </StackPanel>
+        </TeachingTip>
     </Grid>
 </Page>
