@@ -1,4 +1,4 @@
-using Microsoft.UI.Xaml; using Microsoft.UI.Xaml.Controls; using Microsoft.UI.Xaml.Input; using Microsoft.UI.Xaml.Navigation; using XMCL2025.ViewModels;
+using Microsoft.UI.Xaml; using Microsoft.UI.Xaml.Controls; using Microsoft.UI.Xaml.Input; using Microsoft.UI.Xaml.Navigation; using XMCL2025.Contracts.Services; using XMCL2025.ViewModels;
 
 // The Blank Page item template is documented at https://go.microsoft.com/fwlink/?LinkId=234238
 
@@ -14,9 +14,12 @@ namespace XMCL2025.Views
             get;
         }
 
+        private readonly INavigationService _navigationService;
+
         public 角色Page()
         {
             ViewModel = App.GetService<角色ViewModel>();
+            _navigationService = App.GetService<INavigationService>();
             InitializeComponent();
             
             // 订阅显示离线登录对话框的事件
@@ -39,7 +42,7 @@ namespace XMCL2025.Views
         }
 
         /// <summary>
-        /// 角色卡片点击事件处理
+        /// 角色卡片点击事件处理，导航到角色管理页面
         /// </summary>
         /// <param name="sender">发送者</param>
         /// <param name="e">事件参数</param>
@@ -47,7 +50,8 @@ namespace XMCL2025.Views
         {
             if (sender is Border border && border.Tag is MinecraftProfile profile)
             {
-                ViewModel.SwitchProfileCommand.Execute(profile);
+                // 导航到角色管理页面
+                _navigationService.NavigateTo(typeof(角色管理ViewModel).FullName!, profile);
             }
         }
 

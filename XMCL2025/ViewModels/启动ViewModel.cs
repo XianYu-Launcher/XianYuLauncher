@@ -11,6 +11,8 @@ using Newtonsoft.Json;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using Microsoft.UI.Xaml.Controls;
+using Microsoft.UI.Xaml.Controls.Primitives;
+using Microsoft.UI.Xaml.Media;
 using XMCL2025.Core.Contracts.Services;
 using XMCL2025.Core.Services;
 using XMCL2025.Contracts.Services;
@@ -66,22 +68,25 @@ public partial class 启动ViewModel : ObservableRecipient
             // 检查是否异常退出
             if (exitCode != 0)
             {
-                // 异常退出，显示崩溃提示弹窗
+                // 异常退出，显示错误分析弹窗
                 Console.WriteLine($"游戏异常退出，退出代码: {exitCode}");
+                
+                // 保存当前日志的副本，避免弹窗显示时日志被清空
+                List<string> currentOutput = new List<string>(_gameOutput);
+                List<string> currentError = new List<string>(_gameError);
+                string currentLaunchCommand = _launchCommand;
                 
                 App.MainWindow.DispatcherQueue.TryEnqueue(async () =>
                 {
-                    ContentDialog crashDialog = new ContentDialog
-                    {
-                        Title = "游戏崩溃",
-                        Content = "游戏启动后异常退出。您可以查看命令行窗口了解详细错误信息，启动命令已保存到临时文件夹。",
-                        CloseButtonText = "确定",
-                        XamlRoot = App.MainWindow.Content.XamlRoot
-                    };
-                    
-                    await crashDialog.ShowAsync();
+                    // 使用日志副本显示弹窗
+                    await ShowErrorAnalysisDialog(exitCode, currentLaunchCommand, currentOutput, currentError);
                 });
             }
+            
+            // 清空日志，准备下一次启动
+            _gameOutput.Clear();
+            _gameError.Clear();
+            _launchCommand = string.Empty;
         }
         catch (Exception ex)
         {
@@ -108,8 +113,8 @@ public partial class 启动ViewModel : ObservableRecipient
                 string line = await process.StandardOutput.ReadLineAsync();
                 if (!string.IsNullOrEmpty(line))
                 {
+                    _gameOutput.Add(line);
                     Console.WriteLine($"[Minecraft Output]: {line}");
-                    // 可以在这里添加输出处理逻辑，例如记录日志
                 }
             }
             
@@ -119,14 +124,197 @@ public partial class 启动ViewModel : ObservableRecipient
                 string line = await process.StandardError.ReadLineAsync();
                 if (!string.IsNullOrEmpty(line))
                 {
+                    _gameError.Add(line);
                     Console.WriteLine($"[Minecraft Error]: {line}");
-                    // 可以在这里添加错误处理逻辑，例如记录错误日志
                 }
             }
         }
         catch (Exception ex)
         {
             Console.WriteLine($"读取进程输出时出错：{ex.Message}");
+        }
+    }
+    
+    /// <summary>
+    /// 显示错误分析弹窗
+    /// </summary>
+    /// <param name="exitCode">进程退出代码</param>
+    /// <param name="launchCommand">启动命令</param>
+    /// <param name="gameOutput">游戏输出日志副本</param>
+    /// <param name="gameError">游戏错误日志副本</param>
+    private async Task ShowErrorAnalysisDialog(int exitCode, string launchCommand, List<string> gameOutput, List<string> gameError)
+    {
+        // 分析崩溃原因
+        string errorAnalysis = AnalyzeCrash(gameOutput, gameError);
+        
+        // 合并日志，移除输出日志字段
+        List<string> allLogs = new List<string>();
+        allLogs.Add("=== 游戏崩溃报告 ===");
+        allLogs.Add($"崩溃时间: {DateTime.Now:yyyy-MM-dd HH:mm:ss}");
+        allLogs.Add($"退出代码: {exitCode}");
+        allLogs.Add($"崩溃分析: {errorAnalysis}");
+        allLogs.Add("");
+        allLogs.Add("=== 游戏错误日志 ===");
+        allLogs.AddRange(gameError);
+        allLogs.Add("");
+        allLogs.Add("=== 提示 ===");
+        allLogs.Add("请不要将此页面截图,导出崩溃日志发给专业人员以解决问题");
+        
+        // 创建完整的日志文本
+        string fullLog = string.Join(Environment.NewLine, allLogs);
+        
+        // 在UI线程上显示弹窗
+        App.MainWindow.DispatcherQueue.TryEnqueue(async () =>
+        {
+            // 创建错误分析弹窗
+            var dialog = new ContentDialog
+            {
+                Title = "游戏错误分析",
+                Content = new ScrollViewer
+                {
+                    Content = new TextBlock
+                    {
+                        Text = fullLog,
+                        FontFamily = new Microsoft.UI.Xaml.Media.FontFamily("Consolas"),
+                        FontSize = 12,
+                        TextWrapping = Microsoft.UI.Xaml.TextWrapping.Wrap,
+                        Margin = new Microsoft.UI.Xaml.Thickness(12)
+                    },
+                    MaxHeight = 400,
+                    VerticalScrollBarVisibility = Microsoft.UI.Xaml.Controls.ScrollBarVisibility.Auto,
+                    HorizontalScrollBarVisibility = Microsoft.UI.Xaml.Controls.ScrollBarVisibility.Auto
+                },
+                PrimaryButtonText = "确定",
+                SecondaryButtonText = "导出日志",
+                XamlRoot = App.MainWindow.Content.XamlRoot
+            };
+            
+            // 处理按钮点击事件
+            dialog.PrimaryButtonClick += (sender, args) =>
+            {
+                // 确定按钮，关闭弹窗
+            };
+            
+            dialog.SecondaryButtonClick += async (sender, args) =>
+            {
+                // 导出日志按钮，触发日志打包功能
+                await ExportCrashLogsAsync(launchCommand, gameOutput, gameError);
+            };
+            
+            await dialog.ShowAsync();
+        });
+    }
+    
+    /// <summary>
+    /// 分析崩溃原因
+    /// </summary>
+    /// <param name="gameOutput">游戏输出日志</param>
+    /// <param name="gameError">游戏错误日志</param>
+    /// <returns>崩溃分析结果</returns>
+    private string AnalyzeCrash(List<string> gameOutput, List<string> gameError)
+    {
+        // 检查输出日志中是否包含特定的崩溃信息
+        foreach (var line in gameOutput)
+        {
+            if (line.Contains("Manually triggered debug crash", StringComparison.OrdinalIgnoreCase))
+            {
+                return "玩家手动触发崩溃";
+            }
+        }
+        
+        // 检查错误日志中是否包含特定的崩溃信息
+        foreach (var line in gameError)
+        {
+            if (line.Contains("Manually triggered debug crash", StringComparison.OrdinalIgnoreCase))
+            {
+                return "玩家手动触发崩溃";
+            }
+        }
+        
+        // 默认分析结果
+        return "未知崩溃原因";
+    }
+    
+    /// <summary>
+    /// 导出崩溃日志
+    /// </summary>
+    /// <param name="launchCommand">启动命令</param>
+    /// <param name="gameOutput">游戏输出日志副本</param>
+    /// <param name="gameError">游戏错误日志副本</param>
+    private async Task ExportCrashLogsAsync(string launchCommand, List<string> gameOutput, List<string> gameError)
+    {
+        try
+        {
+            // 获取桌面路径
+            string desktopPath = Environment.GetFolderPath(Environment.SpecialFolder.Desktop);
+            string timestamp = DateTime.Now.ToString("yyyyMMdd_HHmmss");
+            string zipFileName = $"minecraft_crash_{timestamp}.zip";
+            string zipFilePath = Path.Combine(desktopPath, zipFileName);
+            
+            // 创建临时文件夹用于存放日志文件
+            string tempFolder = Path.Combine(Path.GetTempPath(), $"minecraft_crash_temp_{timestamp}");
+            Directory.CreateDirectory(tempFolder);
+            
+            try
+            {
+                // 生成启动参数.bat文件
+                string batFilePath = Path.Combine(tempFolder, "启动参数.bat");
+                await File.WriteAllTextAsync(batFilePath, launchCommand);
+                
+                // 生成输出日志.txt文件
+                string logFilePath = Path.Combine(tempFolder, "输出日志.txt");
+                List<string> allLogs = new List<string>();
+                allLogs.Add("=== 游戏崩溃报告 ===");
+                allLogs.Add($"崩溃时间: {DateTime.Now:yyyy-MM-dd HH:mm:ss}");
+                allLogs.Add("");
+                allLogs.Add("=== 游戏输出日志 ===");
+                allLogs.AddRange(gameOutput);
+                allLogs.Add("");
+                allLogs.Add("=== 游戏错误日志 ===");
+                allLogs.AddRange(gameError);
+                await File.WriteAllTextAsync(logFilePath, string.Join(Environment.NewLine, allLogs));
+                
+                // 打包为zip文件
+                ZipFile.CreateFromDirectory(tempFolder, zipFilePath);
+                
+                // 显示导出成功提示
+                App.MainWindow.DispatcherQueue.TryEnqueue(async () =>
+                {
+                    var successDialog = new ContentDialog
+                    {
+                        Title = "导出成功",
+                        Content = $"崩溃日志已成功导出到桌面：{zipFileName}",
+                        PrimaryButtonText = "确定",
+                        XamlRoot = App.MainWindow.Content.XamlRoot
+                    };
+                    await successDialog.ShowAsync();
+                });
+            }
+            finally
+            {
+                // 清理临时文件夹
+                if (Directory.Exists(tempFolder))
+                {
+                    Directory.Delete(tempFolder, true);
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"导出日志失败：{ex.Message}");
+            
+            // 显示导出失败提示
+            App.MainWindow.DispatcherQueue.TryEnqueue(async () =>
+            {
+                var errorDialog = new ContentDialog
+                {
+                    Title = "导出失败",
+                    Content = $"导出崩溃日志失败：{ex.Message}",
+                    PrimaryButtonText = "确定",
+                    XamlRoot = App.MainWindow.Content.XamlRoot
+                };
+                await errorDialog.ShowAsync();
+            });
         }
     }
     
@@ -214,10 +402,16 @@ public partial class 启动ViewModel : ObservableRecipient
     private readonly IFileService _fileService;
     private readonly ILocalSettingsService _localSettingsService;
     private readonly MicrosoftAuthService _microsoftAuthService;
+    
+    // 保存游戏输出日志
+    private List<string> _gameOutput = new List<string>();
+    private List<string> _gameError = new List<string>();
+    private string _launchCommand = string.Empty;
     private const string JavaPathKey = "JavaPath";
     private const string JavaSelectionModeKey = "JavaSelectionMode";
     private const string JavaVersionsKey = "JavaVersions";
     private const string SelectedJavaVersionKey = "SelectedJavaVersion";
+    private const string OfflineLaunchCountKey = "OfflineLaunchCount";
 
     /// <summary>
     /// Java版本信息类
@@ -830,8 +1024,6 @@ public partial class 启动ViewModel : ObservableRecipient
             args.Add(versionInfo.MainClass);
             
             // 游戏基本参数
-            args.Add($"--username");
-            args.Add(Username);
             args.Add($"--version");
             args.Add(SelectedVersion);
             args.Add($"--gameDir");
@@ -891,8 +1083,12 @@ public partial class 启动ViewModel : ObservableRecipient
             string fullCommand = $"\"{javaPath}\" {processedArgs}";
             LaunchStatus = $"完整启动命令：{fullCommand}";
             
-            // 保存启动命令到临时变量，以便在进程退出时使用
-            string launchCommand = fullCommand;
+            // 保存启动命令，以便在进程退出时使用
+            _launchCommand = fullCommand;
+            
+            // 重置日志列表，准备新的启动
+            _gameOutput.Clear();
+            _gameError.Clear();
             
             // 直接执行Java命令，不生成bat文件
             ProcessStartInfo startInfo = new ProcessStartInfo
@@ -900,8 +1096,8 @@ public partial class 启动ViewModel : ObservableRecipient
                 FileName = javaPath,
                 Arguments = processedArgs, // 使用已经处理过的带引号的参数列表
                 UseShellExecute = false, // 设置为false以便捕获输出
-                CreateNoWindow = false, // 显示命令行窗口以便用户查看输出
-                WindowStyle = ProcessWindowStyle.Normal,
+                CreateNoWindow = true, // 隐藏命令行窗口
+                WindowStyle = ProcessWindowStyle.Hidden, // 设置窗口样式为隐藏
                 WorkingDirectory = Path.GetDirectoryName(javaPath), // 设置工作目录为Java所在目录
                 RedirectStandardError = true, // 重定向标准错误以便后续分析
                 RedirectStandardOutput = true, // 重定向标准输出以便后续分析
@@ -924,7 +1120,40 @@ public partial class 启动ViewModel : ObservableRecipient
                 _ = Task.Run(() => ReadProcessOutputAsync(gameProcess));
                 
                 // 启动异步监控进程退出
-                _ = MonitorGameProcessExitAsync(gameProcess, launchCommand);
+                _ = MonitorGameProcessExitAsync(gameProcess, _launchCommand);
+                
+                // 检查是否为离线角色
+                if (SelectedProfile.IsOffline)
+                {
+                    // 增加离线启动计数
+                    int offlineLaunchCount = await _localSettingsService.ReadSettingAsync<int>(OfflineLaunchCountKey) + 1;
+                    await _localSettingsService.SaveSettingAsync(OfflineLaunchCountKey, offlineLaunchCount);
+                    
+                    // 检查是否是10的倍数
+                    if (offlineLaunchCount % 10 == 0)
+                    {
+                        // 显示离线游玩提示弹窗
+                        App.MainWindow.DispatcherQueue.TryEnqueue(async () =>
+                        {
+                            var dialog = new ContentDialog
+                            {
+                                Title = "离线游玩提示",
+                                Content = $"您已经使用离线模式启动{offlineLaunchCount}次了,支持一下正版吧！",
+                                PrimaryButtonText = "知道了",
+                                SecondaryButtonText = "支持正版",
+                                XamlRoot = App.MainWindow.Content.XamlRoot
+                            };
+                            
+                            var result = await dialog.ShowAsync();
+                            if (result == ContentDialogResult.Secondary)
+                            {
+                                // 跳转到Minecraft官方商店页面
+                                var uri = new Uri("https://www.minecraft.net/zh-hans/store/minecraft-java-bedrock-edition-pc");
+                                await Windows.System.Launcher.LaunchUriAsync(uri);
+                            }
+                        });
+                    }
+                }
             }
             catch (Exception ex)
             {
