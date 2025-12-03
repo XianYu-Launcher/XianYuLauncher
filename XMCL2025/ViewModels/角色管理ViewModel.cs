@@ -13,6 +13,7 @@ using Windows.Storage.Streams;
 using XMCL2025.Contracts.Services;
 using XMCL2025.Contracts.ViewModels;
 using XMCL2025.Core.Contracts.Services;
+using XMCL2025.Core.Services;
 
 namespace XMCL2025.ViewModels
 {
@@ -325,6 +326,41 @@ namespace XMCL2025.ViewModels
                 Console.WriteLine($"保存角色列表失败: {ex.Message}");
             }
         }
+        
+        /// <summary>
+        /// 强制刷新令牌，忽略过期时间检查
+        /// </summary>
+        public async Task ForceRefreshTokenAsync()
+        {
+            if (CurrentProfile != null && !string.IsNullOrWhiteSpace(CurrentProfile.RefreshToken))
+            {
+                // 不管是否过期，直接刷新令牌
+                var authService = App.GetService<MicrosoftAuthService>();
+                var refreshResult = await authService.RefreshMinecraftTokenAsync(CurrentProfile.RefreshToken);
+                if (refreshResult.Success)
+                {
+                    // 更新当前角色的令牌信息
+                    CurrentProfile.AccessToken = refreshResult.AccessToken;
+                    CurrentProfile.RefreshToken = refreshResult.RefreshToken;
+                    CurrentProfile.TokenType = refreshResult.TokenType;
+                    CurrentProfile.ExpiresIn = refreshResult.ExpiresIn;
+                    CurrentProfile.IssueInstant = DateTime.Parse(refreshResult.IssueInstant);
+                    CurrentProfile.NotAfter = DateTime.Parse(refreshResult.NotAfter);
+                    
+                    // 保存修改
+                    SaveProfiles();
+                }
+                else
+                {
+                    // 刷新失败，抛出异常
+                    throw new Exception(refreshResult.ErrorMessage);
+                }
+            }
+            else
+            {
+                throw new Exception("当前角色没有刷新令牌，无法刷新");
+            }
+        }
 
         /// <summary>
         /// 上传皮肤到Mojang API
@@ -486,6 +522,42 @@ namespace XMCL2025.ViewModels
             {
                 try
                 {
+                    // 检查并刷新令牌
+                    if (CurrentProfile != null)
+                    {
+                        // 这里需要调用令牌刷新方法，但是角色管理ViewModel没有直接访问角色ViewModel的权限
+                        // 所以我们需要实现一个类似的令牌刷新逻辑
+                        // 注意：这里应该调用角色ViewModel的AutoRefreshTokenAsync方法，
+                        // 但由于架构限制，我们暂时直接实现令牌刷新检查
+                        
+                        // 计算Minecraft访问令牌的过期时间
+                    // 正确方式：令牌颁发时间 + expires_in秒
+                    DateTime minecraftTokenIssueTime = CurrentProfile.IssueInstant;
+                    DateTime minecraftTokenExpiryTime = minecraftTokenIssueTime.AddSeconds(CurrentProfile.ExpiresIn);
+                    
+                    // 检查令牌是否即将过期（30分钟内）
+                    var timeUntilExpiry = minecraftTokenExpiryTime - DateTime.UtcNow;
+                    if (timeUntilExpiry.TotalMinutes <= 30 && !string.IsNullOrWhiteSpace(CurrentProfile.RefreshToken))
+                    {
+                        // 令牌即将过期，需要刷新
+                        var authService = App.GetService<MicrosoftAuthService>();
+                        var refreshResult = await authService.RefreshMinecraftTokenAsync(CurrentProfile.RefreshToken);
+                        if (refreshResult.Success)
+                        {
+                            // 更新当前角色的令牌信息
+                            CurrentProfile.AccessToken = refreshResult.AccessToken;
+                            CurrentProfile.RefreshToken = refreshResult.RefreshToken;
+                            CurrentProfile.TokenType = refreshResult.TokenType;
+                            CurrentProfile.ExpiresIn = refreshResult.ExpiresIn;
+                            CurrentProfile.IssueInstant = DateTime.Parse(refreshResult.IssueInstant);
+                            CurrentProfile.NotAfter = DateTime.Parse(refreshResult.NotAfter);
+                            
+                            // 保存修改
+                            SaveProfiles();
+                        }
+                    }
+                    }
+                    
                     // 准备API请求
                     var apiUrl = "https://api.minecraftservices.com/minecraft/profile";
                     var request = new HttpRequestMessage(HttpMethod.Get, apiUrl);
