@@ -20,6 +20,7 @@ namespace XMCL2025.ViewModels
         public string Id { get; set; }
         public string Name { get; set; }
         public string AccessToken { get; set; }
+        public string RefreshToken { get; set; }
         public string TokenType { get; set; }
         public int ExpiresIn { get; set; }
         public DateTime IssueInstant { get; set; }
@@ -236,6 +237,71 @@ namespace XMCL2025.ViewModels
         }
 
         /// <summary>
+        /// 检查令牌是否需要刷新
+        /// </summary>
+        /// <param name="profile">要检查的角色</param>
+        /// <returns>是否需要刷新</returns>
+        private bool IsTokenExpired(MinecraftProfile profile)
+        {
+            // 计算Minecraft访问令牌的过期时间
+            // 正确方式：令牌颁发时间 + expires_in秒
+            DateTime minecraftTokenIssueTime = profile.IssueInstant;
+            DateTime minecraftTokenExpiryTime = minecraftTokenIssueTime.AddSeconds(profile.ExpiresIn);
+            
+            // 如果还有30分钟或更少的有效期，需要刷新
+            var timeUntilExpiry = minecraftTokenExpiryTime - DateTime.UtcNow;
+            return timeUntilExpiry.TotalMinutes <= 30;
+        }
+        
+        /// <summary>
+        /// 自动刷新令牌
+        /// </summary>
+        /// <param name="profile">要刷新令牌的角色</param>
+        /// <returns>刷新是否成功</returns>
+        public async Task<bool> AutoRefreshTokenAsync(MinecraftProfile profile)
+        {
+            if (profile.IsOffline || string.IsNullOrEmpty(profile.RefreshToken))
+            {
+                return true; // 离线角色或没有刷新令牌，无需刷新
+            }
+            
+            if (!IsTokenExpired(profile))
+            {
+                return true; // 令牌未过期，无需刷新
+            }
+            
+            try
+            {
+                // 刷新令牌
+                var result = await _microsoftAuthService.RefreshMinecraftTokenAsync(profile.RefreshToken);
+                if (result.Success)
+                {
+                    // 更新角色信息
+                    profile.AccessToken = result.AccessToken;
+                    profile.RefreshToken = result.RefreshToken;
+                    profile.TokenType = result.TokenType;
+                    profile.ExpiresIn = result.ExpiresIn;
+                    profile.IssueInstant = DateTime.Parse(result.IssueInstant);
+                    profile.NotAfter = DateTime.Parse(result.NotAfter);
+                    
+                    // 保存修改
+                    SaveProfiles();
+                    return true;
+                }
+                else
+                {
+                    Console.WriteLine($"令牌刷新失败: {result.ErrorMessage}");
+                    return false;
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"令牌刷新异常: {ex.Message}");
+                return false;
+            }
+        }
+        
+        /// <summary>
         /// 开始微软登录命令
         /// </summary>
         [RelayCommand]
@@ -279,6 +345,7 @@ namespace XMCL2025.ViewModels
                         Id = result.Uuid,
                         Name = result.Username,
                         AccessToken = result.AccessToken,
+                        RefreshToken = result.RefreshToken,
                         TokenType = result.TokenType,
                         ExpiresIn = result.ExpiresIn,
                         IssueInstant = DateTime.Parse(result.IssueInstant),

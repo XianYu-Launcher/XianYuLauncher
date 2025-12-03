@@ -231,6 +231,7 @@ public class MicrosoftAuthService
         public string Username { get; set; }
         public string Uuid { get; set; }
         public string AccessToken { get; set; }
+        public string RefreshToken { get; set; }
         public string ErrorMessage { get; set; }
         
         // 扩展字段：玩家完整信息
@@ -323,6 +324,9 @@ public class MicrosoftAuthService
                     ErrorMessage = $"{detailedMsg}\n\n详细信息已保存到临时文件: {tempFilePath}"
                 };
             }
+            
+            // 保存refresh_token
+            string refreshToken = tokenResponse.RefreshToken;
             
             // 4. Xbox Live身份验证
             var (xboxLiveAuthResponse, rawXboxResponse) = await AuthenticateWithXboxLiveAsync(tokenResponse.AccessToken);
@@ -498,6 +502,7 @@ public class MicrosoftAuthService
                 Username = profileResponse.Name,
                 Uuid = profileResponse.Id,
                 AccessToken = minecraftToken,
+                RefreshToken = refreshToken,
                 TokenType = minecraftAuthResponse.TokenType,
                 ExpiresIn = minecraftAuthResponse.ExpiresIn,
                 Roles = minecraftAuthResponse.Roles,
@@ -903,6 +908,138 @@ public class MicrosoftAuthService
         {
             Log.Error(ex, "检查游戏拥有情况失败");
             return (null, null);
+        }
+    }
+    
+    /// <summary>
+    /// 使用refresh_token刷新access_token
+    /// </summary>
+    /// <param name="refreshToken">刷新令牌</param>
+    /// <returns>刷新后的令牌响应</returns>
+    public async Task<TokenResponse> RefreshAccessTokenAsync(string refreshToken)
+    {
+        try
+        {
+            var content = new FormUrlEncodedContent(new[]
+            {
+                new KeyValuePair<string, string>("client_id", ClientId),
+                new KeyValuePair<string, string>("refresh_token", refreshToken),
+                new KeyValuePair<string, string>("grant_type", "refresh_token"),
+                new KeyValuePair<string, string>("scope", "XboxLive.signin offline_access")
+            });
+            
+            var response = await _httpClient.PostAsync(
+                "https://login.microsoftonline.com/consumers/oauth2/v2.0/token",
+                content);
+            
+            response.EnsureSuccessStatusCode();
+            
+            var responseContent = await response.Content.ReadAsStringAsync();
+            return JsonConvert.DeserializeObject<TokenResponse>(responseContent);
+        }
+        catch (Exception ex)
+        {
+            Log.Error(ex, "刷新访问令牌失败");
+            return null;
+        }
+    }
+    
+    /// <summary>
+    /// 完整刷新Minecraft令牌
+    /// </summary>
+    /// <param name="refreshToken">刷新令牌</param>
+    /// <returns>刷新后的登录结果</returns>
+    public async Task<LoginResult> RefreshMinecraftTokenAsync(string refreshToken)
+    {
+        try
+        {
+            // 1. 使用refresh_token获取新的Microsoft访问令牌
+            var tokenResponse = await RefreshAccessTokenAsync(refreshToken);
+            if (tokenResponse == null)
+            {
+                return new LoginResult
+                {
+                    Success = false,
+                    ErrorMessage = "无法刷新Microsoft访问令牌"
+                };
+            }
+            
+            // 2. Xbox Live身份验证
+            var (xboxLiveAuthResponse, rawXboxResponse) = await AuthenticateWithXboxLiveAsync(tokenResponse.AccessToken);
+            if (xboxLiveAuthResponse == null || string.IsNullOrEmpty(xboxLiveAuthResponse.Token))
+            {
+                return new LoginResult
+                {
+                    Success = false,
+                    ErrorMessage = "Xbox Live身份验证失败"
+                };
+            }
+            
+            string uhs = xboxLiveAuthResponse.DisplayClaims.Xui[0].Uhs;
+            string xblToken = xboxLiveAuthResponse.Token;
+            
+            // 3. XSTS身份验证
+            var (xstsAuthResponse, rawXstsResponse) = await AuthorizeWithXstsAsync(xblToken);
+            if (xstsAuthResponse == null || string.IsNullOrEmpty(xstsAuthResponse.Token))
+            {
+                return new LoginResult
+                {
+                    Success = false,
+                    ErrorMessage = "XSTS身份验证失败"
+                };
+            }
+            
+            string xstsToken = xstsAuthResponse.Token;
+            
+            // 4. 获取Minecraft访问令牌
+            var (minecraftAuthResponse, rawMinecraftResponse) = await LoginWithXboxAsync(uhs, xstsToken);
+            if (minecraftAuthResponse == null || string.IsNullOrEmpty(minecraftAuthResponse.AccessToken))
+            {
+                return new LoginResult
+                {
+                    Success = false,
+                    ErrorMessage = "获取Minecraft访问令牌失败"
+                };
+            }
+            
+            string minecraftToken = minecraftAuthResponse.AccessToken;
+            
+            // 5. 获取玩家信息
+            var (profileResponse, rawProfileResponse) = await GetProfileAsync(minecraftToken);
+            if (profileResponse == null || string.IsNullOrEmpty(profileResponse.Id) || string.IsNullOrEmpty(profileResponse.Name))
+            {
+                return new LoginResult
+                {
+                    Success = false,
+                    ErrorMessage = "获取玩家信息失败"
+                };
+            }
+            
+            // 6. 返回刷新后的登录结果
+            return new LoginResult
+            {
+                Success = true,
+                Username = profileResponse.Name,
+                Uuid = profileResponse.Id,
+                AccessToken = minecraftToken,
+                RefreshToken = tokenResponse.RefreshToken,
+                TokenType = minecraftAuthResponse.TokenType,
+                ExpiresIn = minecraftAuthResponse.ExpiresIn,
+                Roles = minecraftAuthResponse.Roles,
+                Skins = profileResponse.Skins,
+                Capes = profileResponse.Capes,
+                IssueInstant = xboxLiveAuthResponse.IssueInstant,
+                NotAfter = xboxLiveAuthResponse.NotAfter
+            };
+        }
+        catch (Exception ex)
+        {
+            Log.Error(ex, "完整刷新Minecraft令牌失败");
+            return new LoginResult
+            {
+                Success = false,
+                ErrorMessage = $"刷新Minecraft令牌失败: {ex.Message}"
+            };
         }
     }
     
