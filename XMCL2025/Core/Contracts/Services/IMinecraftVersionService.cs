@@ -13,8 +13,8 @@ public interface IMinecraftVersionService
     Task DownloadLibrariesAsync(string versionId, string librariesDirectory, Action<double> progressCallback = null, bool allowNetwork = true);
     Task ExtractNativeLibrariesAsync(string versionId, string librariesDirectory, string nativesDirectory);
     Task EnsureAssetIndexAsync(string versionId, string minecraftDirectory, Action<double> progressCallback = null);
-    Task DownloadAllAssetObjectsAsync(string versionId, string minecraftDirectory, Action<double> progressCallback = null);
-    Task EnsureVersionDependenciesAsync(string versionId, string minecraftDirectory, Action<double> progressCallback = null);
+    Task DownloadAllAssetObjectsAsync(string versionId, string minecraftDirectory, Action<double> progressCallback = null, Action<string> currentDownloadCallback = null);
+    Task EnsureVersionDependenciesAsync(string versionId, string minecraftDirectory, Action<double> progressCallback = null, Action<string> currentDownloadCallback = null);
     
     // Mod Loader相关方法
     Task DownloadModLoaderVersionAsync(string minecraftVersionId, string modLoaderType, string modLoaderVersion, string minecraftDirectory, Action<double> progressCallback = null);

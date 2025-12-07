@@ -15,6 +15,7 @@
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto" />
             <RowDefinition Height="*" />
+            <RowDefinition Height="Auto" />
         </Grid.RowDefinitions>
 
         <!-- 标题区域 -->
@@ -157,5 +158,15 @@
                 
 
         </StackPanel>
+        <!-- 启动成功提示（位于底部，直接作为Grid的子元素） -->
+        <InfoBar 
+            x:Name="LaunchSuccessInfoBar"
+            Grid.Row="2"
+            Title="游戏启动成功"
+            Message="{x:Bind ViewModel.LaunchSuccessMessage, Mode=OneWay}"
+            IsOpen="{x:Bind ViewModel.IsLaunchSuccessInfoBarOpen, Mode=TwoWay}"
+            Visibility="{x:Bind ViewModel.IsLaunchSuccessInfoBarOpen, Mode=OneWay, Converter={StaticResource BoolToVisibilityConverter}}"
+            Margin="0,20,0,0" />
+        <!-- InfoBar自带关闭按钮，无需额外添加 -->
     </Grid>
 </Page>

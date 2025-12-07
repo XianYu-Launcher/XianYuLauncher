@@ -1309,7 +1309,7 @@ public class MinecraftVersionService : IMinecraftVersionService
         }
     }
 
-    public async Task EnsureVersionDependenciesAsync(string versionId, string minecraftDirectory, Action<double> progressCallback = null)
+    public async Task EnsureVersionDependenciesAsync(string versionId, string minecraftDirectory, Action<double> progressCallback = null, Action<string> currentDownloadCallback = null)
     {
         try
         {
@@ -1402,12 +1402,25 @@ public class MinecraftVersionService : IMinecraftVersionService
             // 3. 下载所有资源对象 (55-100%)
             try
             {
+                // 使用传入的currentDownloadCallback参数，同时记录日志
+                Action<string> combinedCallback = null;
+                if (currentDownloadCallback != null)
+                {
+                    combinedCallback = (currentHash) =>
+                    {
+                        // 记录日志
+                        _logger.LogInformation("正在下载资源对象: {Hash}", currentHash);
+                        // 调用传入的回调
+                        currentDownloadCallback(currentHash);
+                    };
+                }
+                
                 await DownloadAllAssetObjectsAsync(versionId, minecraftDirectory, (progress) =>
                 {
                     // 只调整整体进度，保留文件大小信息
                     double adjustedProgress = 55 + (progress * 0.45); // 0-100% 映射到 55-100%
                     progressCallback?.Invoke(adjustedProgress);
-                });
+                }, combinedCallback);
             }
             catch (Exception ex)
             {
@@ -1442,7 +1455,7 @@ public class MinecraftVersionService : IMinecraftVersionService
         }
     }
 
-    public async Task DownloadAllAssetObjectsAsync(string versionId, string minecraftDirectory, Action<double> progressCallback = null)
+    public async Task DownloadAllAssetObjectsAsync(string versionId, string minecraftDirectory, Action<double> progressCallback = null, Action<string> currentDownloadCallback = null)
     {
         try
         {
@@ -1538,6 +1551,9 @@ public class MinecraftVersionService : IMinecraftVersionService
                         string hashPrefix = hash.Substring(0, 2); // 哈希前2位（如 "a7"）
                         string assetSubDir = Path.Combine(objectsDirectory, hashPrefix); // 资源子目录（如 objects/a7）
                         string assetSavePath = Path.Combine(assetSubDir, hash); // 资源保存路径（如 objects/a7/完整哈希）
+                        
+                        // 报告当前下载的文件名（哈希值）
+                        currentDownloadCallback?.Invoke(hash);
 
                         // 创建子目录
                         if (!Directory.Exists(assetSubDir))

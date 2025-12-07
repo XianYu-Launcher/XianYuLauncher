@@ -480,6 +480,24 @@ public partial class 启动ViewModel : ObservableRecipient
     private MinecraftProfile _selectedProfile;
 
     /// <summary>
+    /// 启动成功消息，用于InfoBar显示
+    /// </summary>
+    [ObservableProperty]
+    private string _launchSuccessMessage = string.Empty;
+    
+    /// <summary>
+    /// 当前下载项信息，用于InfoBar显示
+    /// </summary>
+    [ObservableProperty]
+    private string _currentDownloadItem = string.Empty;
+    
+    /// <summary>
+    /// 启动成功InfoBar是否打开
+    /// </summary>
+    [ObservableProperty]
+    private bool _isLaunchSuccessInfoBarOpen = false;
+    
+    /// <summary>
     /// 当前版本路径，用于彩蛋显示
     /// </summary>
     public string CurrentVersionPath
@@ -809,14 +827,45 @@ public partial class 启动ViewModel : ObservableRecipient
             // 5. 确保版本依赖和资源文件可用
             LaunchStatus = $"正在检查版本依赖和资源文件...";
             DownloadProgress = 0;
+            
+            // 在补全版本时显示InfoBar
+            IsLaunchSuccessInfoBarOpen = true;
+            CurrentDownloadItem = "正在准备游戏文件...";
+            LaunchSuccessMessage = $"{SelectedVersion} 正在准备游戏文件...";
+            
             // 这里会等待版本补全完成后才继续执行
             try
             {
+                // 创建当前下载回调，用于显示当前下载的文件名
+                Action<string> currentDownloadCallback = (currentHash) =>
+                {
+                    if (!string.IsNullOrEmpty(currentHash))
+                    {
+                        // 更新InfoBar消息，显示当前下载的文件名
+                        string currentStatus = LaunchStatus;
+                        if (currentStatus.StartsWith("正在准备游戏文件..."))
+                        {
+                            // 提取当前进度
+                            int percentIndex = currentStatus.IndexOf('%');
+                            if (percentIndex > 0)
+                            {
+                                string progressPart = currentStatus.Substring(0, percentIndex + 1);
+                                CurrentDownloadItem = $"{progressPart} 正在下载: {currentHash}";
+                                LaunchSuccessMessage = $"{SelectedVersion} {progressPart} 正在下载: {currentHash}";
+                            }
+                        }
+                    }
+                };
+                
                 await _minecraftVersionService.EnsureVersionDependenciesAsync(SelectedVersion, minecraftPath, progress =>
                 {
                     DownloadProgress = progress;
                     LaunchStatus = $"正在准备游戏文件... {progress:F0}%";
-                });
+                    
+                    // 更新InfoBar消息，显示当前进度
+                    CurrentDownloadItem = $"正在准备游戏文件... {progress:F0}%";
+                    LaunchSuccessMessage = $"{SelectedVersion} 正在准备游戏文件... {progress:F0}%";
+                }, currentDownloadCallback);
             }
             catch (Exception ex)
             {
@@ -1161,6 +1210,10 @@ public partial class 启动ViewModel : ObservableRecipient
             {
                 gameProcess.Start();
                 LaunchStatus = "游戏启动命令已执行，命令行窗口已打开！";
+                
+                // 显示启动成功InfoBar
+                LaunchSuccessMessage = $"{SelectedVersion} 启动成功！";
+                IsLaunchSuccessInfoBarOpen = true;
                 
                 // 设置EnableRaisingEvents为true
                 gameProcess.EnableRaisingEvents = true;
