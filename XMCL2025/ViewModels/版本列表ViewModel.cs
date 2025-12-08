@@ -61,7 +61,19 @@ public partial class 版本列表ViewModel : ObservableRecipient
     {
         _minecraftVersionService = minecraftVersionService;
         _fileService = fileService;
+        
+        // 订阅Minecraft路径变化事件
+        _fileService.MinecraftPathChanged += OnMinecraftPathChanged;
+        
         InitializeAsync().ConfigureAwait(false);
+    }
+    
+    /// <summary>
+    /// 当Minecraft路径变化时触发
+    /// </summary>
+    private async void OnMinecraftPathChanged(object? sender, string newPath)
+    {
+        await LoadVersionsAsync();
     }
 
     private async Task InitializeAsync()

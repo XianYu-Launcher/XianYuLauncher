@@ -8,6 +8,15 @@ namespace XMCL2025.Core.Services;
 public class FileService : IFileService
 {
     private string? _customMinecraftDataPath;
+    private const string MinecraftPathKey = "MinecraftPath";
+    
+    public event EventHandler<string>? MinecraftPathChanged;
+    
+    public FileService()
+    {
+        // 构造函数中从本地设置加载保存的Minecraft路径
+        LoadMinecraftPathFromSettings();
+    }
     
     public string ReadText(string filePath)
     {
@@ -50,7 +59,45 @@ public class FileService : IFileService
     
     public void SetMinecraftDataPath(string path)
     {
-        _customMinecraftDataPath = path;
+        if (_customMinecraftDataPath != path)
+        {
+            _customMinecraftDataPath = path;
+            SaveMinecraftPathToSettings(path);
+            // 触发路径变化事件
+            MinecraftPathChanged?.Invoke(this, path);
+        }
+    }
+    
+    private void LoadMinecraftPathFromSettings()
+    {
+        try
+        {
+            // 从本地设置加载保存的Minecraft路径
+            var localSettings = ApplicationData.Current.LocalSettings;
+            if (localSettings.Values.TryGetValue(MinecraftPathKey, out object? pathObj) && pathObj is string path)
+            {
+                _customMinecraftDataPath = path;
+            }
+        }
+        catch (Exception ex)
+        {
+            // 加载失败时使用默认路径
+            System.Diagnostics.Debug.WriteLine($"加载Minecraft路径失败: {ex.Message}");
+        }
+    }
+    
+    private void SaveMinecraftPathToSettings(string path)
+    {
+        try
+        {
+            // 将Minecraft路径保存到本地设置
+            var localSettings = ApplicationData.Current.LocalSettings;
+            localSettings.Values[MinecraftPathKey] = path;
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"保存Minecraft路径失败: {ex.Message}");
+        }
     }
 
     public string GetApplicationFolderPath()
