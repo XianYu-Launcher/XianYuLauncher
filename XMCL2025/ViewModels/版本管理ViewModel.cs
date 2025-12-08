@@ -386,12 +386,27 @@ public partial class 版本管理ViewModel : ObservableRecipient, INavigationAwa
         _minecraftVersionService = minecraftVersionService;
         _navigationService = navigationService;
         
+        // 订阅Minecraft路径变化事件
+        _fileService.MinecraftPathChanged += OnMinecraftPathChanged;
+        
         // 监听集合变化事件，用于更新空状态
         Mods.CollectionChanged += (sender, e) => OnPropertyChanged(nameof(IsModListEmpty));
         Shaders.CollectionChanged += (sender, e) => OnPropertyChanged(nameof(IsShaderListEmpty));
         ResourcePacks.CollectionChanged += (sender, e) => OnPropertyChanged(nameof(IsResourcePackListEmpty));
         DataPacks.CollectionChanged += (sender, e) => OnPropertyChanged(nameof(IsDataPackListEmpty));
         Maps.CollectionChanged += (sender, e) => OnPropertyChanged(nameof(IsMapListEmpty));
+    }
+    
+    /// <summary>
+    /// 当Minecraft路径变化时触发
+    /// </summary>
+    private async void OnMinecraftPathChanged(object? sender, string newPath)
+    {
+        MinecraftPath = newPath;
+        if (SelectedVersion != null)
+        {
+            await LoadVersionDataAsync();
+        }
     }
 
     /// <summary>

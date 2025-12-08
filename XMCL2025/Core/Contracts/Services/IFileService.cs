@@ -4,6 +4,7 @@ namespace XMCL2025.Core.Contracts.Services;
 
 public interface IFileService
 {
+    event EventHandler<string>? MinecraftPathChanged;
     string ReadText(string filePath);
     void WriteText(string filePath, string content);
     bool FileExists(string filePath);

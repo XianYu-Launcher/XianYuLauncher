@@ -529,7 +529,19 @@ public partial class 启动ViewModel : ObservableRecipient
         _localSettingsService = App.GetService<ILocalSettingsService>();
         _microsoftAuthService = App.GetService<MicrosoftAuthService>();
         _navigationService = App.GetService<INavigationService>();
+        
+        // 订阅Minecraft路径变化事件
+        _fileService.MinecraftPathChanged += OnMinecraftPathChanged;
+        
         InitializeAsync().ConfigureAwait(false);
+    }
+    
+    /// <summary>
+    /// 当Minecraft路径变化时触发
+    /// </summary>
+    private async void OnMinecraftPathChanged(object? sender, string newPath)
+    {
+        await LoadInstalledVersionsAsync();
     }
 
     private async Task InitializeAsync()
@@ -1183,12 +1195,13 @@ public partial class 启动ViewModel : ObservableRecipient
                     if (jvmArg is string argStr)
                     {
                         // 替换占位符
-                        string processedArg = argStr
-                            .Replace("${natives_directory}", Path.Combine(versionDir, $"{SelectedVersion}-natives"))
-                            .Replace("${launcher_name}", "XianYuLauncher")
-                            .Replace("${launcher_version}", "1.0")
-                            .Replace("${classpath}", classpath);
-                        args.Add(processedArg);
+                                string processedArg = argStr
+                                    .Replace("${natives_directory}", Path.Combine(versionDir, $"{SelectedVersion}-natives"))
+                                    .Replace("${launcher_name}", "XianYuLauncher")
+                                    .Replace("${launcher_version}", "1.0")
+                                    .Replace("${classpath}", classpath)
+                                    .Replace("${library_directory}", librariesPath);
+                                args.Add(processedArg);
                         
                         // 检查是否包含classpath
                         if (processedArg.Contains("-cp") || processedArg.Contains("-classpath"))

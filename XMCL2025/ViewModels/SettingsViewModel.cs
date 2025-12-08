@@ -678,6 +678,7 @@ public partial class SettingsViewModel : ObservableRecipient
         if (value != null)
         {
             _localSettingsService.SaveSettingAsync(MinecraftPathKey, value).ConfigureAwait(false);
+            _fileService.SetMinecraftDataPath(value);
         }
     }
     
