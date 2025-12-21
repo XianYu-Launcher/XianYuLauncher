@@ -26,6 +26,88 @@ public partial class MinecraftVersionService : IMinecraftVersionService
         _downloadSourceFactory = downloadSourceFactory;
     }
 
+    /// <summary>
+    /// 下载Optifine+Forge版本（先安装Optifine，再安装Forge）
+    /// </summary>
+    /// <param name="minecraftVersionId">Minecraft版本ID</param>
+    /// <param name="forgeVersion">Forge版本</param>
+    /// <param name="optifineType">Optifine类型</param>
+    /// <param name="optifinePatch">Optifine补丁版本</param>
+    /// <param name="versionsDirectory">版本目录</param>
+    /// <param name="librariesDirectory">库目录</param>
+    /// <param name="progressCallback">进度回调</param>
+    /// <param name="cancellationToken">取消令牌</param>
+    /// <param name="customVersionName">自定义版本名称</param>
+    public async Task DownloadOptifineForgeVersionAsync(string minecraftVersionId, string forgeVersion, string optifineType, string optifinePatch, string versionsDirectory, string librariesDirectory, Action<double> progressCallback, CancellationToken cancellationToken = default, string customVersionName = null)
+    {
+        try
+        {
+            _logger.LogInformation("开始下载Optifine+Forge版本: OptiFine_{optifineType}_{optifinePatch} + Forge {ForgeVersion} for Minecraft {MinecraftVersion}", optifineType, optifinePatch, forgeVersion, minecraftVersionId);
+            progressCallback?.Invoke(0); // 0% - 开始下载
+
+            // 1. 先安装Forge版本
+            _logger.LogInformation("===== 开始安装Forge ====");
+            string optifineForgeVersionId = customVersionName ?? $"forge-{minecraftVersionId}-{forgeVersion}-optifine-{optifineType}-{optifinePatch}";
+            Action<double> optifineProgressCallback = (progress) =>
+            {
+                // Forge安装占总进度的50%
+                double adjustedProgress = progress * 0.5;
+                progressCallback?.Invoke(adjustedProgress);
+            };
+            await DownloadForgeVersionAsync(minecraftVersionId, forgeVersion, versionsDirectory, librariesDirectory, optifineProgressCallback, cancellationToken, optifineForgeVersionId);
+            _logger.LogInformation("===== Forge安装完成 ====");
+            
+            // 2. 然后下载Optifine.jar并放入mods目录
+            _logger.LogInformation("===== 开始下载Optifine JAR ====");
+            
+            // 生成版本目录路径
+            string versionDirectory = Path.Combine(versionsDirectory, optifineForgeVersionId);
+            string modsDirectory = Path.Combine(versionDirectory, "mods");
+            Directory.CreateDirectory(modsDirectory);
+            
+            // 下载Optifine JAR文件
+            string optifineJarName = $"OptiFine_{minecraftVersionId}_{optifineType}_{optifinePatch}.jar";
+            string optifineJarPath = Path.Combine(modsDirectory, optifineJarName);
+            
+            // 使用BMCLAPI下载Optifine，格式与单独安装Optifine保持一致
+            string optifineDownloadUrl = $"https://bmclapi2.bangbang93.com/optifine/{minecraftVersionId}/{optifineType}/{optifinePatch}";
+            
+            // 输出调试信息，显示请求的URL
+            System.Diagnostics.Debug.WriteLine($"[DEBUG] 正在下载Optifine JAR，URL: {optifineDownloadUrl}");
+            System.Diagnostics.Debug.WriteLine($"[DEBUG] Optifine JAR将保存到: {optifineJarPath}");
+            
+            // 下载Optifine JAR
+            using (var response = await _httpClient.GetAsync(optifineDownloadUrl, HttpCompletionOption.ResponseHeadersRead, cancellationToken))
+            {
+                response.EnsureSuccessStatusCode();
+                long totalSize = response.Content.Headers.ContentLength ?? -1L;
+                long totalRead = 0L;
+                
+                const int bufferSize = 65536;
+                using (var stream = await response.Content.ReadAsStreamAsync(cancellationToken))
+                using (var fileStream = new FileStream(optifineJarPath, FileMode.Create, FileAccess.Write, FileShare.None, bufferSize, true))
+                {
+                    var buffer = new byte[bufferSize];
+                    int bytesRead;
+                    
+                    while ((bytesRead = await stream.ReadAsync(buffer, 0, buffer.Length, cancellationToken)) > 0)
+                    {
+                        await fileStream.WriteAsync(buffer, 0, bytesRead, cancellationToken);
+                        totalRead += bytesRead;
+                    }
+                }
+            }
+            _logger.LogInformation("===== Optifine JAR下载完成 ====");
+
+            _logger.LogInformation("Optifine+Forge版本下载安装完成: {VersionId}", optifineForgeVersionId);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "下载Optifine+Forge版本失败: OptiFine_{optifineType}_{optifinePatch} + Forge {ForgeVersion} for Minecraft {MinecraftVersion}", optifineType, optifinePatch, forgeVersion, minecraftVersionId);
+            throw;
+        }
+    }
+
     public async Task<VersionManifest> GetVersionManifestAsync()
     {
         try

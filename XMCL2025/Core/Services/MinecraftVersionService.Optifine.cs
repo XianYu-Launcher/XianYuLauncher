@@ -29,7 +29,7 @@ public partial class MinecraftVersionService
     /// <param name="progressCallback">进度回调</param>
     /// <param name="cancellationToken">取消令牌</param>
     /// <param name="customVersionName">自定义版本名称</param>
-    private async Task DownloadOptifineVersionAsync(string minecraftVersionId, string optifineType, string optifinePatch, string versionsDirectory, string librariesDirectory, Action<double> progressCallback, CancellationToken cancellationToken = default, string customVersionName = null)
+    internal async Task DownloadOptifineVersionAsync(string minecraftVersionId, string optifineType, string optifinePatch, string versionsDirectory, string librariesDirectory, Action<double> progressCallback, CancellationToken cancellationToken = default, string customVersionName = null)
     {
         try
         {
@@ -41,6 +41,9 @@ public partial class MinecraftVersionService
             var downloadSource = _downloadSourceFactory.GetSource(downloadSourceType.ToString().ToLower());
             _logger.LogInformation("当前下载源: {DownloadSource}", downloadSource.Name);
 
+            // 定义缓冲区大小，供所有下载操作使用
+            const int bufferSize = 65536;
+
             // 1. 创建版本目录
             string optifineVersionId = customVersionName ?? $"{minecraftVersionId}-OptiFine_{optifineType}_{optifinePatch}";
             string optifineVersionDirectory = Path.Combine(versionsDirectory, optifineVersionId);
@@ -48,18 +51,40 @@ public partial class MinecraftVersionService
             Directory.CreateDirectory(optifineVersionDirectory);
             progressCallback?.Invoke(5); // 5% - 版本目录创建完成
             
-            // 立即生成版本配置文件
-            var versionConfig = new XMCL2025.Core.Models.VersionConfig
-            {
-                ModLoaderType = "optifine",
-                ModLoaderVersion = $"{optifineType}_{optifinePatch}",
-                MinecraftVersion = minecraftVersionId,
-                CreatedAt = DateTime.Now
-            };
+            // 立即生成或更新版本配置文件
             string configPath = Path.Combine(optifineVersionDirectory, "XianYuL.cfg");
+            VersionConfig versionConfig;
+            
+            // 检查是否已存在配置文件
+            if (File.Exists(configPath))
+            {
+                // 读取现有配置，保留原有ModLoader信息
+                _logger.LogInformation("检测到已存在配置文件，读取并更新: {ConfigPath}", configPath);
+                string existingConfigContent = File.ReadAllText(configPath);
+                versionConfig = JsonConvert.DeserializeObject<VersionConfig>(existingConfigContent) ?? new VersionConfig();
+                
+                // 更新Optifine版本信息，不覆盖原有ModLoaderType
+                versionConfig.OptifineVersion = $"{optifineType}_{optifinePatch}";
+                // 保留原有的CreatedAt时间
+            }
+            else
+            {
+                // 不存在配置文件，创建新配置
+                _logger.LogInformation("配置文件不存在，创建新配置: {ConfigPath}", configPath);
+                versionConfig = new VersionConfig
+                {
+                    ModLoaderType = "vanilla", // Optifine不是真正的ModLoader，使用vanilla
+                    ModLoaderVersion = string.Empty,
+                    OptifineVersion = $"{optifineType}_{optifinePatch}",
+                    MinecraftVersion = minecraftVersionId,
+                    CreatedAt = DateTime.Now
+                };
+            }
+            
+            // 保存更新后的配置文件
             File.WriteAllText(configPath, JsonConvert.SerializeObject(versionConfig, Formatting.Indented));
-            _logger.LogInformation("已生成版本配置文件: {ConfigPath}", configPath);
-            System.Diagnostics.Debug.WriteLine($"[DEBUG] 已生成Optifine版本配置文件: {configPath}");
+            _logger.LogInformation("已更新版本配置文件: {ConfigPath}", configPath);
+            System.Diagnostics.Debug.WriteLine($"[DEBUG] 已更新Optifine版本配置文件: {configPath}");
 
             // 2. 获取原版Minecraft版本信息
             _logger.LogInformation("开始获取原版Minecraft版本信息: {MinecraftVersion}", minecraftVersionId);
@@ -71,55 +96,67 @@ public partial class MinecraftVersionService
             }
             progressCallback?.Invoke(10); // 10% - 原版版本信息获取完成
 
-            // 3. 下载原版Minecraft核心文件(JAR)和JSON
-            _logger.LogInformation("开始下载原版Minecraft核心文件: {MinecraftVersion}", minecraftVersionId);
-            var clientDownload = originalVersionInfo.Downloads.Client;
+            // 3. 检查版本目录中是否已经存在有效的jar和json文件
+            // 如果存在，说明是在已有ModLoader基础上安装Optifine，跳过重新下载原版文件
             var jarPath = Path.Combine(optifineVersionDirectory, $"{optifineVersionId}.jar");
             var jsonPath = Path.Combine(optifineVersionDirectory, $"{optifineVersionId}.json");
+            bool hasExistingFiles = File.Exists(jarPath) && File.Exists(jsonPath);
             
-            // 使用下载源获取客户端JAR的下载URL
-            var clientJarUrl = downloadSource.GetClientJarUrl(minecraftVersionId, clientDownload.Url);
-            System.Diagnostics.Debug.WriteLine($"[DEBUG] 当前下载内容: JAR核心文件(Optifine), 下载源: {downloadSource.Name}, 版本: {optifineVersionId}, 下载URL: {clientJarUrl}");
-            
-            // 下载JAR文件
-            const int bufferSize = 65536;
-            using (var response = await _httpClient.GetAsync(clientJarUrl, HttpCompletionOption.ResponseHeadersRead))
+            if (hasExistingFiles)
             {
-                response.EnsureSuccessStatusCode();
-                long totalSize = response.Content.Headers.ContentLength ?? -1L;
-                long totalRead = 0L;
+                // 已有有效文件，跳过重新下载，直接使用现有文件
+                _logger.LogInformation("检测到版本目录中已存在有效文件，跳过重新下载原版Minecraft核心文件");
+                progressCallback?.Invoke(45); // 直接跳转到45%进度
+            }
+            else
+            {
+                // 没有现有文件，执行正常的原版文件下载流程
+                _logger.LogInformation("开始下载原版Minecraft核心文件: {MinecraftVersion}", minecraftVersionId);
+                var clientDownload = originalVersionInfo.Downloads.Client;
                 
-                using (var stream = await response.Content.ReadAsStreamAsync())
-                using (var fileStream = new FileStream(jarPath, FileMode.Create, FileAccess.Write, FileShare.None, bufferSize, FileOptions.Asynchronous))
+                // 使用下载源获取客户端JAR的下载URL
+                var clientJarUrl = downloadSource.GetClientJarUrl(minecraftVersionId, clientDownload.Url);
+                System.Diagnostics.Debug.WriteLine($"[DEBUG] 当前下载内容: JAR核心文件(Optifine), 下载源: {downloadSource.Name}, 版本: {optifineVersionId}, 下载URL: {clientJarUrl}");
+                
+                // 下载JAR文件
+                using (var response = await _httpClient.GetAsync(clientJarUrl, HttpCompletionOption.ResponseHeadersRead))
                 {
-                    var buffer = new byte[bufferSize];
-                    int bytesRead;
+                    response.EnsureSuccessStatusCode();
+                    long totalSize = response.Content.Headers.ContentLength ?? -1L;
+                    long totalRead = 0L;
                     
-                    while ((bytesRead = await stream.ReadAsync(buffer, 0, buffer.Length, cancellationToken)) > 0)
+                    using (var stream = await response.Content.ReadAsStreamAsync())
+                    using (var fileStream = new FileStream(jarPath, FileMode.Create, FileAccess.Write, FileShare.None, bufferSize, FileOptions.Asynchronous))
                     {
-                        await fileStream.WriteAsync(buffer, 0, bytesRead, cancellationToken);
-                        totalRead += bytesRead;
+                        var buffer = new byte[bufferSize];
+                        int bytesRead;
                         
-                        if (totalSize > 0)
+                        while ((bytesRead = await stream.ReadAsync(buffer, 0, buffer.Length, cancellationToken)) > 0)
                         {
-                            double progress = 10 + ((double)totalRead / totalSize) * 35; // 10% - 45% 用于JAR下载
-                            progressCallback?.Invoke(progress);
+                            await fileStream.WriteAsync(buffer, 0, bytesRead, cancellationToken);
+                            totalRead += bytesRead;
+                            
+                            if (totalSize > 0)
+                            {
+                                double progress = 10 + ((double)totalRead / totalSize) * 35; // 10% - 45% 用于JAR下载
+                                progressCallback?.Invoke(progress);
+                            }
                         }
                     }
                 }
-            }
-            progressCallback?.Invoke(45); // 45% - JAR文件下载完成
-            _logger.LogInformation("原版Minecraft核心文件下载完成: {JarPath}", jarPath);
+                progressCallback?.Invoke(45); // 45% - JAR文件下载完成
+                _logger.LogInformation("原版Minecraft核心文件下载完成: {JarPath}", jarPath);
 
-            // 下载并保存原版JSON文件，后续会修改
-            string jsonContent = JsonConvert.SerializeObject(originalVersionInfo, Formatting.Indented);
-            
-            // 添加Debug输出，显示即将保存的JSON内容（前500个字符）
-            System.Diagnostics.Debug.WriteLine($"[DEBUG] 即将保存的Minecraft版本{optifineVersionId} JSON内容:\n{jsonContent.Substring(0, Math.Min(500, jsonContent.Length))}...");
-            
-            await File.WriteAllTextAsync(jsonPath, jsonContent);
-            _logger.LogInformation("原版Minecraft JSON文件保存完成: {JsonPath}", jsonPath);
-            progressCallback?.Invoke(50); // 50% - JSON文件保存完成
+                // 下载并保存原版JSON文件，后续会修改
+                string jsonContent = JsonConvert.SerializeObject(originalVersionInfo, Formatting.Indented);
+                
+                // 添加Debug输出，显示即将保存的JSON内容（前500个字符）
+                System.Diagnostics.Debug.WriteLine($"[DEBUG] 即将保存的Minecraft版本{optifineVersionId} JSON内容:\n{jsonContent.Substring(0, Math.Min(500, jsonContent.Length))}...");
+                
+                await File.WriteAllTextAsync(jsonPath, jsonContent);
+                _logger.LogInformation("原版Minecraft JSON文件保存完成: {JsonPath}", jsonPath);
+            }
+            progressCallback?.Invoke(50); // 50% - JSON文件保存完成（或跳过完成）
 
             // 4. 下载Optifine核心文件
             _logger.LogInformation("开始下载Optifine核心文件");
@@ -147,7 +184,7 @@ public partial class MinecraftVersionService
                 long totalRead = 0L;
                 
                 using (var stream = await response.Content.ReadAsStreamAsync())
-                using (var fileStream = new FileStream(optifineJarPath, FileMode.Create, FileAccess.Write, FileShare.None, bufferSize, FileOptions.Asynchronous))
+                using (var fileStream = new FileStream(optifineJarPath, FileMode.Create, FileAccess.Write, FileShare.None, bufferSize, true))
                 {
                     var buffer = new byte[bufferSize];
                     int bytesRead;

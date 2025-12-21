@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using System.Threading;
 using System.Threading.Tasks;
 using Newtonsoft.Json;
 
@@ -20,6 +21,9 @@ public interface IMinecraftVersionService
     // Mod Loader相关方法
     Task DownloadModLoaderVersionAsync(string minecraftVersionId, string modLoaderType, string modLoaderVersion, string minecraftDirectory, Action<double> progressCallback = null, string customVersionName = null);
     Task DownloadModLoaderVersionAsync(string minecraftVersionId, string modLoaderType, string modLoaderVersion, string minecraftDirectory, Action<double> progressCallback = null, System.Threading.CancellationToken cancellationToken = default, string customVersionName = null);
+    
+    // Optifine+Forge组合下载方法
+    Task DownloadOptifineForgeVersionAsync(string minecraftVersionId, string forgeVersion, string optifineType, string optifinePatch, string versionsDirectory, string librariesDirectory, Action<double> progressCallback, CancellationToken cancellationToken = default, string customVersionName = null);
     
     // 获取已安装的Minecraft版本
     Task<List<string>> GetInstalledVersionsAsync(string minecraftDirectory = null);
