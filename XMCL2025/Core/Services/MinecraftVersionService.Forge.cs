@@ -29,10 +29,12 @@ public partial class MinecraftVersionService
     /// <param name="progressCallback">进度回调</param>
     /// <param name="cancellationToken">取消令牌</param>
     /// <param name="customVersionName">自定义版本名称</param>
-    private async Task DownloadForgeVersionAsync(string minecraftVersionId, string forgeVersion, string versionsDirectory, string librariesDirectory, Action<double> progressCallback, CancellationToken cancellationToken = default, string customVersionName = null)
+    /// <param name="skipJarJsonDownload">是否跳过jar和json下载（在Optifine之后安装时使用）</param>
+    internal async Task DownloadForgeVersionAsync(string minecraftVersionId, string forgeVersion, string versionsDirectory, string librariesDirectory, Action<double> progressCallback, CancellationToken cancellationToken = default, string customVersionName = null, bool skipJarJsonDownload = false)
     {
         try
         {
+            const int bufferSize = 65536; // 缓冲区大小，整个方法共享
             _logger.LogInformation("开始下载Forge版本: {ForgeVersion} for Minecraft {MinecraftVersion}", forgeVersion, minecraftVersionId);
             progressCallback?.Invoke(0); // 0% - 开始下载
 
@@ -71,44 +73,51 @@ public partial class MinecraftVersionService
             }
             progressCallback?.Invoke(10); // 10% - 原版版本信息获取完成
 
-            // 3. 下载原版Minecraft核心文件(JAR)
-            _logger.LogInformation("开始下载原版Minecraft核心文件: {MinecraftVersion}", minecraftVersionId);
-            var clientDownload = originalVersionInfo.Downloads.Client;
+            // 3. 下载原版Minecraft核心文件(JAR) - 仅当skipJarJsonDownload为false时执行
             var jarPath = Path.Combine(forgeVersionDirectory, $"{forgeVersionId}.jar");
-            
-            // 使用下载源获取客户端JAR的下载URL
-            var clientJarUrl = downloadSource.GetClientJarUrl(minecraftVersionId, clientDownload.Url);
-            System.Diagnostics.Debug.WriteLine($"[DEBUG] 当前下载内容: JAR核心文件(Forge), 下载源: {downloadSource.Name}, 版本: {forgeVersionId}, 下载URL: {clientJarUrl}");
-            
-            // 下载JAR文件
-            const int bufferSize = 65536;
-            using (var response = await _httpClient.GetAsync(clientJarUrl, HttpCompletionOption.ResponseHeadersRead))
+            if (!skipJarJsonDownload)
             {
-                response.EnsureSuccessStatusCode();
-                long totalSize = response.Content.Headers.ContentLength ?? -1L;
-                long totalRead = 0L;
+                _logger.LogInformation("开始下载原版Minecraft核心文件: {MinecraftVersion}", minecraftVersionId);
+                var clientDownload = originalVersionInfo.Downloads.Client;
                 
-                using (var stream = await response.Content.ReadAsStreamAsync())
-                using (var fileStream = new FileStream(jarPath, FileMode.Create, FileAccess.Write, FileShare.None, bufferSize, FileOptions.Asynchronous))
+                // 使用下载源获取客户端JAR的下载URL
+                var clientJarUrl = downloadSource.GetClientJarUrl(minecraftVersionId, clientDownload.Url);
+                System.Diagnostics.Debug.WriteLine($"[DEBUG] 当前下载内容: JAR核心文件(Forge), 下载源: {downloadSource.Name}, 版本: {forgeVersionId}, 下载URL: {clientJarUrl}");
+                
+                // 下载JAR文件
+                using (var response = await _httpClient.GetAsync(clientJarUrl, HttpCompletionOption.ResponseHeadersRead))
                 {
-                    var buffer = new byte[bufferSize];
-                    int bytesRead;
+                    response.EnsureSuccessStatusCode();
+                    long totalSize = response.Content.Headers.ContentLength ?? -1L;
+                    long totalRead = 0L;
                     
-                    while ((bytesRead = await stream.ReadAsync(buffer, 0, buffer.Length, cancellationToken)) > 0)
+                    using (var stream = await response.Content.ReadAsStreamAsync())
+                    using (var fileStream = new FileStream(jarPath, FileMode.Create, FileAccess.Write, FileShare.None, bufferSize, FileOptions.Asynchronous))
                     {
-                        await fileStream.WriteAsync(buffer, 0, bytesRead, cancellationToken);
-                        totalRead += bytesRead;
+                        var buffer = new byte[bufferSize];
+                        int bytesRead;
                         
-                        if (totalSize > 0)
+                        while ((bytesRead = await stream.ReadAsync(buffer, 0, buffer.Length, cancellationToken)) > 0)
                         {
-                            double progress = 10 + ((double)totalRead / totalSize) * 25; // 10% - 35% 用于JAR下载
-                            progressCallback?.Invoke(progress);
+                            await fileStream.WriteAsync(buffer, 0, bytesRead, cancellationToken);
+                            totalRead += bytesRead;
+                            
+                            if (totalSize > 0)
+                            {
+                                double progress = 10 + ((double)totalRead / totalSize) * 25; // 10% - 35% 用于JAR下载
+                                progressCallback?.Invoke(progress);
+                            }
                         }
                     }
                 }
+                progressCallback?.Invoke(35); // 35% - JAR文件下载完成
+                _logger.LogInformation("原版Minecraft核心文件下载完成: {JarPath}", jarPath);
             }
-            progressCallback?.Invoke(35); // 35% - JAR文件下载完成
-            _logger.LogInformation("原版Minecraft核心文件下载完成: {JarPath}", jarPath);
+            else
+            {
+                _logger.LogInformation("跳过JAR文件下载，使用现有Optifine处理后的文件");
+                progressCallback?.Invoke(35); // 直接跳转到35%进度
+            }
 
             // 跳过单独保存原版JSON文件，因为后续会合并生成完整的版本JSON
             progressCallback?.Invoke(45); // 45% - 跳过原版JSON单独保存
@@ -139,7 +148,7 @@ public partial class MinecraftVersionService
                 long totalRead = 0L;
                 
                 using (var stream = await response.Content.ReadAsStreamAsync())
-                using (var fileStream = new FileStream(forgeInstallerPath, FileMode.Create, FileAccess.Write, FileShare.None, bufferSize, FileOptions.Asynchronous))
+                using (var fileStream = new FileStream(forgeInstallerPath, FileMode.Create, FileAccess.Write, FileShare.None, bufferSize, true))
                 {
                     var buffer = new byte[bufferSize];
                     int bytesRead;
