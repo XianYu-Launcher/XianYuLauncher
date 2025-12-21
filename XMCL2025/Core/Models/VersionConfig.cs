@@ -23,6 +23,11 @@ namespace XMCL2025.Core.Models
         public string MinecraftVersion { get; set; }
         
         /// <summary>
+        /// Optifine版本号（如果安装了Optifine）
+        /// </summary>
+        public string OptifineVersion { get; set; }
+        
+        /// <summary>
         /// 配置文件创建时间
         /// </summary>
         public DateTime CreatedAt { get; set; }

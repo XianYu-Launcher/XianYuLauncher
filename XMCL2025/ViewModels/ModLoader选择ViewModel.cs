@@ -780,13 +780,6 @@ public partial class ModLoader选择ViewModel : ObservableRecipient, INavigation
                         }
                     }
                 }
-                // 处理Optifine与其他ModLoader同时选择的情况
-                else if (IsOptifineSelected && !string.IsNullOrEmpty(SelectedModLoader))
-                {
-                    // 如果同时选择了Optifine和其他ModLoader，先下载其他ModLoader，然后Optifine会作为后续步骤处理
-                    // 这里保持原有逻辑，因为Optifine会在其他ModLoader基础上安装
-                }
-                
                 // 下载带Mod Loader的版本
                 if (string.IsNullOrEmpty(modLoaderVersionToDownload))
                 {
@@ -795,15 +788,107 @@ public partial class ModLoader选择ViewModel : ObservableRecipient, INavigation
                     return;
                 }
                 
-                await minecraftVersionService.DownloadModLoaderVersionAsync(
-                    SelectedMinecraftVersion,
-                    modLoaderToDownload,
-                    modLoaderVersionToDownload,
-                    minecraftDirectory,
-                    progressCallback,
-                    _downloadCts.Token,
-                    VersionName);
-                successMessage = $"{modLoaderToDownload} {modLoaderVersionToDownload} 版本下载完成！\n\nMinecraft版本: {SelectedMinecraftVersion}\nMod Loader: {modLoaderToDownload}\nMod Loader版本: {modLoaderVersionToDownload}\n自定义版本名称: {VersionName}";
+                // 处理Optifine与Forge同时选择的特殊情况
+                if (IsOptifineSelected && SelectedModLoader == "Forge")
+                {
+                    // 查找当前选择的Optifine版本对应的完整信息
+                    var optifineItem = ModLoaderItems.FirstOrDefault(item => item.Name == "Optifine");
+                    if (optifineItem != null && !string.IsNullOrEmpty(SelectedOptifineVersion))
+                    {
+                        var optifineInfo = optifineItem.GetOptifineVersionInfo(SelectedOptifineVersion);
+                        if (optifineInfo != null && optifineInfo.FullVersion != null)
+                        {
+                            // 使用专门的Optifine+Forge下载方法，该方法已经实现了先Optifine后Forge的正确顺序
+                            await minecraftVersionService.DownloadOptifineForgeVersionAsync(
+                                SelectedMinecraftVersion,
+                                modLoaderVersionToDownload,
+                                optifineInfo.FullVersion.Type,
+                                optifineInfo.FullVersion.Patch,
+                                Path.Combine(minecraftDirectory, "versions"),
+                                Path.Combine(minecraftDirectory, "libraries"),
+                                (progress) =>
+                                {
+                                    DownloadProgress = progress;
+                                    DownloadProgressText = $"{progress:F0}%";
+                                    DownloadStatus = progress < 50 ? "正在安装 Optifine..." : "正在安装 Forge...";
+                                },
+                                _downloadCts.Token,
+                                VersionName);
+                        }
+                    }
+                }
+                // 处理Optifine单独选择的情况
+                else if (IsOptifineSelected && string.IsNullOrEmpty(SelectedModLoader))
+                {
+                    // 单独下载Optifine
+                    await minecraftVersionService.DownloadModLoaderVersionAsync(
+                        SelectedMinecraftVersion,
+                        modLoaderToDownload,
+                        modLoaderVersionToDownload,
+                        minecraftDirectory,
+                        progressCallback,
+                        _downloadCts.Token,
+                        VersionName);
+                }
+                // 处理其他ModLoader（包括非Forge+Optifine组合）
+                else
+                {
+                    // 第一步：下载主要的Mod Loader（如Fabric、NeoForge等）
+                    await minecraftVersionService.DownloadModLoaderVersionAsync(
+                        SelectedMinecraftVersion,
+                        modLoaderToDownload,
+                        modLoaderVersionToDownload,
+                        minecraftDirectory,
+                        progressCallback,
+                        _downloadCts.Token,
+                        VersionName);
+                    
+                    // 第二步：如果同时选择了Optifine，在主要Mod Loader基础上安装Optifine
+                    if (IsOptifineSelected && !string.IsNullOrEmpty(SelectedModLoader))
+                    {
+                        // 查找当前选择的Optifine版本对应的完整信息
+                        var optifineItem = ModLoaderItems.FirstOrDefault(item => item.Name == "Optifine");
+                        if (optifineItem != null && !string.IsNullOrEmpty(SelectedOptifineVersion))
+                        {
+                            var optifineInfo = optifineItem.GetOptifineVersionInfo(SelectedOptifineVersion);
+                            if (optifineInfo != null && optifineInfo.FullVersion != null)
+                            {
+                                // 更新下载状态和进度回调，处理Optifine安装进度
+                                Action<double> optifineProgressCallback = (progress) =>
+                                {
+                                    // Optifine安装占总进度的40%（主要ModLoader占60%）
+                                    double adjustedProgress = 60 + (progress * 0.4);
+                                    DownloadProgress = adjustedProgress;
+                                    DownloadProgressText = $"{adjustedProgress:F0}%";
+                                    DownloadStatus = $"正在安装 Optifine {optifineInfo.FullVersion.Type}_{optifineInfo.FullVersion.Patch}...";
+                                };
+                                
+                                // 使用特殊格式传递Optifine的type和patch值
+                                string optifineVersionToDownload = $"{optifineInfo.FullVersion.Type}:{optifineInfo.FullVersion.Patch}";
+                                
+                                // 下载Optifine
+                                await minecraftVersionService.DownloadModLoaderVersionAsync(
+                                    SelectedMinecraftVersion,
+                                    "Optifine",
+                                    optifineVersionToDownload,
+                                    minecraftDirectory,
+                                    optifineProgressCallback,
+                                    _downloadCts.Token,
+                                    VersionName);
+                            }
+                        }
+                    }
+                }
+                
+                // 构建成功消息
+                if (IsOptifineSelected && !string.IsNullOrEmpty(SelectedModLoader))
+                {
+                    successMessage = $"{modLoaderToDownload} {modLoaderVersionToDownload} + Optifine {SelectedOptifineVersion} 版本下载完成！\n\nMinecraft版本: {SelectedMinecraftVersion}\nMod Loader: {modLoaderToDownload} {modLoaderVersionToDownload} + Optifine {SelectedOptifineVersion}\n自定义版本名称: {VersionName}";
+                }
+                else
+                {
+                    successMessage = $"{modLoaderToDownload} {modLoaderVersionToDownload} 版本下载完成！\n\nMinecraft版本: {SelectedMinecraftVersion}\nMod Loader: {modLoaderToDownload}\nMod Loader版本: {modLoaderVersionToDownload}\n自定义版本名称: {VersionName}";
+                }
             }
             
             // 隐藏下载弹窗
