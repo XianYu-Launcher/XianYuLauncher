@@ -51,16 +51,18 @@ public enum JavaSelectionModeType
 }
 
 public partial class SettingsViewModel : ObservableRecipient
-{
-    private readonly IThemeSelectorService _themeSelectorService;
-    private readonly ILocalSettingsService _localSettingsService;
-    private readonly IFileService _fileService;
-    private readonly INavigationService _navigationService;
-    private const string JavaPathKey = "JavaPath";
-    private const string SelectedJavaVersionKey = "SelectedJavaVersion";
-    private const string JavaVersionsKey = "JavaVersions";
-    private const string EnableVersionIsolationKey = "EnableVersionIsolation";
-    private const string JavaSelectionModeKey = "JavaSelectionMode";
+    {
+        private readonly IThemeSelectorService _themeSelectorService;
+        private readonly ILocalSettingsService _localSettingsService;
+        private readonly IFileService _fileService;
+        private readonly INavigationService _navigationService;
+        private readonly ILanguageSelectorService _languageSelectorService;
+        private const string JavaPathKey = "JavaPath";
+        private const string SelectedJavaVersionKey = "SelectedJavaVersion";
+        private const string JavaVersionsKey = "JavaVersions";
+        private const string EnableVersionIsolationKey = "EnableVersionIsolation";
+        private const string JavaSelectionModeKey = "JavaSelectionMode";
+        private const string LanguageKey = "Language";
     private const string MinecraftPathKey = "MinecraftPath";
     private const string DownloadSourceKey = "DownloadSource";
     private const string VersionListSourceKey = "VersionListSource";
@@ -147,6 +149,20 @@ public partial class SettingsViewModel : ObservableRecipient
     // 标志位：是否是初始化加载材质设置
     private bool _isInitializingMaterial = true;
     
+    /// <summary>
+    /// 当前应用语言
+    /// </summary>
+    [ObservableProperty]
+    private string _language = "zh-CN";
+    
+    /// <summary>
+    /// 语言切换命令
+    /// </summary>
+    public ICommand SwitchLanguageCommand
+    {
+        get;
+    }
+    
 
     /// <summary>
     /// 是否开启版本隔离
@@ -224,18 +240,20 @@ public partial class SettingsViewModel : ObservableRecipient
         get;
     }
 
-    public SettingsViewModel(IThemeSelectorService themeSelectorService, ILocalSettingsService localSettingsService, IFileService fileService, MaterialService materialService, INavigationService navigationService)
+    public SettingsViewModel(IThemeSelectorService themeSelectorService, ILocalSettingsService localSettingsService, IFileService fileService, MaterialService materialService, INavigationService navigationService, ILanguageSelectorService languageSelectorService)
     {
         _themeSelectorService = themeSelectorService;
         _localSettingsService = localSettingsService;
         _fileService = fileService;
         _materialService = materialService;
         _navigationService = navigationService;
+        _languageSelectorService = languageSelectorService;
         _elementTheme = _themeSelectorService.Theme;
         _versionDescription = GetVersionDescription();
         
-
-
+        // 初始化语言设置
+        _language = _languageSelectorService.Language;
+        
         SwitchThemeCommand = new RelayCommand<ElementTheme>(
             async (param) =>
             {
@@ -272,11 +290,41 @@ public partial class SettingsViewModel : ObservableRecipient
                     VersionListSource = source;
                 }
             });
+        
+        SwitchLanguageCommand = new RelayCommand<string>(
+            async (param) =>
+            {
+                if (Language != param)
+                {
+                    Language = param;
+                    await _languageSelectorService.SetLanguageAsync(param);
+                    
+                    // 显示语言切换成功提示，需要重启应用
+                    var dialog = new Microsoft.UI.Xaml.Controls.ContentDialog
+                    {
+                        Title = "语言设置已更新",
+                        Content = "语言设置已成功保存，应用将在重启后生效。是否立即重启应用？",
+                        PrimaryButtonText = "立即重启",
+                        CloseButtonText = "稍后重启",
+                        DefaultButton = Microsoft.UI.Xaml.Controls.ContentDialogButton.Primary
+                    };
+                    
+                    dialog.XamlRoot = App.MainWindow.Content.XamlRoot;
+                    var result = await dialog.ShowAsync();
+                    
+                    if (result == Microsoft.UI.Xaml.Controls.ContentDialogResult.Primary)
+                    {
+                        // 立即重启应用
+                        System.Diagnostics.Process.Start(AppContext.BaseDirectory + AppDomain.CurrentDomain.FriendlyName);
+                        App.MainWindow.Close();
+                    }
+                }
+            });
 
         // 初始化鸣谢人员列表
         AcknowledgmentPersons = new ObservableCollection<AcknowledgmentPerson>
         {
-            new AcknowledgmentPerson("bangbang93", "提供了BMCLAPI")
+            new AcknowledgmentPerson("bangbang93", "Settings_BmclapiSupportText".GetLocalized())
         };
         
         // 初始化Java版本列表变化事件
@@ -913,6 +961,15 @@ public partial class SettingsViewModel : ObservableRecipient
         {
             MinecraftPath = folder.Path;
         }
+    }
+
+    /// <summary>
+    /// 导航到新手教程页面
+    /// </summary>
+    [RelayCommand]
+    private void NavigateToTutorialPage()
+    {
+        _navigationService.NavigateTo(typeof(TutorialPageViewModel).FullName!);
     }
 
     /// <summary>

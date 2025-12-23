@@ -13,6 +13,7 @@ using Microsoft.Graphics.Canvas.Geometry;
 using Microsoft.Graphics.Canvas.UI.Xaml;
 
 using XMCL2025.ViewModels;
+using XMCL2025.Helpers;
 
 namespace XMCL2025.Views;
 
@@ -83,9 +84,9 @@ public sealed partial class 启动Page : Page
         ProfileMenuFlyout.Items.Insert(0, new MenuFlyoutSeparator());
 
         // 添加角色列表
-        if (ViewModel.Profiles.Count > 0)
-        {
-            var profileSubItem = new MenuFlyoutSubItem { Text = "已添加角色" };
+            if (ViewModel.Profiles.Count > 0)
+            {
+                var profileSubItem = new MenuFlyoutSubItem { Text = "LaunchPage_AddedProfilesText".GetLocalized() };
             
             foreach (var profile in ViewModel.Profiles)
             {

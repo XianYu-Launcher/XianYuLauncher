@@ -10,6 +10,7 @@
     mc:Ignorable="d">
     <Page.Resources>
         <helpers:EnumToBooleanConverter x:Key="EnumToBooleanConverter" />
+        <helpers:StringToBooleanConverter x:Key="StringToBooleanConverter" />
     </Page.Resources>
     <Grid x:Name="ContentArea" Padding="20">
         <Grid.RowDefinitions>
@@ -19,8 +20,8 @@
 
         <!-- 标题区域 -->
         <StackPanel Grid.Row="0" Margin="0,0,0,20">
-            <TextBlock x:Name="PageTitle" Text="设置" Style="{ThemeResource TitleTextBlockStyle}" FontSize="36" FontWeight="Bold" />
-            <TextBlock x:Name="PageSubtitle" Text="配置启动器设置" Style="{ThemeResource BodyTextBlockStyle}" Margin="0,8,0,0" Opacity="0.7" />
+            <TextBlock x:Name="PageTitle" x:Uid="SettingsPage_Title" Text="设置" Style="{ThemeResource TitleTextBlockStyle}" FontSize="36" FontWeight="Bold" />
+            <TextBlock x:Name="PageSubtitle" x:Uid="SettingsPage_Subtitle" Text="配置启动器设置" Style="{ThemeResource BodyTextBlockStyle}" Margin="0,8,0,0" Opacity="0.7" />
         </StackPanel>
 
         <!-- 主要内容区域 -->
@@ -45,13 +46,13 @@
                         <TabViewItem.Header>
                             <StackPanel Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
                                 <FontIcon Glyph="" FontSize="16" />
-                                <TextBlock Text="基础设置" VerticalAlignment="Center" />
+                                <TextBlock x:Uid="Settings_BasicTitle" Text="基础设置" VerticalAlignment="Center" />
                             </StackPanel>
                         </TabViewItem.Header>
                         <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
                             <StackPanel Margin="12,10,12,0">
                                 <!-- Minecraft 路径设置 -->
-                                <TextBlock Text="Minecraft 路径" Style="{ThemeResource SubtitleTextBlockStyle}" />
+                                <TextBlock x:Uid="Settings_MinecraftPath" Text="Minecraft 路径" Style="{ThemeResource SubtitleTextBlockStyle}" />
                                 <StackPanel Margin="{StaticResource SmallTopBottomMargin}">
                                     <StackPanel Orientation="Horizontal" Margin="{StaticResource XSmallTopMargin}" Spacing="8">
                                         <TextBox 
@@ -64,6 +65,7 @@
                                             Command="{x:Bind ViewModel.BrowseMinecraftPathCommand}"/>
                                     </StackPanel>
                                     <TextBlock 
+                                        x:Uid="Settings_MinecraftPathDescription"
                                         Text="Minecraft游戏目录，包含versions、saves等文件夹" 
                                         Style="{ThemeResource CaptionTextBlockStyle}" 
                                         Margin="{StaticResource XSmallTopMargin}" 
@@ -71,12 +73,13 @@
                                 </StackPanel>
                                 
                                 <!-- 版本隔离设置 -->
-                                <TextBlock Text="游戏设置" Style="{ThemeResource SubtitleTextBlockStyle}" Margin="0,20,0,0" />
+                                <TextBlock x:Uid="Settings_Game" Text="游戏设置" Style="{ThemeResource SubtitleTextBlockStyle}" Margin="0,20,0,0" />
                                 <StackPanel Margin="{StaticResource SmallTopBottomMargin}">
                                     <StackPanel Orientation="Horizontal" VerticalAlignment="Top" Spacing="16">
                                         <StackPanel VerticalAlignment="Center">
-                                            <TextBlock Text="启用版本隔离" />
+                                            <TextBlock x:Uid="Settings_VersionIsolation" Text="启用版本隔离" />
                                             <TextBlock 
+                                                x:Uid="Settings_VersionIsolationDescription"
                                                 Text="开启后，每个Minecraft版本将使用独立的游戏目录(.minecraft/versions/{版本ID})" 
                                                 Style="{ThemeResource CaptionTextBlockStyle}" 
                                                 Margin="0,4,0,0" 
@@ -89,7 +92,14 @@
                                     </StackPanel>
                                 </StackPanel>
                                 
-
+                                <!-- 新手教程按钮 -->
+                                <StackPanel Margin="0,20,0,0">
+                                    <Button 
+                                        Content="打开新手教程" 
+                                        Command="{x:Bind ViewModel.NavigateToTutorialPageCommand}" 
+                                        Margin="0,0,0,8" 
+                                        Width="200"/>
+                                </StackPanel>
                             </StackPanel>
                         </ScrollViewer>
                     </TabViewItem>
@@ -99,16 +109,17 @@
                         <TabViewItem.Header>
                             <StackPanel Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
                                 <FontIcon Glyph="&#xE790;" FontSize="16" />
-                                <TextBlock Text="个性化" VerticalAlignment="Center" />
+                                <TextBlock x:Uid="Settings_PersonalizationTitle" Text="个性化" VerticalAlignment="Center" />
                             </StackPanel>
                         </TabViewItem.Header>
                         <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
                             <StackPanel Margin="12,10,12,0">
                                 <!-- 主题设置 -->
-                                <TextBlock Text="主题" Style="{ThemeResource SubtitleTextBlockStyle}" />
+                                <TextBlock x:Uid="Settings_Theme" Text="主题" Style="{ThemeResource SubtitleTextBlockStyle}" />
                                 <StackPanel Margin="{StaticResource SmallTopBottomMargin}">
                                     <StackPanel Margin="{StaticResource XSmallTopMargin}">
                                         <RadioButton
+                                            x:Uid="Settings_Theme_Light"
                                             Content="浅色"
                                             Command="{x:Bind ViewModel.SwitchThemeCommand}"
                                             IsChecked="{x:Bind ViewModel.ElementTheme, Converter={StaticResource EnumToBooleanConverter}, ConverterParameter=Light, Mode=OneWay}"
@@ -119,6 +130,7 @@
                                             </RadioButton.CommandParameter>
                                         </RadioButton>
                                         <RadioButton
+                                            x:Uid="Settings_Theme_Dark"
                                             Content="深色"
                                             Command="{x:Bind ViewModel.SwitchThemeCommand}"
                                             IsChecked="{x:Bind ViewModel.ElementTheme, Converter={StaticResource EnumToBooleanConverter}, ConverterParameter=Dark, Mode=OneWay}"
@@ -129,6 +141,7 @@
                                             </RadioButton.CommandParameter>
                                         </RadioButton>
                                         <RadioButton
+                                            x:Uid="Settings_Theme_Default"
                                             Content="跟随系统"
                                             Command="{x:Bind ViewModel.SwitchThemeCommand}"
                                             IsChecked="{x:Bind ViewModel.ElementTheme, Converter={StaticResource EnumToBooleanConverter}, ConverterParameter=Default, Mode=OneWay}"
@@ -142,7 +155,7 @@
                                 </StackPanel>
 
                                 <!-- 材质设置 -->
-                                <TextBlock Text="窗口材质" Style="{ThemeResource SubtitleTextBlockStyle}" Margin="0,20,0,0" />
+                                <TextBlock x:Uid="Settings_WindowMaterial" Text="窗口材质" Style="{ThemeResource SubtitleTextBlockStyle}" Margin="0,20,0,0" />
                                 <StackPanel Margin="{StaticResource SmallTopBottomMargin}">
                                     <StackPanel Margin="{StaticResource XSmallTopMargin}">
                                         <ComboBox
@@ -156,11 +169,43 @@
                                             </ComboBox.ItemTemplate>
                                         </ComboBox>
                                         <TextBlock 
+                                            x:Uid="Settings_WindowMaterialDescription"
                                             Text="选择窗口材质，不同材质在视觉效果和性能上有所差异" 
                                             Style="{ThemeResource CaptionTextBlockStyle}" 
                                             Margin="0,4,0,0" 
                                             Opacity="0.7"/>
                                     </StackPanel>
+                                </StackPanel>
+                                
+                                <!-- 语言设置 -->
+                                <TextBlock x:Uid="Settings_Language" Text="语言" Style="{ThemeResource SubtitleTextBlockStyle}" Margin="0,20,0,0" />
+                                <StackPanel Margin="{StaticResource SmallTopBottomMargin}">
+                                    <StackPanel Margin="{StaticResource XSmallTopMargin}">
+                                        <RadioButton
+                                            x:Uid="Settings_Language_Chinese"
+                                            Content="简体中文"
+                                            Command="{x:Bind ViewModel.SwitchLanguageCommand}"
+                                            CommandParameter="zh-CN"
+                                            IsChecked="{x:Bind ViewModel.Language, Mode=OneWay, Converter={StaticResource StringToBooleanConverter}, ConverterParameter=zh-CN}"
+                                            FontSize="15"
+                                            GroupName="AppLanguage">
+                                        </RadioButton>
+                                        <RadioButton
+                                            x:Uid="Settings_Language_English"
+                                            Content="English"
+                                            Command="{x:Bind ViewModel.SwitchLanguageCommand}"
+                                            CommandParameter="en-US"
+                                            IsChecked="{x:Bind ViewModel.Language, Mode=OneWay, Converter={StaticResource StringToBooleanConverter}, ConverterParameter=en-US}"
+                                            FontSize="15"
+                                            GroupName="AppLanguage">
+                                        </RadioButton>
+                                    </StackPanel>
+                                    <TextBlock 
+                                        x:Uid="Settings_LanguageDescription"
+                                        Text="选择应用语言，更改后需要重启应用才能生效" 
+                                        Style="{ThemeResource CaptionTextBlockStyle}" 
+                                        Margin="0,4,0,0" 
+                                        Opacity="0.7"/>
                                 </StackPanel>
                             </StackPanel>
                         </ScrollViewer>
@@ -171,15 +216,15 @@
                         <TabViewItem.Header>
                             <StackPanel Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
                                 <FontIcon Glyph="" FontSize="16" />
-                                <TextBlock Text="Java设置" VerticalAlignment="Center" />
+                                <TextBlock x:Uid="Settings_JavaTitle" Text="Java设置" VerticalAlignment="Center" />
                             </StackPanel>
                         </TabViewItem.Header>
                         <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
                             <StackPanel Margin="12,10,12,0">
                                 <!-- Java路径设置 -->
-                                <TextBlock Text="Java路径设置" Style="{ThemeResource SubtitleTextBlockStyle}" />
+                                <TextBlock x:Uid="Settings_JavaPath" Text="Java路径设置" Style="{ThemeResource SubtitleTextBlockStyle}" />
                                 <StackPanel Margin="{StaticResource SmallTopBottomMargin}">
-                                    <TextBlock Text="Java版本管理" />
+                                    <TextBlock x:Uid="Settings_JavaVersionManagement" Text="Java版本管理" />
                                     
                                     <!-- Java Versions List -->
                                     <StackPanel Margin="0,12,0,0">
@@ -188,18 +233,20 @@
                                                 <ColumnDefinition Width="*" />
                                                 <ColumnDefinition Width="Auto" />
                                             </Grid.ColumnDefinitions>
-                                            <TextBlock Text="已安装的Java版本" Style="{ThemeResource SubtitleTextBlockStyle}" Margin="0,0,0,8" />
+                                            <TextBlock x:Uid="Settings_InstalledJavaVersions" Text="已安装的Java版本" Style="{ThemeResource SubtitleTextBlockStyle}" Margin="0,0,0,8" />
                                             <StackPanel Orientation="Horizontal" VerticalAlignment="Top" HorizontalAlignment="Right" Grid.Column="1">
                                                 <Button
-                                                    Content="添加"
-                                                    Command="{x:Bind ViewModel.AddJavaVersionCommand}"
-                                                    IsEnabled="{x:Bind ViewModel.CanRefreshJavaVersions, Mode=OneWay}"
-                                                    Margin="0,0,8,0" ToolTipService.ToolTip="手动添加Java版本到列表" />
+                                            x:Uid="Settings_Add"
+                                            Content="添加"
+                                            Command="{x:Bind ViewModel.AddJavaVersionCommand}"
+                                            IsEnabled="{x:Bind ViewModel.CanRefreshJavaVersions, Mode=OneWay}"
+                                            Margin="0,0,8,0" ToolTipService.ToolTip="手动添加Java版本到列表" />
                                                 <Button
-                                                    Content="刷新"
-                                                    Command="{x:Bind ViewModel.RefreshJavaVersionsCommand}"
-                                                    IsEnabled="{x:Bind ViewModel.CanRefreshJavaVersions, Mode=OneWay}"
-                                                    Margin="0,0,8,0" ToolTipService.ToolTip="刷新已安装的Java版本列表" />
+                                            x:Uid="Settings_Refresh"
+                                            Content="刷新"
+                                            Command="{x:Bind ViewModel.RefreshJavaVersionsCommand}"
+                                            IsEnabled="{x:Bind ViewModel.CanRefreshJavaVersions, Mode=OneWay}"
+                                            Margin="0,0,8,0" ToolTipService.ToolTip="刷新已安装的Java版本列表" />
                                                 <ProgressRing IsActive="{x:Bind ViewModel.IsLoadingJavaVersions, Mode=OneWay}" Width="20" Height="20" VerticalAlignment="Center" />
                                             </StackPanel>
                                         </Grid>
@@ -219,9 +266,10 @@
                                 </StackPanel>
                                 
                                 <!-- Java选择方式 -->
-                                <TextBlock Text="Java选择方式" Margin="0,20,0,0" />
+                                <TextBlock x:Uid="Settings_JavaSelectionMode" Text="Java选择方式" Margin="0,20,0,0" />
                                 <StackPanel Margin="0,8,0,0">
                                     <RadioButton
+                                        x:Uid="Settings_JavaSelectionMode_Auto"
                                         Content="自动从列表内选择Java"
                                         Command="{x:Bind ViewModel.SwitchJavaSelectionModeCommand}"
                                         CommandParameter="Auto"
@@ -231,6 +279,7 @@
                                         ToolTipService.ToolTip="启动时根据游戏版本自动从列表中选择合适的Java版本">
                                     </RadioButton>
                                     <RadioButton
+                                        x:Uid="Settings_JavaSelectionMode_Manual"
                                         Content="手动选择Java"
                                         Command="{x:Bind ViewModel.SwitchJavaSelectionModeCommand}"
                                         CommandParameter="Manual"
@@ -241,7 +290,7 @@
                                     </RadioButton>
                                 </StackPanel>
                                 
-                                <TextBlock Text="Java路径" Margin="0,20,0,0" />
+                                <TextBlock x:Uid="Settings_JavaPathLabel" Text="Java路径" Margin="0,20,0,0" />
                                     <StackPanel Orientation="Horizontal" Margin="{StaticResource XSmallTopMargin}" Spacing="8">
                                         <TextBox 
                                             Text="{x:Bind ViewModel.JavaPath, Mode=TwoWay}" 
@@ -249,13 +298,16 @@
                                             Width="300"
                                             Margin="0,0,8,0"/>
                                         <Button 
+                                            x:Uid="Settings_Browse"
                                             Content="浏览..." 
                                             Command="{x:Bind ViewModel.BrowseJavaPathCommand}"/>
                                         <Button 
+                                            x:Uid="Settings_Clear"
                                             Content="清除" 
                                             Command="{x:Bind ViewModel.ClearJavaPathCommand}"/>
                                     </StackPanel>
                                     <TextBlock 
+                                        x:Uid="Settings_JavaPathDescription"
                                         Text="使用'添加'按钮手动添加Java版本到列表，或直接指定Java路径" 
                                         Style="{ThemeResource CaptionTextBlockStyle}" 
                                         Margin="{StaticResource XSmallTopMargin}" 
@@ -270,18 +322,19 @@
                         <TabViewItem.Header>
                             <StackPanel Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
                                 <FontIcon Glyph="" FontSize="16" />
-                                <TextBlock Text="网络与下载" VerticalAlignment="Center" />
+                                <TextBlock x:Uid="Settings_NetworkTitle" Text="网络与下载" VerticalAlignment="Center" />
                             </StackPanel>
                         </TabViewItem.Header>
                         <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
                             <StackPanel Margin="12,10,12,0">
                                 <!-- 下载源设置 -->
-                                <TextBlock Text="下载源设置" Style="{ThemeResource SubtitleTextBlockStyle}" />
+                                <TextBlock x:Uid="Settings_DownloadSource" Text="下载源设置" Style="{ThemeResource SubtitleTextBlockStyle}" />
                                 <StackPanel Margin="{StaticResource SmallTopBottomMargin}">
-                                    <TextBlock Text="选择下载源" />
+                                    <TextBlock x:Uid="Settings_SelectDownloadSource" Text="选择下载源" />
 
                                     <StackPanel Margin="{StaticResource XSmallTopMargin}">
                                         <RadioButton
+                                            x:Uid="Settings_DownloadSource_Official"
                                             Content="尽量使用官方源"
                                             Command="{x:Bind ViewModel.SwitchDownloadSourceCommand}"
                                             IsChecked="{x:Bind ViewModel.DownloadSource, Converter={StaticResource EnumToBooleanConverter}, ConverterParameter=Official, Mode=OneWay}"
@@ -292,6 +345,7 @@
                                             </RadioButton.CommandParameter>
                                         </RadioButton>
                                         <RadioButton
+                                            x:Uid="Settings_DownloadSource_BMCLAPI"
                                             Content="尽量使用BMCLAPI"
                                             Command="{x:Bind ViewModel.SwitchDownloadSourceCommand}"
                                             IsChecked="{x:Bind ViewModel.DownloadSource, Converter={StaticResource EnumToBooleanConverter}, ConverterParameter=BMCLAPI, Mode=OneWay}"
@@ -303,6 +357,7 @@
                                         </RadioButton>
                                     </StackPanel>
                                     <TextBlock 
+                                        x:Uid="Settings_DownloadSourceDescription"
                                         Text="选择下载源可以影响游戏资源的下载速度和稳定性" 
                                         Style="{ThemeResource CaptionTextBlockStyle}" 
                                         Margin="{StaticResource XSmallTopMargin}" 
@@ -311,10 +366,11 @@
                                 
                                 <!-- 版本列表源设置 -->
                                 <StackPanel Margin="{StaticResource SmallTopBottomMargin}">
-                                    <TextBlock Text="选择版本列表源" />
+                                    <TextBlock x:Uid="Settings_SelectVersionListSource" Text="选择版本列表源" />
 
                                     <StackPanel Margin="{StaticResource XSmallTopMargin}">
                                         <RadioButton
+                                            x:Uid="Settings_VersionListSource_Official"
                                             Content="尽量使用官方源"
                                             Command="{x:Bind ViewModel.SwitchVersionListSourceCommand}"
                                             IsChecked="{x:Bind ViewModel.VersionListSource, Converter={StaticResource EnumToBooleanConverter}, ConverterParameter=Official, Mode=OneWay}"
@@ -325,6 +381,7 @@
                                             </RadioButton.CommandParameter>
                                         </RadioButton>
                                         <RadioButton
+                                            x:Uid="Settings_VersionListSource_BMCLAPI"
                                             Content="尽量使用BMCLAPI"
                                             Command="{x:Bind ViewModel.SwitchVersionListSourceCommand}"
                                             IsChecked="{x:Bind ViewModel.VersionListSource, Converter={StaticResource EnumToBooleanConverter}, ConverterParameter=BMCLAPI, Mode=OneWay}"
@@ -336,6 +393,7 @@
                                         </RadioButton>
                                     </StackPanel>
                                     <TextBlock 
+                                        x:Uid="Settings_VersionListSourceDescription"
                                         Text="选择版本列表源可以影响游戏版本列表的获取速度和稳定性" 
                                         Style="{ThemeResource CaptionTextBlockStyle}" 
                                         Margin="{StaticResource XSmallTopMargin}" 
@@ -350,7 +408,7 @@
                         <TabViewItem.Header>
                             <StackPanel Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
                                 <FontIcon Glyph="" FontSize="16" />
-                                <TextBlock Text="关于" VerticalAlignment="Center" />
+                                <TextBlock x:Uid="Settings_AboutTitle" Text="关于" VerticalAlignment="Center" />
                             </StackPanel>
                         </TabViewItem.Header>
                         <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
@@ -366,14 +424,14 @@
                                     <!-- 作者名称占位符 -->
                                     <StackPanel VerticalAlignment="Center">
                                         <TextBlock Text="SpiritStudio" Style="{ThemeResource TitleTextBlockStyle}" FontSize="20" />
-                                        <TextBlock Text="感谢所有参与项目开发的工作室成员" Style="{ThemeResource BodyTextBlockStyle}" Opacity="0.7" />
+                                        <TextBlock x:Uid="Settings_ThanksToTeam" Text="感谢所有参与项目开发的工作室成员" Style="{ThemeResource BodyTextBlockStyle}" Opacity="0.7" />
                                     </StackPanel>
                                 </StackPanel>
 
                                 <!-- 鸣谢区域 -->
                                 <StackPanel Margin="0,0,0,20">
                                     <!-- 鸣谢标题 -->
-                                    <TextBlock Text="鸣谢" Style="{ThemeResource TitleTextBlockStyle}" FontSize="14" Margin="0,0,0,8" />
+                                    <TextBlock x:Uid="Settings_Acknowledgments" Text="鸣谢" Style="{ThemeResource TitleTextBlockStyle}" FontSize="14" Margin="0,0,0,8" />
                                     <!-- 鸣谢人员列表，每行最多3个 -->
                                     <ItemsControl ItemsSource="{x:Bind ViewModel.AcknowledgmentPersons, Mode=OneWay}">
                                         <ItemsControl.ItemsPanel>
@@ -420,6 +478,7 @@
 
                                 <!-- 免责声明 -->
                                 <TextBlock 
+                                    x:Uid="Settings_Disclaimer"
                                     Text="XianYuLauncher 是一个非官方的 Minecraft 启动器，与 Mojang Studios、Microsoft 及其中中国大陆代理公司无任何从属关系或官方合作关联。" 
                                     Style="{ThemeResource CaptionTextBlockStyle}" 
                                     Margin="0,40,0,20" 

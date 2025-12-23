@@ -17,8 +17,8 @@
 
         <!-- 标题区域 -->
         <StackPanel Grid.Row="0" Margin="0,0,0,20">
-            <TextBlock x:Name="PageTitle" Text="资源下载" Style="{StaticResource PageTitleStyle}" FontSize="36" FontWeight="Bold" />
-            <TextBlock x:Name="PageSubtitle" Text="下载和管理Minecraft资源" Style="{StaticResource BodyTextStyle}" Margin="0,8,0,0" Opacity="0.7" />
+            <TextBlock x:Name="PageTitle" x:Uid="ResourceDownloadPage_PageTitle" Text="资源下载" Style="{StaticResource PageTitleStyle}" FontSize="36" FontWeight="Bold" />
+            <TextBlock x:Name="PageSubtitle" x:Uid="ResourceDownloadPage_PageSubtitle" Text="下载和管理Minecraft资源" Style="{StaticResource BodyTextStyle}" Margin="0,8,0,0" Opacity="0.7" />
         </StackPanel>
 
         <!-- 主要内容区域 -->
@@ -43,7 +43,7 @@
                         <TabViewItem.Header>
                             <StackPanel Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
                                 <FontIcon Glyph="" FontSize="16" />
-                                <TextBlock Text="版本下载" VerticalAlignment="Center" />
+                                <TextBlock x:Uid="ResourceDownloadPage_VersionTabHeader" Text="版本下载" VerticalAlignment="Center" />
                             </StackPanel>
                         </TabViewItem.Header>
                         <Grid>
@@ -64,9 +64,9 @@
                                 <!-- 最新正式版 -->
                                 <Border CornerRadius="8" Padding="15" BorderBrush="{ThemeResource SystemControlForegroundBaseLowBrush}" BorderThickness="1" Background="{ThemeResource CardBackgroundFillColorDefault}" HorizontalAlignment="Stretch">
                                     <StackPanel>
-                                        <TextBlock Text="最新正式版" Style="{StaticResource CaptionTextBlockStyle}" Foreground="{ThemeResource TextFillColorSecondary}" />
+                                        <TextBlock x:Uid="ResourceDownloadPage_LatestRelease" Text="最新正式版" Style="{StaticResource CaptionTextBlockStyle}" Foreground="{ThemeResource TextFillColorSecondary}" />
                                         <TextBlock Text="{Binding LatestReleaseVersion, Mode=OneWay}" Style="{StaticResource TitleTextBlockStyle}" Foreground="{ThemeResource TextFillColorPrimary}" />
-                                        <Button Content="下载" Style="{StaticResource DefaultButtonStyle}" HorizontalAlignment="Left" Margin="0,10,0,0"
+                                        <Button x:Uid="ResourceDownloadPage_DownloadButton" Content="下载" Style="{StaticResource DefaultButtonStyle}" HorizontalAlignment="Left" Margin="0,10,0,0"
                                                 Command="{Binding DownloadVersionCommand}" CommandParameter="{Binding LatestReleaseVersion, Mode=OneWay}" />
                                     </StackPanel>
                                 </Border>
@@ -74,9 +74,9 @@
                                 <!-- 最新快照版 -->
                                 <Border Grid.Column="2" CornerRadius="8" Padding="15" BorderBrush="{ThemeResource SystemControlForegroundBaseLowBrush}" BorderThickness="1" Background="{ThemeResource CardBackgroundFillColorDefault}" HorizontalAlignment="Stretch">
                                     <StackPanel>
-                                        <TextBlock Text="最新快照版" Style="{StaticResource CaptionTextBlockStyle}" Foreground="{ThemeResource TextFillColorSecondary}" />
+                                        <TextBlock x:Uid="ResourceDownloadPage_LatestSnapshot" Text="最新快照版" Style="{StaticResource CaptionTextBlockStyle}" Foreground="{ThemeResource TextFillColorSecondary}" />
                                         <TextBlock Text="{Binding LatestSnapshotVersion, Mode=OneWay}" Style="{StaticResource TitleTextBlockStyle}" Foreground="{ThemeResource TextFillColorPrimary}" />
-                                        <Button Content="下载" Style="{StaticResource DefaultButtonStyle}" HorizontalAlignment="Left" Margin="0,10,0,0"
+                                        <Button x:Uid="ResourceDownloadPage_DownloadButton" Content="下载" Style="{StaticResource DefaultButtonStyle}" HorizontalAlignment="Left" Margin="0,10,0,0"
                                                 Command="{Binding DownloadVersionCommand}" CommandParameter="{Binding LatestSnapshotVersion, Mode=OneWay}" />
                                     </StackPanel>
                                 </Border>
@@ -92,6 +92,7 @@
                                 <TextBox 
                                     Grid.Column="0"
                                     x:Name="VersionSearchBox"
+                                    x:Uid="ResourceDownloadPage_VersionSearchBox"
                                     PlaceholderText="搜索版本..."
                                     Text="{Binding SearchText, Mode=TwoWay}" 
                                     KeyDown="VersionSearchBox_KeyDown" 
@@ -166,7 +167,7 @@
                         <TabViewItem.Header>
                             <StackPanel Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
                                 <FontIcon Glyph="" FontSize="16" />
-                                <TextBlock Text="Mod下载" VerticalAlignment="Center" />
+                                <TextBlock x:Uid="ResourceDownloadPage_ModTabHeader" Text="Mod下载" VerticalAlignment="Center" />
                             </StackPanel>
                         </TabViewItem.Header>
                         <Grid>
@@ -203,6 +204,7 @@
                                 <!-- Mod Loader Filter -->
                                 <ComboBox
                                     x:Name="LoaderComboBox"
+                                    x:Uid="ResourceDownloadPage_LoaderComboBox"
                                     Grid.Row="0"
                                     Grid.Column="1"
                                     Header="加载器"
@@ -222,6 +224,7 @@
                                 <!-- Version Filter -->
                                 <ComboBox
                                     x:Name="VersionComboBox"
+                                    x:Uid="ResourceDownloadPage_VersionComboBox"
                                     Grid.Row="0"
                                     Grid.Column="2"
                                     Header="版本"
@@ -236,6 +239,7 @@
                                 <!-- 类别筛选 -->
                                 <ComboBox
                                     x:Name="ModCategoryComboBox"
+                                    x:Uid="ResourceDownloadPage_ModCategoryComboBox"
                                     Grid.Row="0"
                                     Grid.Column="3"
                                     Header="类别"
@@ -244,26 +248,26 @@
                                     SelectedValuePath="Tag"
                                     SelectedValue="{Binding SelectedModCategory, Mode=TwoWay}"
                                     SelectionChanged="ModCategoryComboBox_SelectionChanged">
-                                    <ComboBoxItem Content="所有类别" Tag="all" IsSelected="True" />
-                                    <ComboBoxItem Content="冒险" Tag="adventure" />
-                                    <ComboBoxItem Content="整活" Tag="cursed" />
-                                    <ComboBoxItem Content="装饰" Tag="decoration" />
-                                    <ComboBoxItem Content="经济" Tag="economy" />
-                                    <ComboBoxItem Content="装备" Tag="equipment" />
-                                    <ComboBoxItem Content="食物" Tag="food" />
-                                    <ComboBoxItem Content="机制" Tag="game-mechanics" />
-                                    <ComboBoxItem Content="前置" Tag="library" />
-                                    <ComboBoxItem Content="魔法" Tag="magic" />
-                                    <ComboBoxItem Content="管理" Tag="management" />
-                                    <ComboBoxItem Content="迷你游戏" Tag="minigame" />
-                                    <ComboBoxItem Content="生物" Tag="mobs" />
-                                    <ComboBoxItem Content="性能" Tag="optimization" />
-                                    <ComboBoxItem Content="社交" Tag="social" />
-                                    <ComboBoxItem Content="存储" Tag="storage" />
-                                    <ComboBoxItem Content="科技" Tag="technology" />
-                                    <ComboBoxItem Content="交通" Tag="transportation" />
-                                    <ComboBoxItem Content="实用" Tag="utility" />
-                                    <ComboBoxItem Content="世界生成" Tag="worldgen" />
+                                    <ComboBoxItem x:Uid="ResourceDownloadPage_AllCategories" Content="所有类别" Tag="all" IsSelected="True" />
+                                    <ComboBoxItem x:Uid="ResourceDownloadPage_AdventureCategory" Content="冒险" Tag="adventure" />
+                                    <ComboBoxItem x:Uid="ResourceDownloadPage_CursedCategory" Content="整活" Tag="cursed" />
+                                    <ComboBoxItem x:Uid="ResourceDownloadPage_DecorationCategory" Content="装饰" Tag="decoration" />
+                                    <ComboBoxItem x:Uid="ResourceDownloadPage_EconomyCategory" Content="经济" Tag="economy" />
+                                    <ComboBoxItem x:Uid="ResourceDownloadPage_EquipmentCategory" Content="装备" Tag="equipment" />
+                                    <ComboBoxItem x:Uid="ResourceDownloadPage_FoodCategory" Content="食物" Tag="food" />
+                                    <ComboBoxItem x:Uid="ResourceDownloadPage_GameMechanicsCategory" Content="机制" Tag="game-mechanics" />
+                                    <ComboBoxItem x:Uid="ResourceDownloadPage_LibraryCategory" Content="前置" Tag="library" />
+                                    <ComboBoxItem x:Uid="ResourceDownloadPage_MagicCategory" Content="魔法" Tag="magic" />
+                                    <ComboBoxItem x:Uid="ResourceDownloadPage_ManagementCategory" Content="管理" Tag="management" />
+                                    <ComboBoxItem x:Uid="ResourceDownloadPage_MinigameCategory" Content="迷你游戏" Tag="minigame" />
+                                    <ComboBoxItem x:Uid="ResourceDownloadPage_MobsCategory" Content="生物" Tag="mobs" />
+                                    <ComboBoxItem x:Uid="ResourceDownloadPage_OptimizationCategory" Content="性能" Tag="optimization" />
+                                    <ComboBoxItem x:Uid="ResourceDownloadPage_SocialCategory" Content="社交" Tag="social" />
+                                    <ComboBoxItem x:Uid="ResourceDownloadPage_StorageCategory" Content="存储" Tag="storage" />
+                                    <ComboBoxItem x:Uid="ResourceDownloadPage_TechnologyCategory" Content="科技" Tag="technology" />
+                                    <ComboBoxItem x:Uid="ResourceDownloadPage_TransportationCategory" Content="交通" Tag="transportation" />
+                                    <ComboBoxItem x:Uid="ResourceDownloadPage_UtilityCategory" Content="实用" Tag="utility" />
+                                    <ComboBoxItem x:Uid="ResourceDownloadPage_WorldgenCategory" Content="世界生成" Tag="worldgen" />
                                 </ComboBox>
                             </Grid>
 
@@ -397,7 +401,7 @@
                         <TabViewItem.Header>
                             <StackPanel Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
                                 <FontIcon Glyph="" FontSize="16" />
-                                <TextBlock Text="光影下载" VerticalAlignment="Center" />
+                                <TextBlock x:Uid="ResourceDownloadPage_ShaderPackTabHeader" Text="光影下载" VerticalAlignment="Center" />
                             </StackPanel>
                         </TabViewItem.Header>
                         <Grid>
@@ -434,6 +438,7 @@
                                 <!-- Version Filter -->
                                 <ComboBox
                                     x:Name="ShaderPackVersionComboBox"
+                                    x:Uid="ResourceDownloadPage_ShaderPackVersionComboBox"
                                     Grid.Row="0"
                                     Grid.Column="1"
                                     Header="版本"
@@ -448,6 +453,7 @@
                                 <!-- 类别筛选 -->
                                 <ComboBox
                                     x:Name="ShaderPackCategoryComboBox"
+                                    x:Uid="ResourceDownloadPage_ShaderPackCategoryComboBox"
                                     Grid.Row="0"
                                     Grid.Column="2"
                                     Header="类别"
@@ -456,13 +462,13 @@
                                     SelectedValuePath="Tag"
                                     SelectedValue="{Binding SelectedShaderPackCategory, Mode=TwoWay}"
                                     SelectionChanged="ShaderPackCategoryComboBox_SelectionChanged">
-                                    <ComboBoxItem Content="所有类别" Tag="all" IsSelected="True" />
-                                    <ComboBoxItem Content="卡通" Tag="cartoon" />
-                                    <ComboBoxItem Content="整活" Tag="cursed" />
-                                    <ComboBoxItem Content="奇幻" Tag="fantasy" />
-                                    <ComboBoxItem Content="写实" Tag="realistic" />
-                                    <ComboBoxItem Content="半写实" Tag="semi-realistic" />
-                                    <ComboBoxItem Content="原版风" Tag="vanilla-like" />
+                                    <ComboBoxItem x:Uid="ResourceDownloadPage_AllCategories" Content="所有类别" Tag="all" IsSelected="True" />
+                                    <ComboBoxItem x:Uid="ResourceDownloadPage_CartoonCategory" Content="卡通" Tag="cartoon" />
+                                    <ComboBoxItem x:Uid="ResourceDownloadPage_CursedCategory" Content="整活" Tag="cursed" />
+                                    <ComboBoxItem x:Uid="ResourceDownloadPage_FantasyCategory" Content="奇幻" Tag="fantasy" />
+                                    <ComboBoxItem x:Uid="ResourceDownloadPage_RealisticCategory" Content="写实" Tag="realistic" />
+                                    <ComboBoxItem x:Uid="ResourceDownloadPage_SemiRealisticCategory" Content="半写实" Tag="semi-realistic" />
+                                    <ComboBoxItem x:Uid="ResourceDownloadPage_VanillaLikeCategory" Content="原版风" Tag="vanilla-like" />
                                 </ComboBox>
                             </Grid>
 
@@ -595,8 +601,8 @@
                     <TabViewItem>
                         <TabViewItem.Header>
                             <StackPanel Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
-                                <FontIcon Glyph="" FontSize="16" />
-                                <TextBlock Text="资源包下载" VerticalAlignment="Center" />
+                                <FontIcon Glyph="&#xE8B7;" FontSize="16" />
+                                <TextBlock x:Uid="ResourceDownloadPage_ResourcePackTabHeader" Text="资源包下载" VerticalAlignment="Center" />
                             </StackPanel>
                         </TabViewItem.Header>
                         <Grid>
@@ -633,6 +639,7 @@
                                 <!-- Version Filter -->
                                 <ComboBox
                                     x:Name="ResourcePackVersionComboBox"
+                                    x:Uid="ResourceDownloadPage_ResourcePackVersionComboBox"
                                     Grid.Row="0"
                                     Grid.Column="1"
                                     Header="版本"
@@ -647,6 +654,7 @@
                                 <!-- 类别筛选 -->
                                 <ComboBox
                                     x:Name="ResourcePackCategoryComboBox"
+                                    x:Uid="ResourceDownloadPage_ResourcePackCategoryComboBox"
                                     Grid.Row="0"
                                     Grid.Column="2"
                                     Header="类别"
@@ -655,17 +663,17 @@
                                     SelectedValuePath="Tag"
                                     SelectedValue="{Binding SelectedResourcePackCategory, Mode=TwoWay}"
                                     SelectionChanged="ResourcePackCategoryComboBox_SelectionChanged">
-                                    <ComboBoxItem Content="所有类别" Tag="all" IsSelected="True" />
-                                    <ComboBoxItem Content="战斗" Tag="combat" />
-                                    <ComboBoxItem Content="整活" Tag="cursed" />
-                                    <ComboBoxItem Content="装饰" Tag="decoration" />
-                                    <ComboBoxItem Content="适配模组" Tag="modded" />
-                                    <ComboBoxItem Content="写实" Tag="realistic" />
-                                    <ComboBoxItem Content="简约" Tag="simplistic" />
-                                    <ComboBoxItem Content="主题化" Tag="themed" />
-                                    <ComboBoxItem Content="微调" Tag="tweaks" />
-                                    <ComboBoxItem Content="实用" Tag="utility" />
-                                    <ComboBoxItem Content="原版风" Tag="vanilla-like" />
+                                    <ComboBoxItem x:Uid="ResourceDownloadPage_AllCategories" Content="所有类别" Tag="all" IsSelected="True" />
+                                    <ComboBoxItem x:Uid="ResourceDownloadPage_CombatCategory" Content="战斗" Tag="combat" />
+                                    <ComboBoxItem x:Uid="ResourceDownloadPage_CursedCategory" Content="整活" Tag="cursed" />
+                                    <ComboBoxItem x:Uid="ResourceDownloadPage_DecorationCategory" Content="装饰" Tag="decoration" />
+                                    <ComboBoxItem x:Uid="ResourceDownloadPage_ModdedCategory" Content="适配模组" Tag="modded" />
+                                    <ComboBoxItem x:Uid="ResourceDownloadPage_RealisticCategory" Content="写实" Tag="realistic" />
+                                    <ComboBoxItem x:Uid="ResourceDownloadPage_SimplisticCategory" Content="简约" Tag="simplistic" />
+                                    <ComboBoxItem x:Uid="ResourceDownloadPage_ThemedCategory" Content="主题化" Tag="themed" />
+                                    <ComboBoxItem x:Uid="ResourceDownloadPage_TweaksCategory" Content="微调" Tag="tweaks" />
+                                    <ComboBoxItem x:Uid="ResourceDownloadPage_UtilityCategory" Content="实用" Tag="utility" />
+                                    <ComboBoxItem x:Uid="ResourceDownloadPage_VanillaLikeCategory" Content="原版风" Tag="vanilla-like" />
                                 </ComboBox>
                             </Grid>
 
@@ -798,8 +806,8 @@
                     <TabViewItem>
                         <TabViewItem.Header>
                             <StackPanel Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
-                                <FontIcon Glyph="" FontSize="16" />
-                                <TextBlock Text="数据包下载" VerticalAlignment="Center" />
+                                <FontIcon Glyph="&#xE760;" FontSize="16" />
+                                <TextBlock x:Uid="ResourceDownloadPage_DatapackTabHeader" Text="数据包下载" VerticalAlignment="Center" />
                             </StackPanel>
                         </TabViewItem.Header>
                         <Grid>
@@ -825,6 +833,7 @@
                                 <!-- Search Box -->
                                 <AutoSuggestBox
                                     x:Name="DatapackSearchBox"
+                                    x:Uid="ResourceDownloadPage_DatapackSearchBox"
                                     Grid.Row="0"
                                     Grid.Column="0"
                                     PlaceholderText="Search datapacks..."
@@ -836,6 +845,7 @@
                                 <!-- Version Filter -->
                                 <ComboBox
                                     x:Name="DatapackVersionComboBox"
+                                    x:Uid="ResourceDownloadPage_DatapackVersionComboBox"
                                     Grid.Row="0"
                                     Grid.Column="1"
                                     Header="版本"
@@ -850,6 +860,7 @@
                                 <!-- 类别筛选 -->
                                 <ComboBox
                                     x:Name="DatapackCategoryComboBox"
+                                    x:Uid="ResourceDownloadPage_DatapackCategoryComboBox"
                                     Grid.Row="0"
                                     Grid.Column="2"
                                     Header="类别"
@@ -858,26 +869,26 @@
                                     SelectedValuePath="Tag"
                                     SelectedValue="{Binding SelectedDatapackCategory, Mode=TwoWay}"
                                     SelectionChanged="DatapackCategoryComboBox_SelectionChanged">
-                                    <ComboBoxItem Content="所有类别" Tag="all" IsSelected="True" />
-                                    <ComboBoxItem Content="冒险" Tag="adventure" />
-                                    <ComboBoxItem Content="整活" Tag="cursed" />
-                                    <ComboBoxItem Content="装饰" Tag="decoration" />
-                                    <ComboBoxItem Content="经济" Tag="economy" />
-                                    <ComboBoxItem Content="装备" Tag="equipment" />
-                                    <ComboBoxItem Content="食物" Tag="food" />
-                                    <ComboBoxItem Content="游戏机制" Tag="game-mechanics" />
-                                    <ComboBoxItem Content="前置" Tag="library" />
-                                    <ComboBoxItem Content="魔法" Tag="magic" />
-                                    <ComboBoxItem Content="管理" Tag="management" />
-                                    <ComboBoxItem Content="迷你游戏" Tag="minigame" />
-                                    <ComboBoxItem Content="生物" Tag="mobs" />
-                                    <ComboBoxItem Content="性能" Tag="optimization" />
-                                    <ComboBoxItem Content="社交" Tag="social" />
-                                    <ComboBoxItem Content="存储" Tag="storage" />
-                                    <ComboBoxItem Content="科技" Tag="technology" />
-                                    <ComboBoxItem Content="交通" Tag="transportation" />
-                                    <ComboBoxItem Content="实用" Tag="utility" />
-                                    <ComboBoxItem Content="世界生成" Tag="worldgen" />
+                                    <ComboBoxItem x:Uid="ResourceDownloadPage_AllCategories" Content="所有类别" Tag="all" IsSelected="True" />
+                                    <ComboBoxItem x:Uid="ResourceDownloadPage_AdventureCategory" Content="冒险" Tag="adventure" />
+                                    <ComboBoxItem x:Uid="ResourceDownloadPage_CursedCategory" Content="整活" Tag="cursed" />
+                                    <ComboBoxItem x:Uid="ResourceDownloadPage_DecorationCategory" Content="装饰" Tag="decoration" />
+                                    <ComboBoxItem x:Uid="ResourceDownloadPage_EconomyCategory" Content="经济" Tag="economy" />
+                                    <ComboBoxItem x:Uid="ResourceDownloadPage_EquipmentCategory" Content="装备" Tag="equipment" />
+                                    <ComboBoxItem x:Uid="ResourceDownloadPage_FoodCategory" Content="食物" Tag="food" />
+                                    <ComboBoxItem x:Uid="ResourceDownloadPage_GameMechanicsCategory" Content="游戏机制" Tag="game-mechanics" />
+                                    <ComboBoxItem x:Uid="ResourceDownloadPage_LibraryCategory" Content="前置" Tag="library" />
+                                    <ComboBoxItem x:Uid="ResourceDownloadPage_MagicCategory" Content="魔法" Tag="magic" />
+                                    <ComboBoxItem x:Uid="ResourceDownloadPage_ManagementCategory" Content="管理" Tag="management" />
+                                    <ComboBoxItem x:Uid="ResourceDownloadPage_MinigameCategory" Content="迷你游戏" Tag="minigame" />
+                                    <ComboBoxItem x:Uid="ResourceDownloadPage_MobsCategory" Content="生物" Tag="mobs" />
+                                    <ComboBoxItem x:Uid="ResourceDownloadPage_OptimizationCategory" Content="性能" Tag="optimization" />
+                                    <ComboBoxItem x:Uid="ResourceDownloadPage_SocialCategory" Content="社交" Tag="social" />
+                                    <ComboBoxItem x:Uid="ResourceDownloadPage_StorageCategory" Content="存储" Tag="storage" />
+                                    <ComboBoxItem x:Uid="ResourceDownloadPage_TechnologyCategory" Content="科技" Tag="technology" />
+                                    <ComboBoxItem x:Uid="ResourceDownloadPage_TransportationCategory" Content="交通" Tag="transportation" />
+                                    <ComboBoxItem x:Uid="ResourceDownloadPage_UtilityCategory" Content="实用" Tag="utility" />
+                                    <ComboBoxItem x:Uid="ResourceDownloadPage_WorldgenCategory" Content="世界生成" Tag="worldgen" />
                                 </ComboBox>
                             </Grid>
 
@@ -1010,8 +1021,8 @@
                     <TabViewItem>
                         <TabViewItem.Header>
                             <StackPanel Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
-                                <FontIcon Glyph="" FontSize="16" />
-                                <TextBlock Text="整合包下载" VerticalAlignment="Center" />
+                                <FontIcon Glyph="" FontSize="16" />
+                                <TextBlock x:Uid="ResourceDownloadPage_ModpackTabHeader" Text="整合包下载" VerticalAlignment="Center" />
                             </StackPanel>
                         </TabViewItem.Header>
                         <Grid>
@@ -1037,6 +1048,7 @@
                                 <!-- Search Box -->
                                 <AutoSuggestBox
                                     x:Name="ModpackSearchBox"
+                                    x:Uid="ResourceDownloadPage_ModpackSearchBox"
                                     Grid.Row="0"
                                     Grid.Column="0"
                                     PlaceholderText="Search modpacks..."
@@ -1048,6 +1060,7 @@
                                 <!-- Version Filter -->
                                 <ComboBox
                                     x:Name="ModpackVersionComboBox"
+                                    x:Uid="ResourceDownloadPage_ModpackVersionComboBox"
                                     Grid.Row="0"
                                     Grid.Column="1"
                                     Header="版本"
@@ -1062,6 +1075,7 @@
                                 <!-- 类别筛选 -->
                                 <ComboBox
                                     x:Name="ModpackCategoryComboBox"
+                                    x:Uid="ResourceDownloadPage_ModpackCategoryComboBox"
                                     Grid.Row="0"
                                     Grid.Column="2"
                                     Header="类别"
@@ -1070,17 +1084,17 @@
                                     SelectedValuePath="Tag"
                                     SelectedValue="{Binding SelectedModpackCategory, Mode=TwoWay}"
                                     SelectionChanged="ModpackCategoryComboBox_SelectionChanged">
-                                    <ComboBoxItem Content="所有类别" Tag="all" IsSelected="True" />
-                                    <ComboBoxItem Content="冒险" Tag="adventure" />
-                                    <ComboBoxItem Content="硬核" Tag="challenging" />
-                                    <ComboBoxItem Content="战斗" Tag="combat" />
-                                    <ComboBoxItem Content="全能型" Tag="kitchen-sink" />
-                                    <ComboBoxItem Content="轻量" Tag="lightweight" />
-                                    <ComboBoxItem Content="魔法" Tag="magic" />
-                                    <ComboBoxItem Content="联机" Tag="multiplayer" />
-                                    <ComboBoxItem Content="性能" Tag="optimization" />
-                                    <ComboBoxItem Content="任务" Tag="quests" />
-                                    <ComboBoxItem Content="科技" Tag="technology" />
+                                    <ComboBoxItem x:Uid="ResourceDownloadPage_AllCategories" Content="所有类别" Tag="all" IsSelected="True" />
+                                    <ComboBoxItem x:Uid="ResourceDownloadPage_AdventureCategory" Content="冒险" Tag="adventure" />
+                                    <ComboBoxItem x:Uid="ResourceDownloadPage_ChallengingCategory" Content="硬核" Tag="challenging" />
+                                    <ComboBoxItem x:Uid="ResourceDownloadPage_CombatCategory" Content="战斗" Tag="combat" />
+                                    <ComboBoxItem x:Uid="ResourceDownloadPage_KitchenSinkCategory" Content="全能型" Tag="kitchen-sink" />
+                                    <ComboBoxItem x:Uid="ResourceDownloadPage_LightweightCategory" Content="轻量" Tag="lightweight" />
+                                    <ComboBoxItem x:Uid="ResourceDownloadPage_MagicCategory" Content="魔法" Tag="magic" />
+                                    <ComboBoxItem x:Uid="ResourceDownloadPage_MultiplayerCategory" Content="联机" Tag="multiplayer" />
+                                    <ComboBoxItem x:Uid="ResourceDownloadPage_OptimizationCategory" Content="性能" Tag="optimization" />
+                                    <ComboBoxItem x:Uid="ResourceDownloadPage_QuestsCategory" Content="任务" Tag="quests" />
+                                    <ComboBoxItem x:Uid="ResourceDownloadPage_TechnologyCategory" Content="科技" Tag="technology" />
                                 </ComboBox>
                             </Grid>
 

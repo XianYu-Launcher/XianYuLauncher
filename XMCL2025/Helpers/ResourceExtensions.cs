@@ -1,4 +1,4 @@
-﻿using Microsoft.Windows.ApplicationModel.Resources;
+using Microsoft.Windows.ApplicationModel.Resources;
 
 namespace XMCL2025.Helpers;
 

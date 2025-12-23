@@ -10,6 +10,7 @@ using System.Threading.Tasks;
 using Microsoft.UI.Xaml.Controls;
 using XMCL2025.Core.Contracts.Services;
 using XMCL2025.Core.Services;
+using XMCL2025.Helpers;
 
 namespace XMCL2025.ViewModels
 {
@@ -311,7 +312,7 @@ namespace XMCL2025.ViewModels
             try
             {
                 IsLoggingIn = true;
-                LoginStatus = "正在获取登录代码...";
+                LoginStatus = "TutorialPage_LoginStatus_GettingCode".GetLocalized();
 
                 // 获取设备代码
                 var deviceCodeResponse = await _microsoftAuthService.GetMicrosoftDeviceCodeAsync();
@@ -321,7 +322,11 @@ namespace XMCL2025.ViewModels
                     return;
                 }
 
-                LoginStatus = $"请在浏览器中访问 {deviceCodeResponse.VerificationUri}，输入代码：{deviceCodeResponse.UserCode}";
+                LoginStatus = string.Format("{0} {1}，{2}：{3}", 
+                    "TutorialPage_LoginStatus_VisitUrl".GetLocalized(), 
+                    deviceCodeResponse.VerificationUri, 
+                    "TutorialPage_LoginStatus_EnterCode".GetLocalized(), 
+                    deviceCodeResponse.UserCode);
 
                 // 自动打开浏览器
                 var uri = new Uri(deviceCodeResponse.VerificationUri);
@@ -360,7 +365,7 @@ namespace XMCL2025.ViewModels
                     ActiveProfile = microsoftProfile;
                     SaveProfiles();
 
-                    LoginStatus = "登录成功";
+                    LoginStatus = "TutorialPage_LoginStatus_Success".GetLocalized();
                 }
                 else
                 {

@@ -21,8 +21,8 @@ namespace XMCL2025.Helpers
             if (value is bool boolValue)
             {
                 string[] texts = parameter?.ToString()?.Split(',') ?? new string[] { "True", "False" };
-                string trueText = texts.Length > 0 ? texts[0] : "True";
-                string falseText = texts.Length > 1 ? texts[1] : "False";
+                string trueText = texts.Length > 0 ? texts[0].GetLocalized() : "True";
+                string falseText = texts.Length > 1 ? texts[1].GetLocalized() : "False";
                 return boolValue ? trueText : falseText;
             }
             return "Unknown";

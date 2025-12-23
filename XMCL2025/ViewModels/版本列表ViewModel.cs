@@ -11,6 +11,7 @@ using Windows.Storage;
 using Windows.System;
 using XMCL2025.Core.Contracts.Services;
 using XMCL2025.Contracts.Services;
+using XMCL2025.Helpers;
 
 namespace XMCL2025.ViewModels;
 
@@ -87,7 +88,7 @@ public partial class 版本列表ViewModel : ObservableRecipient
     private async Task LoadVersionsAsync()
     {
         IsLoading = true;
-        StatusMessage = "正在加载版本列表...";
+        StatusMessage = "VersionListPage_LoadingVersionsText".GetLocalized();
 
         try
         {
@@ -164,11 +165,11 @@ public partial class 版本列表ViewModel : ObservableRecipient
             // 按安装日期降序排序
             Versions = new ObservableCollection<VersionInfoItem>(Versions.OrderByDescending(v => v.InstallDate));
 
-            StatusMessage = Versions.Count > 0 ? $"共找到 {Versions.Count} 个已安装版本" : "未找到已安装的版本";
+            StatusMessage = Versions.Count > 0 ? $"{"VersionListPage_FoundVersionsText".GetLocalized()} {Versions.Count} {"VersionListPage_InstalledVersionsText".GetLocalized()}" : "VersionListPage_NoVersionsFoundText".GetLocalized();
         }
         catch (Exception ex)
         {
-            StatusMessage = "加载版本列表失败：" + ex.Message;
+            StatusMessage = $"{"VersionListPage_LoadFailedText".GetLocalized()}: {ex.Message}";
         }
         finally
         {
@@ -184,7 +185,7 @@ public partial class 版本列表ViewModel : ObservableRecipient
     {
         if (version == null || string.IsNullOrEmpty(version.Path))
         {
-            StatusMessage = "版本路径无效";
+            StatusMessage = "VersionListPage_InvalidVersionPathText".GetLocalized();
             return;
         }
 
@@ -192,11 +193,11 @@ public partial class 版本列表ViewModel : ObservableRecipient
         {
             var folder = await StorageFolder.GetFolderFromPathAsync(version.Path);
             await Launcher.LaunchFolderAsync(folder);
-            StatusMessage = $"已打开版本 {version.Name} 的文件夹";
+            StatusMessage = $"{"VersionListPage_FolderOpenedText".GetLocalized()} {version.Name} {"VersionListPage_FolderText".GetLocalized()}";
         }
         catch (Exception ex)
         {
-            StatusMessage = $"打开文件夹失败：{ex.Message}";
+            StatusMessage = $"{"VersionListPage_OpenFolderFailedText".GetLocalized()}: {ex.Message}";
         }
     }
 
@@ -208,7 +209,7 @@ public partial class 版本列表ViewModel : ObservableRecipient
     {
         if (version == null || string.IsNullOrEmpty(version.Path))
         {
-            StatusMessage = "版本信息无效";
+            StatusMessage = "VersionListPage_InvalidVersionInfoText".GetLocalized();
             return;
         }
 
@@ -217,17 +218,17 @@ public partial class 版本列表ViewModel : ObservableRecipient
             // 检查版本文件夹是否存在
             if (!Directory.Exists(version.Path))
             {
-                StatusMessage = $"版本 {version.Name} 不存在";
+                StatusMessage = $"{"VersionListPage_VersionDoesNotExistText".GetLocalized()} {version.Name}";
                 return;
             }
 
             // 创建确认对话框
             var dialog = new ContentDialog
             {
-                Title = "确认删除",
-                Content = $"确定要删除版本 {version.Name} 吗？此操作将删除该版本的所有文件，无法恢复。",
-                PrimaryButtonText = "删除",
-                CloseButtonText = "取消",
+                Title = "VersionListPage_ConfirmDeleteText".GetLocalized(),
+                Content = $"{"VersionListPage_ConfirmDeleteContentText".GetLocalized()} {version.Name} {"VersionListPage_ConfirmDeleteWarningText".GetLocalized()}",
+                PrimaryButtonText = "VersionListPage_DeleteText".GetLocalized(),
+                CloseButtonText = "VersionListPage_CancelText".GetLocalized(),
                 DefaultButton = ContentDialogButton.Close
             };
 
@@ -250,12 +251,12 @@ public partial class 版本列表ViewModel : ObservableRecipient
                 Versions.Remove(version);
                 
                 // 更新状态信息
-                StatusMessage = $"已删除版本 {version.Name}";
+                StatusMessage = $"{"VersionListPage_VersionDeletedText".GetLocalized()} {version.Name}";
             }
         }
         catch (Exception ex)
         {
-            StatusMessage = $"删除版本失败：{ex.Message}";
+            StatusMessage = $"{"VersionListPage_DeleteFailedText".GetLocalized()}: {ex.Message}";
         }
     }
 }
