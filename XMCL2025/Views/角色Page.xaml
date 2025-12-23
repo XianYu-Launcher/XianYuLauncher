@@ -54,12 +54,14 @@
             <!-- 标题区域 -->
             <StackPanel Grid.Row="0" Margin="0,0,0,32">
                 <TextBlock 
+                    x:Uid="ProfilePage_Title" 
                     Text="角色管理" 
                     Style="{StaticResource TitleTextBlockStyle}" 
                     FontSize="40" 
                     FontWeight="Bold" 
                     Margin="0,0,0,8" />
                 <TextBlock 
+                    x:Uid="ProfilePage_Subtitle" 
                     Text="管理您的Minecraft角色" 
                     Style="{StaticResource SubtitleTextBlockStyle}" 
                     Opacity="0.7" />
@@ -99,6 +101,7 @@
                             <ColumnDefinition Width="Auto" />
                         </Grid.ColumnDefinitions>
                         <TextBlock 
+                            x:Uid="ProfilePage_AddedProfilesText" 
                             Text="已添加的角色" 
                             Style="{StaticResource TitleTextBlockStyle}" 
                             FontSize="20" 
@@ -107,6 +110,7 @@
                             HorizontalAlignment="Left" />
                         <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="12" HorizontalAlignment="Right">
                             <Button 
+                                    x:Uid="ProfilePage_AddAccountButton" 
                                     Style="{StaticResource CustomPrimaryButtonStyle}" 
                                     ToolTipService.ToolTip="添加账户"
                                     HorizontalAlignment="Right">
@@ -115,11 +119,12 @@
                                             FontFamily="{StaticResource SymbolThemeFontFamily}" 
                                             Glyph="&#xE109;" 
                                             FontSize="16" /> 
-                                        <TextBlock Text="添加账户" FontSize="14" VerticalAlignment="Center" /> 
+                                        <TextBlock x:Uid="ProfilePage_AddAccountText" Text="添加账户" FontSize="14" VerticalAlignment="Center" /> 
                                     </StackPanel>
                                     <Button.Flyout>
                                         <MenuFlyout>
                                             <MenuFlyoutItem 
+                                                x:Uid="ProfilePage_OfflineLoginMenuItem"
                                                 x:Name="OfflineLoginMenuItem"
                                                 Text="离线登录" 
                                                 Click="OfflineLoginMenuItem_Click"
@@ -129,6 +134,7 @@
                                                 </MenuFlyoutItem.Icon>
                                             </MenuFlyoutItem>
                                             <MenuFlyoutItem 
+                                                x:Uid="ProfilePage_MicrosoftLoginMenuItem"
                                                 x:Name="MicrosoftLoginMenuItem"
                                                 Text="微软登录" 
                                                 Click="MicrosoftLoginMenuItem_Click"
@@ -199,6 +205,7 @@
                                                 <StackPanel Spacing="8" Margin="0,8,0,0">
                                                     <StackPanel Orientation="Horizontal" Spacing="4">
                                                         <TextBlock 
+                                                            x:Uid="ProfilePage_UuidLabel" 
                                                             Text="UUID: " 
                                                             FontSize="14" 
                                                             Opacity="0.6" />
@@ -210,11 +217,13 @@
                                                     </StackPanel>
                                                     <StackPanel Orientation="Horizontal" Spacing="4">
                                                         <TextBlock 
+                                                            x:Uid="ProfilePage_ProfileTypeLabel" 
                                                             Text="角色类型: " 
                                                             FontSize="14" 
                                                             Opacity="0.6" />
                                                         <TextBlock 
-                                                            Text="{x:Bind IsOffline, Mode=OneWay, Converter={StaticResource BoolToTextConverter}, ConverterParameter='离线角色,微软账户'}" 
+                                                            x:Uid="ProfilePage_ProfileTypeValue" 
+                                                            Text="{x:Bind IsOffline, Mode=OneWay, Converter={StaticResource BoolToTextConverter}, ConverterParameter='ProfilePage_OfflineProfileText,ProfilePage_MicrosoftProfileText'}" 
                                                             FontSize="14" 
                                                             Opacity="0.6" 
                                                             FontWeight="SemiBold" />
@@ -226,6 +235,7 @@
                                             <StackPanel Grid.Column="1" Orientation="Vertical" Spacing="8" VerticalAlignment="Center" HorizontalAlignment="Right" Margin="0,0,0,0">
                                                 <!-- 切换角色按钮 -->
                                                 <Button 
+                                                    x:Uid="ProfilePage_SwitchProfileButton"
                                                     Command="{Binding DataContext.SwitchProfileCommand, ElementName=ContentArea}"
                                                     CommandParameter="{Binding}"
                                                     Style="{StaticResource ProfileButtonStyle}"
@@ -239,6 +249,7 @@
                                                 
                                                 <!-- 删除角色按钮 -->
                                                 <Button 
+                                                    x:Uid="ProfilePage_DeleteProfileButton"
                                                     Command="{Binding DataContext.DeleteProfileCommand, ElementName=ContentArea}"
                                                     CommandParameter="{Binding}"
                                                     Style="{StaticResource ProfileButtonStyle}"
@@ -259,6 +270,7 @@
 
                     <!-- 空角色列表提示 -->
                     <StackPanel 
+                        x:Uid="ProfilePage_EmptyProfilesStack" 
                         Visibility="{x:Bind ViewModel.IsProfilesEmpty, Mode=OneWay, Converter={StaticResource BoolToVisibilityConverter}}"
                         Orientation="Vertical" 
                         VerticalAlignment="Center" 
@@ -273,6 +285,7 @@
                             Opacity="0.2" 
                             Margin="0,0,0,8" />
                         <TextBlock 
+                            x:Uid="ProfilePage_EmptyProfilesTitle" 
                             Text="还没有添加任何角色" 
                             FontSize="20" 
                             FontWeight="SemiBold" 
@@ -280,6 +293,7 @@
                             TextAlignment="Center" 
                             Margin="0,0,0,4" />
                         <TextBlock 
+                            x:Uid="ProfilePage_EmptyProfilesDescription" 
                             Text="点击'添加账户'按钮开始添加您的第一个角色" 
                             FontSize="15" 
                             Opacity="0.6" 

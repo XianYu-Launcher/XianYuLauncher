@@ -15,6 +15,7 @@ using XMCL2025.Contracts.Services;
 using XMCL2025.Core.Contracts.Services;
 using XMCL2025.Core.Models;
 using XMCL2025.Core.Services;
+using XMCL2025.Helpers;
 
 namespace XMCL2025.ViewModels
 {
@@ -177,15 +178,15 @@ namespace XMCL2025.ViewModels
         
         // 显示文本：根据项目类型动态显示"支持的加载器"或"标签"
         [ObservableProperty]
-        private string _supportedLoadersText = "支持的加载器";
+        private string _supportedLoadersText = "ModDownloadDetailPage_SupportedLoadersText_Mod".GetLocalized();
         
         // 显示文本：根据项目类型动态显示"Mod下载"或"资源包下载"
         [ObservableProperty]
-        private string _downloadSectionText = "Mod下载";
+        private string _downloadSectionText = "ModDownloadDetailPage_DownloadSectionText_Mod".GetLocalized();
         
         // 版本选择弹窗提示文本
         [ObservableProperty]
-        private string _versionSelectionTip = "灰色版本表示不兼容当前Mod版本";
+        private string _versionSelectionTip = "ModDownloadDetailPage_VersionSelectionTip_Mod".GetLocalized();
         
         // 重写ProjectType的setter，当项目类型变化时更新显示文本
         partial void OnProjectTypeChanged(string value)
@@ -194,29 +195,29 @@ namespace XMCL2025.ViewModels
             switch (value)
             {
                 case "resourcepack":
-                    SupportedLoadersText = "标签";
-                    DownloadSectionText = "资源包下载";
-                    VersionSelectionTip = "灰色版本表示不兼容当前资源包版本";
+                    SupportedLoadersText = "ModDownloadDetailPage_SupportedLoadersText_Tags".GetLocalized();
+                    DownloadSectionText = "ModDownloadDetailPage_DownloadSectionText_ResourcePack".GetLocalized();
+                    VersionSelectionTip = "ModDownloadDetailPage_VersionSelectionTip_ResourcePack".GetLocalized();
                     break;
                 case "shader":
-                    SupportedLoadersText = "标签";
-                    DownloadSectionText = "光影下载";
-                    VersionSelectionTip = "灰色版本表示不兼容当前光影版本";
+                    SupportedLoadersText = "ModDownloadDetailPage_SupportedLoadersText_Tags".GetLocalized();
+                    DownloadSectionText = "ModDownloadDetailPage_DownloadSectionText_Shader".GetLocalized();
+                    VersionSelectionTip = "ModDownloadDetailPage_VersionSelectionTip_Shader".GetLocalized();
                     break;
                 case "modpack":
-                    SupportedLoadersText = "支持的加载器";
-                    DownloadSectionText = "整合包下载";
-                    VersionSelectionTip = "灰色版本表示不兼容当前整合包版本";
+                    SupportedLoadersText = "ModDownloadDetailPage_SupportedLoadersText_Mod".GetLocalized();
+                    DownloadSectionText = "ModDownloadDetailPage_DownloadSectionText_Modpack".GetLocalized();
+                    VersionSelectionTip = "ModDownloadDetailPage_VersionSelectionTip_Modpack".GetLocalized();
                     break;
                 case "datapack":
-                    SupportedLoadersText = "标签";
-                    DownloadSectionText = "数据包下载";
-                    VersionSelectionTip = "灰色版本表示不兼容当前数据包版本";
+                    SupportedLoadersText = "ModDownloadDetailPage_SupportedLoadersText_Tags".GetLocalized();
+                    DownloadSectionText = "ModDownloadDetailPage_DownloadSectionText_Datapack".GetLocalized();
+                    VersionSelectionTip = "ModDownloadDetailPage_VersionSelectionTip_Datapack".GetLocalized();
                     break;
                 default:
-                    SupportedLoadersText = "支持的加载器";
-                    DownloadSectionText = "Mod下载";
-                    VersionSelectionTip = "灰色版本表示不兼容当前Mod版本";
+                    SupportedLoadersText = "ModDownloadDetailPage_SupportedLoadersText_Mod".GetLocalized();
+                    DownloadSectionText = "ModDownloadDetailPage_DownloadSectionText_Mod".GetLocalized();
+                    VersionSelectionTip = "ModDownloadDetailPage_VersionSelectionTip_Mod".GetLocalized();
                     break;
             }
         }
@@ -339,7 +340,7 @@ namespace XMCL2025.ViewModels
                 ModIconUrl = projectDetail.IconUrl?.ToString() ?? "ms-appx:///Assets/Placeholder.png";
                 ModLicense = projectDetail.License?.Name ?? "未知许可证";
                 // 优先使用从列表页传递过来的作者信息，如果没有则使用API返回的
-                ModAuthor = "发布者: " + (_passedModInfo?.Author ?? projectDetail.Author);
+                ModAuthor = "ModDownloadDetailPage_AuthorText".GetLocalized() + (_passedModInfo?.Author ?? projectDetail.Author);
                 
                 // 设置项目类型
                 ProjectType = projectDetail.ProjectType;

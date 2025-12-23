@@ -21,14 +21,14 @@
         <!-- 标题区域 -->
         <StackPanel Grid.Row="0" Margin="0,0,0,40">
             <TextBlock Text="XianYu Launcher" Style="{StaticResource TitleTextBlockStyle}" FontSize="48" FontWeight="Bold" />
-            <TextBlock Text="Minecraft 启动器" Style="{StaticResource SubtitleTextBlockStyle}" Margin="0,4,0,0" Opacity="0.8" />
+            <TextBlock x:Uid="LaunchPage_Subtitle" Text="Minecraft 启动器" Style="{StaticResource SubtitleTextBlockStyle}" Margin="0,4,0,0" Opacity="0.8" />
         </StackPanel>
 
         <!-- 主要内容区域 -->
         <StackPanel Grid.Row="1" Spacing="28" MaxWidth="600" HorizontalAlignment="Left" VerticalAlignment="Top">
             <!-- 版本选择 -->
             <StackPanel Spacing="10">
-                <TextBlock Text="选择Minecraft版本" Style="{StaticResource TitleTextBlockStyle}" FontSize="18" FontWeight="SemiBold" />
+                <TextBlock x:Uid="LaunchPage_VersionSelection" Text="选择Minecraft版本" Style="{StaticResource TitleTextBlockStyle}" FontSize="18" FontWeight="SemiBold" />
                 <Grid>
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="*" />
@@ -38,6 +38,7 @@
                         x:Name="VersionComboBox"
                         ItemsSource="{x:Bind ViewModel.InstalledVersions, Mode=OneWay}"
                         SelectedItem="{x:Bind ViewModel.SelectedVersion, Mode=TwoWay}"
+                        x:Uid="LaunchPage_SelectVersionPlaceholder"
                         PlaceholderText="请选择已安装的版本"
                         HorizontalAlignment="Stretch"
                         Height="40"
@@ -51,6 +52,7 @@
                         Height="40"
                         Width="40"
                         Style="{StaticResource DefaultButtonStyle}"
+                        x:Uid="LaunchPage_RefreshVersionsTooltip"
                         ToolTipService.ToolTip="刷新版本列表">
                         <FontIcon FontFamily="{StaticResource SymbolThemeFontFamily}" Glyph="&#xe72c;" FontSize="18" />
                     </Button>
@@ -61,7 +63,7 @@
 
             <!-- 角色选择 -->
             <StackPanel Spacing="10">
-                <TextBlock Text="玩家名" Style="{StaticResource TitleTextBlockStyle}" FontSize="18" FontWeight="SemiBold" />
+                <TextBlock x:Uid="LaunchPage_PlayerName" Text="玩家名" Style="{StaticResource TitleTextBlockStyle}" FontSize="18" FontWeight="SemiBold" />
                 <Button 
                     x:Name="ProfileButton"
                     HorizontalAlignment="Stretch"
@@ -96,6 +98,7 @@
                             <!-- 角色列表将在代码中动态生成 -->
                             <!-- 添加角色选项 -->
                             <MenuFlyoutItem 
+                                x:Uid="LaunchPage_AddProfile"
                                 Text="添加角色"
                                 Click="AddProfileMenuItem_Click">
                                 <MenuFlyoutItem.Icon>
@@ -110,6 +113,7 @@
             <!-- 启动按钮 -->
             <Button 
                 x:Name="LaunchButton"
+                x:Uid="LaunchPage_LaunchGame"
                 Content="启动游戏"
                 Style="{StaticResource AccentButtonStyle}"
                 Command="{x:Bind ViewModel.LaunchGameCommand}"
@@ -153,6 +157,7 @@
         <InfoBar 
             x:Name="LaunchSuccessInfoBar"
             Grid.Row="2"
+            x:Uid="LaunchPage_SuccessTitle"
             Title="游戏启动成功"
             Message="{x:Bind ViewModel.LaunchSuccessMessage, Mode=OneWay}"
             IsOpen="{x:Bind ViewModel.IsLaunchSuccessInfoBarOpen, Mode=TwoWay}"

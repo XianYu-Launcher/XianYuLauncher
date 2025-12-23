@@ -20,13 +20,13 @@
 
         <!-- 标题区域 -->
         <StackPanel Grid.Row="0" Margin="0,0,0,20">
-            <TextBlock Text="新手教程" Style="{ThemeResource TitleTextBlockStyle}" FontSize="36" FontWeight="Bold" />
-            <TextBlock Text="请完成以下设置，以便正常运行Minecraft" Style="{ThemeResource BodyTextBlockStyle}" Margin="0,8,0,0" Opacity="0.7" />
+            <TextBlock x:Uid="TutorialPage_Title" Text="新手教程" Style="{ThemeResource TitleTextBlockStyle}" FontSize="36" FontWeight="Bold" />
+            <TextBlock x:Uid="TutorialPage_Subtitle" Text="请完成以下设置，以便正常运行Minecraft" Style="{ThemeResource BodyTextBlockStyle}" Margin="0,8,0,0" Opacity="0.7" />
         </StackPanel>
 
         <!-- 页面指示器 -->
         <StackPanel Grid.Row="1" Orientation="Horizontal" Margin="0,0,0,20" Spacing="20">
-            <TextBlock x:Name="StepTextBlock" Text="步骤 1/3" Style="{ThemeResource SubtitleTextBlockStyle}" HorizontalAlignment="Center" VerticalAlignment="Center" />
+            <TextBlock x:Uid="TutorialPage_StepText" x:Name="StepTextBlock" Text="步骤 1/3" Style="{ThemeResource SubtitleTextBlockStyle}" HorizontalAlignment="Center" VerticalAlignment="Center" />
             <ProgressBar Value="{x:Bind ViewModel.CurrentPageIndex, Mode=OneWay}" Minimum="0" Maximum="2" Width="200" VerticalAlignment="Center" />
         </StackPanel>
 
@@ -34,19 +34,22 @@
         <Grid Grid.Row="2">
             <!-- Minecraft路径设置页面 -->
             <StackPanel x:Name="PathSettingsPanel">
-                <TextBlock Text="Minecraft 路径" Style="{ThemeResource SubtitleTextBlockStyle}" />
+                <TextBlock x:Uid="TutorialPage_MinecraftPathTitle" Text="Minecraft 路径" Style="{ThemeResource SubtitleTextBlockStyle}" />
                 <StackPanel Margin="{StaticResource SmallTopBottomMargin}">
                     <StackPanel Orientation="Horizontal" Margin="{StaticResource XSmallTopMargin}" Spacing="8">
                         <TextBox 
+                            x:Uid="TutorialPage_MinecraftPathTextBox"
                             Text="{x:Bind ViewModel.MinecraftPath, Mode=TwoWay}" 
                             PlaceholderText="请选择Minecraft游戏目录" 
                             Width="400" 
                             Margin="0,0,8,0"/>
                         <Button 
+                            x:Uid="TutorialPage_BrowseButton"
                             Content="浏览..." 
                             Command="{x:Bind ViewModel.BrowseMinecraftPathCommand}"/>
                     </StackPanel>
                     <TextBlock 
+                        x:Uid="TutorialPage_MinecraftPathDescription"
                         Text="Minecraft游戏目录，包含versions、saves等文件夹" 
                         Style="{ThemeResource CaptionTextBlockStyle}" 
                         Margin="{StaticResource XSmallTopMargin}" 
@@ -56,7 +59,7 @@
 
             <!-- Java设置页面 -->
             <StackPanel x:Name="JavaSettingsPanel" Visibility="Collapsed">
-                <TextBlock Text="Java路径设置" Style="{ThemeResource SubtitleTextBlockStyle}" />
+                <TextBlock x:Uid="TutorialPage_JavaSettingsTitle" Text="Java路径设置" Style="{ThemeResource SubtitleTextBlockStyle}" />
                 <StackPanel Margin="{StaticResource SmallTopBottomMargin}">
                     <!-- Java Versions List -->
                     <StackPanel Margin="0,12,0,0">
@@ -65,14 +68,16 @@
                                 <ColumnDefinition Width="*" />
                                 <ColumnDefinition Width="Auto" />
                             </Grid.ColumnDefinitions>
-                            <TextBlock Text="已安装的Java版本" Style="{ThemeResource SubtitleTextBlockStyle}" Margin="0,0,0,8" />
+                            <TextBlock x:Uid="TutorialPage_InstalledJavaVersions" Text="已安装的Java版本" Style="{ThemeResource SubtitleTextBlockStyle}" Margin="0,0,0,8" />
                             <StackPanel Orientation="Horizontal" VerticalAlignment="Top" HorizontalAlignment="Right" Grid.Column="1">
                                 <Button
+                                    x:Uid="TutorialPage_AddJavaButton"
                                     Content="添加"
                                     Command="{x:Bind ViewModel.AddJavaVersionCommand}"
                                     IsEnabled="{x:Bind ViewModel.CanRefreshJavaVersions, Mode=OneWay}"
                                     Margin="0,0,8,0" ToolTipService.ToolTip="手动添加Java版本到列表" />
                                 <Button
+                                    x:Uid="TutorialPage_RefreshJavaButton"
                                     Content="刷新"
                                     Command="{x:Bind ViewModel.RefreshJavaVersionsCommand}"
                                     IsEnabled="{x:Bind ViewModel.CanRefreshJavaVersions, Mode=OneWay}"
@@ -96,9 +101,10 @@
                     </StackPanel>
                     
                     <!-- Java选择方式 -->
-                    <TextBlock Text="Java选择方式" Margin="0,20,0,0" />
+                    <TextBlock x:Uid="TutorialPage_JavaSelectionMode" Text="Java选择方式" Margin="0,20,0,0" />
                     <StackPanel Margin="0,8,0,0">
                         <RadioButton
+                            x:Uid="TutorialPage_AutoJavaSelection"
                             Content="自动从列表内选择Java"
                             Command="{x:Bind ViewModel.SwitchJavaSelectionModeCommand}"
                             CommandParameter="Auto"
@@ -108,6 +114,7 @@
                             ToolTipService.ToolTip="启动时根据游戏版本自动从列表中选择合适的Java版本">
                         </RadioButton>
                         <RadioButton
+                            x:Uid="TutorialPage_ManualJavaSelection"
                             Content="手动选择Java"
                             Command="{x:Bind ViewModel.SwitchJavaSelectionModeCommand}"
                             CommandParameter="Manual"
@@ -119,21 +126,25 @@
                     </StackPanel>
                     
                     <!-- Java路径设置 -->
-                    <TextBlock Text="Java路径" Margin="0,20,0,0" />
+                    <TextBlock x:Uid="TutorialPage_JavaPathTitle" Text="Java路径" Margin="0,20,0,0" />
                     <StackPanel Orientation="Horizontal" Margin="{StaticResource XSmallTopMargin}" Spacing="8">
                         <TextBox 
+                            x:Uid="TutorialPage_JavaPathTextBox"
                             Text="{x:Bind ViewModel.JavaPath, Mode=TwoWay}" 
                             PlaceholderText="请选择Java可执行文件路径" 
                             Width="400"
                             Margin="0,0,8,0"/>
                         <Button 
+                            x:Uid="TutorialPage_BrowseJavaButton"
                             Content="浏览..." 
                             Command="{x:Bind ViewModel.BrowseJavaPathCommand}"/>
                         <Button 
+                            x:Uid="TutorialPage_ClearJavaButton"
                             Content="清除" 
                             Command="{x:Bind ViewModel.ClearJavaPathCommand}"/>
                     </StackPanel>
                     <TextBlock 
+                        x:Uid="TutorialPage_JavaPathDescription"
                         Text="使用'添加'按钮手动添加Java版本到列表，或直接指定Java路径" 
                         Style="{ThemeResource CaptionTextBlockStyle}" 
                         Margin="{StaticResource XSmallTopMargin}" 
@@ -143,13 +154,14 @@
 
             <!-- 角色选择页面 -->
             <StackPanel x:Name="ProfileSettingsPanel" Visibility="Collapsed">
-                <TextBlock Text="角色选择" Style="{ThemeResource SubtitleTextBlockStyle}" />
+                <TextBlock x:Uid="TutorialPage_ProfileSelectionTitle" Text="角色选择" Style="{ThemeResource SubtitleTextBlockStyle}" />
                 <StackPanel Margin="{StaticResource SmallTopBottomMargin}">
                     <!-- 登录方式选择 -->
                     <StackPanel Margin="{StaticResource XSmallTopMargin}">
-                        <TextBlock Text="登录方式" Margin="0,0,0,8" />
+                        <TextBlock x:Uid="TutorialPage_LoginTypeTitle" Text="登录方式" Margin="0,0,0,8" />
                         <StackPanel Orientation="Horizontal" Spacing="16">
                             <RadioButton
+                                x:Uid="TutorialPage_MicrosoftLoginRadio"
                                 Content="微软登录"
                                 Command="{x:Bind ViewModel.SwitchLoginTypeCommand}"
                                 CommandParameter="Microsoft"
@@ -157,6 +169,7 @@
                                 FontSize="15"
                                 GroupName="LoginType" />
                             <RadioButton
+                                x:Uid="TutorialPage_OfflineLoginRadio"
                                 Content="离线登录"
                                 Command="{x:Bind ViewModel.SwitchLoginTypeCommand}"
                                 CommandParameter="Offline"
@@ -209,8 +222,9 @@
                             
                             <!-- 角色名称 -->
                             <StackPanel VerticalAlignment="Center">
-                                <TextBlock Text="角色名称" Margin="0,0,0,4" />
+                                <TextBlock x:Uid="TutorialPage_ProfileNameTitle" Text="角色名称" Margin="0,0,0,4" />
                                 <TextBlock 
+                                    x:Uid="TutorialPage_ProfileNameValue"
                                     Text="{x:Bind ViewModel.ProfileName, Mode=OneWay}" 
                                     Width="200" 
                                     FontWeight="SemiBold" />
@@ -218,6 +232,7 @@
                         </StackPanel>
                         
                         <Button 
+                            x:Uid="TutorialPage_MicrosoftLoginButton"
                             Command="{x:Bind ViewModel.MicrosoftLoginCommand}" 
                             Width="300" 
                             Height="40" 
@@ -225,7 +240,7 @@
                             IsEnabled="{x:Bind ViewModel.IsNotLoggingIn, Mode=OneWay}">
                             <StackPanel Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
                                 <FontIcon Glyph="" FontSize="16" />
-                                <TextBlock Text="登录" VerticalAlignment="Center" />
+                                <TextBlock x:Uid="TutorialPage_LoginButtonText" Text="登录" VerticalAlignment="Center" />
                             </StackPanel>
                         </Button>
                     </StackPanel>
@@ -254,15 +269,14 @@
                             
                             <!-- 角色名称 -->
                             <StackPanel VerticalAlignment="Center">
-                                <TextBlock Text="角色名称" Margin="0,0,0,4" />
+                                <TextBlock x:Uid="TutorialPage_OfflineProfileNameTitle" Text="角色名称" Margin="0,0,0,4" />
                                 <TextBox 
+                                    x:Uid="TutorialPage_OfflineProfileNameTextBox"
                                     Text="{x:Bind ViewModel.OfflineProfileName, Mode=TwoWay}" 
                                     PlaceholderText="请输入角色名称" 
                                     Width="200" />
                             </StackPanel>
                         </StackPanel>
-
-
                     </StackPanel>
                 </StackPanel>
             </StackPanel>
@@ -271,18 +285,21 @@
         <!-- 导航按钮区域 -->
         <StackPanel Grid.Row="3" Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,20,0,0" Spacing="12">
             <Button 
+                x:Uid="TutorialPage_PreviousButton"
                 x:Name="PreviousButton" 
                 Content="上一步" 
                 Command="{x:Bind ViewModel.PreviousCommand}" 
                 IsEnabled="{x:Bind ViewModel.CanGoPrevious, Mode=OneWay}" 
                 Width="100" />
             <Button 
+                x:Uid="TutorialPage_NextButton"
                 x:Name="NextButton" 
                 Content="下一步" 
                 Command="{x:Bind ViewModel.NextCommand}" 
                 Width="100" 
                 Visibility="{x:Bind ViewModel.IsNotLastPage, Mode=OneWay}" />
             <Button 
+                x:Uid="TutorialPage_FinishButton"
                 x:Name="FinishButton" 
                 Content="完成" 
                 Command="{x:Bind ViewModel.FinishCommand}" 

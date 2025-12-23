@@ -13,6 +13,7 @@ using XMCL2025.Contracts.Services;
 using XMCL2025.Core.Contracts.Services;
 using XMCL2025.Core.Models;
 using XMCL2025.Core.Services;
+using XMCL2025.Helpers;
 
 namespace XMCL2025.ViewModels
 {
@@ -210,9 +211,9 @@ namespace XMCL2025.ViewModels
         {
             var dialog = new ContentDialog
             {
-                Title = "登录要求",
-                Content = "您未登录微软账户!",
-                CloseButtonText = "确定",
+                Title = "TutorialPage_LoginRequiredDialog_Title".GetLocalized(),
+                Content = "TutorialPage_LoginRequiredDialog_Content".GetLocalized(),
+                CloseButtonText = "TutorialPage_OKButtonText".GetLocalized(),
                 XamlRoot = App.MainWindow.Content.XamlRoot
             };
             
@@ -678,7 +679,7 @@ namespace XMCL2025.ViewModels
             try
             {
                 IsLoggingIn = true;
-                LoginStatus = "正在获取登录代码...";
+                LoginStatus = "TutorialPage_LoginStatus_GettingCode".GetLocalized();
 
                 // 获取设备代码
                 var deviceCodeResponse = await _microsoftAuthService.GetMicrosoftDeviceCodeAsync();
@@ -688,7 +689,11 @@ namespace XMCL2025.ViewModels
                     return;
                 }
 
-                LoginStatus = $"请在浏览器中访问 {deviceCodeResponse.VerificationUri}，输入代码：{deviceCodeResponse.UserCode}";
+                LoginStatus = string.Format("{0} {1}，{2}：{3}", 
+                    "TutorialPage_LoginStatus_VisitUrl".GetLocalized(), 
+                    deviceCodeResponse.VerificationUri, 
+                    "TutorialPage_LoginStatus_EnterCode".GetLocalized(), 
+                    deviceCodeResponse.UserCode);
 
                 // 自动打开浏览器
                 var uri = new Uri(deviceCodeResponse.VerificationUri);
@@ -725,7 +730,7 @@ namespace XMCL2025.ViewModels
                     // 保存到临时变量，等待点击完成按钮时添加
                     _pendingMicrosoftProfile = microsoftProfile;
 
-                    LoginStatus = "登录成功";
+                    LoginStatus = "TutorialPage_LoginStatus_Success".GetLocalized();
                     ProfileName = result.Username;
                     
                     // 延迟一段时间后再次触发，确保角色已经成功添加
@@ -763,9 +768,9 @@ namespace XMCL2025.ViewModels
         {
             var errorDialog = new ContentDialog
             {
-                Title = "登录失败",
+                Title = "TutorialPage_LoginFailedDialog_Title".GetLocalized(),
                 Content = errorMessage,
-                CloseButtonText = "确定",
+                CloseButtonText = "TutorialPage_OKButtonText".GetLocalized(),
                 XamlRoot = App.MainWindow.Content.XamlRoot
             };
             await errorDialog.ShowAsync();
@@ -778,10 +783,10 @@ namespace XMCL2025.ViewModels
         {
             var dialog = new ContentDialog
             {
-                Title = "购买Minecraft",
-                Content = "您的微软账户尚未购买Minecraft，请先购买游戏。",
-                PrimaryButtonText = "前往购买",
-                CloseButtonText = "取消",
+                Title = "TutorialPage_PurchaseMinecraftDialog_Title".GetLocalized(),
+                Content = "TutorialPage_PurchaseMinecraftDialog_Content".GetLocalized(),
+                PrimaryButtonText = "TutorialPage_PurchaseButtonText".GetLocalized(),
+                CloseButtonText = "TutorialPage_CancelButtonText".GetLocalized(),
                 XamlRoot = App.MainWindow.Content.XamlRoot
             };
 
@@ -799,9 +804,9 @@ namespace XMCL2025.ViewModels
                     // 无法打开链接时显示提示
                     var errorDialog = new ContentDialog
                     {
-                        Title = "无法打开链接",
-                        Content = "无法打开购买链接，请手动访问该网址。",
-                        CloseButtonText = "确定",
+                        Title = "TutorialPage_CannotOpenLinkDialog_Title".GetLocalized(),
+                        Content = "TutorialPage_CannotOpenLinkDialog_Content".GetLocalized(),
+                        CloseButtonText = "TutorialPage_OKButtonText".GetLocalized(),
                         XamlRoot = App.MainWindow.Content.XamlRoot
                     };
                     await errorDialog.ShowAsync();

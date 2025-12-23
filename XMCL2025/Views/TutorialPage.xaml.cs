@@ -10,6 +10,7 @@ using System.Threading.Tasks;
 using Windows.Storage;
 using Windows.Storage.Streams;
 using XMCL2025.ViewModels;
+using XMCL2025.Helpers;
 
 namespace XMCL2025.Views
 {
@@ -78,7 +79,9 @@ namespace XMCL2025.Views
             var stepTextBlock = this.FindName("StepTextBlock") as TextBlock;
             if (stepTextBlock != null)
             {
-                stepTextBlock.Text = $"步骤 {pageIndex + 1}/3";
+                // 使用资源文件中的"步骤"文本，而不是硬编码
+                string stepPrefix = "TutorialPage_StepPrefixText".GetLocalized();
+                stepTextBlock.Text = $"{stepPrefix} {pageIndex + 1}/3";
             }
         }
 

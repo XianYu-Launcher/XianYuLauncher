@@ -30,9 +30,9 @@
 
         <!-- 页面标题 -->
         <StackPanel Grid.Row="0" Margin="0,0,0,24">
-            <TextBlock Text="下载Minecraft" FontSize="28" FontWeight="Bold" />
+            <TextBlock x:Uid="ModLoaderSelectionPage_TitleText" Text="下载Minecraft" FontSize="28" FontWeight="Bold" />
             <TextBlock Margin="0,8,0,0" FontSize="16">
-                <Run Text="当前Minecraft版本: " />
+                <Run x:Uid="ModLoaderSelectionPage_CurrentVersionText" Text="当前Minecraft版本: " />
                 <Run Text="{x:Bind ViewModel.SelectedMinecraftVersion, Mode=OneWay}" FontWeight="SemiBold" />
             </TextBlock>
         </StackPanel>
@@ -43,7 +43,7 @@
                 <RowDefinition Height="Auto" />
                 <RowDefinition Height="Auto" />
             </Grid.RowDefinitions>
-            <TextBlock Text="版本名称:" Margin="0,0,0,12" FontWeight="SemiBold" FontSize="16" />
+            <TextBlock x:Uid="ModLoaderSelectionPage_VersionNameText" Text="版本名称:" Margin="0,0,0,12" FontWeight="SemiBold" FontSize="16" />
             <Border 
                 Grid.Row="1"
                 Background="{ThemeResource CardBackgroundFillColorSecondaryBrush}"
@@ -52,11 +52,12 @@
                 CornerRadius="8"
                 Padding="16">
                 <StackPanel>
-                    <TextBlock Text="自定义版本名称，下载时将使用此名称创建版本文件夹、jar文件和json文件。" 
+                    <TextBlock x:Uid="ModLoaderSelectionPage_VersionNameDescription" Text="自定义版本名称，下载时将使用此名称创建版本文件夹、jar文件和json文件。" 
                                FontSize="14"
                                Foreground="{ThemeResource TextFillColorSecondaryBrush}"
                                Margin="0,0,0,8" />
                     <TextBox 
+                        x:Uid="ModLoaderSelectionPage_VersionNameTextBox"
                         Text="{x:Bind ViewModel.VersionName, Mode=TwoWay}"
                         PlaceholderText="例如: 1.21.10-fabric-0.15.3"
                         FontSize="16"
@@ -76,7 +77,7 @@
                 <RowDefinition Height="*" />
             </Grid.RowDefinitions>
 
-            <TextBlock Text="选择附属组件:" Margin="0,0,0,16" FontWeight="SemiBold" FontSize="16" />
+            <TextBlock x:Uid="ModLoaderSelectionPage_SelectComponentsText" Text="选择附属组件:" Margin="0,0,0,16" FontWeight="SemiBold" FontSize="16" />
             
             <!-- Mod Loader Expander列表 -->
             <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto" HorizontalAlignment="Stretch">
@@ -121,6 +122,7 @@
                                                 VerticalAlignment="Center" 
                                                 HorizontalAlignment="Stretch" />
                                             <Button
+                                                x:Uid="ModLoaderSelectionPage_CancelSelectionButton"
                                                 Grid.Column="1"
                                                 Width="24"
                                                 Height="24"
@@ -225,10 +227,12 @@
         <!-- 确认按钮 -->
         <StackPanel Grid.Row="3" Orientation="Horizontal" HorizontalAlignment="Right" Spacing="12">
             <Button
+                x:Uid="ModLoaderSelectionPage_CancelButton"
                 Content="取消"
                 Command="{x:Bind ViewModel.CancelCommand}"
                 MinWidth="100" />
             <Button
+                x:Uid="ModLoaderSelectionPage_ConfirmDownloadButton"
                 Content="确认下载"
                 Command="{x:Bind ViewModel.ConfirmSelectionCommand}"
                 MinWidth="120" />
@@ -236,6 +240,7 @@
         
         <!-- 下载进度弹窗 -->
         <ContentDialog
+            x:Uid="ModLoaderSelectionPage_DownloadProgressDialog"
             x:Name="DownloadProgressDialog"
             Title="版本下载中"
             CloseButtonText="取消"

@@ -18,6 +18,7 @@ using Microsoft.UI.Xaml.Media;
 using XMCL2025.Core.Contracts.Services;
 using XMCL2025.Core.Services;
 using XMCL2025.Contracts.Services;
+using XMCL2025.Helpers;
 using System.Collections.Specialized;
 
 namespace XMCL2025.ViewModels;
@@ -835,7 +836,7 @@ public partial class 启动ViewModel : ObservableRecipient
                 {
                     // 显示InfoBar消息
                     IsLaunchSuccessInfoBarOpen = true;
-                    LaunchSuccessMessage = $"{SelectedVersion} 正在进行微软账户续签...";
+                    LaunchSuccessMessage = $"{SelectedVersion} {"LaunchPage_MicrosoftAccountRenewingText".GetLocalized()}";
                     
                     // 调用令牌刷新方法
                     var 角色管理ViewModel = App.GetService<角色管理ViewModel>();
@@ -848,7 +849,7 @@ public partial class 启动ViewModel : ObservableRecipient
                     SelectedProfile = 角色管理ViewModel.CurrentProfile;
                     
                     // 更新InfoBar消息
-                    LaunchSuccessMessage = $"{SelectedVersion} 微软账户续签成功...";
+                    LaunchSuccessMessage = $"{SelectedVersion} {"LaunchPage_MicrosoftAccountRenewedText".GetLocalized()}";
                 }
             }
             catch (HttpRequestException ex)
@@ -869,7 +870,7 @@ public partial class 启动ViewModel : ObservableRecipient
     {
         if (string.IsNullOrEmpty(SelectedVersion))
         {
-            LaunchStatus = "请先选择一个版本";
+            LaunchStatus = "LaunchPage_PleaseSelectVersionText".GetLocalized();
             return;
         }
 
@@ -900,7 +901,7 @@ public partial class 启动ViewModel : ObservableRecipient
         }
 
         IsLaunching = true;
-        LaunchStatus = "正在启动游戏...";
+        LaunchStatus = "LaunchPage_StartingGameText".GetLocalized();
 
         try
         {
@@ -1038,8 +1039,8 @@ public partial class 启动ViewModel : ObservableRecipient
             
             // 在补全版本时显示InfoBar
             IsLaunchSuccessInfoBarOpen = true;
-            CurrentDownloadItem = "正在准备游戏文件...";
-            LaunchSuccessMessage = $"{SelectedVersion} 正在准备游戏文件...";
+            CurrentDownloadItem = "LaunchPage_PreparingGameFilesText".GetLocalized();
+            LaunchSuccessMessage = $"{SelectedVersion} {"LaunchPage_PreparingGameFilesText".GetLocalized()}";
             
             // 这里会等待版本补全完成后才继续执行
             try
@@ -1050,54 +1051,54 @@ public partial class 启动ViewModel : ObservableRecipient
                     if (!string.IsNullOrEmpty(currentHash))
                     {
                         // 更新InfoBar消息，显示当前下载的文件名
-                        string currentStatus = LaunchStatus;
-                        if (currentStatus.StartsWith("正在准备游戏文件..."))
-                        {
-                            // 提取当前进度
-                            int percentIndex = currentStatus.IndexOf('%');
-                            if (percentIndex > 0)
-                            {
-                                string progressPart = currentStatus.Substring(0, percentIndex + 1);
-                                CurrentDownloadItem = $"{progressPart} 正在下载: {currentHash}";
-                                LaunchSuccessMessage = $"{SelectedVersion} {progressPart} 正在下载: {currentHash}";
-                            }
-                        }
+                                string currentStatus = LaunchStatus;
+                                if (currentStatus.Contains("LaunchPage_PreparingGameFilesProgressText".GetLocalized()))
+                                {
+                                    // 提取当前进度
+                                    int percentIndex = currentStatus.IndexOf('%');
+                                    if (percentIndex > 0)
+                                    {
+                                        string progressPart = currentStatus.Substring(0, percentIndex + 1);
+                                        CurrentDownloadItem = $"{progressPart} {"LaunchPage_DownloadingText".GetLocalized()}: {currentHash}";
+                                        LaunchSuccessMessage = $"{SelectedVersion} {progressPart} {"LaunchPage_DownloadingText".GetLocalized()}: {currentHash}";
+                                    }
+                                }
                     }
                 };
                 
                 await _minecraftVersionService.EnsureVersionDependenciesAsync(SelectedVersion, minecraftPath, progress =>
                 {
                     DownloadProgress = progress;
-                    LaunchStatus = $"正在准备游戏文件... {progress:F0}%";
+                    LaunchStatus = string.Format("{0} {1:F0}%", "LaunchPage_PreparingGameFilesProgressText".GetLocalized(), progress);
                     
                     // 更新InfoBar消息，显示当前进度
-                    CurrentDownloadItem = $"正在准备游戏文件... {progress:F0}%";
-                    LaunchSuccessMessage = $"{SelectedVersion} 正在准备游戏文件... {progress:F0}%";
+                    CurrentDownloadItem = string.Format("{0} {1:F0}%", "LaunchPage_PreparingGameFilesProgressText".GetLocalized(), progress);
+                    LaunchSuccessMessage = string.Format("{0} {1:F0}%", $"{SelectedVersion} {"LaunchPage_PreparingGameFilesProgressText".GetLocalized()}", progress);
                 }, currentDownloadCallback);
             }
             catch (Exception ex)
             {
                 // 显示详细的错误信息，帮助用户定位问题
-                LaunchStatus = $"准备游戏文件失败: {ex.Message}";
+                LaunchStatus = string.Format("{0}: {1}", "LaunchPage_PreparingGameFilesFailedText".GetLocalized(), ex.Message);
                 Console.WriteLine($"启动失败: {ex.Message}");
                 Console.WriteLine($"错误堆栈: {ex.StackTrace}");
                 if (ex.InnerException != null)
                 {
                     Console.WriteLine($"内部错误: {ex.InnerException.Message}");
                     Console.WriteLine($"内部错误堆栈: {ex.InnerException.StackTrace}");
-                    LaunchStatus += $"\n内部错误: {ex.InnerException.Message}";
+                    LaunchStatus += $"\n{"LaunchPage_InnerErrorText".GetLocalized()}: {ex.InnerException.Message}";
                 }
                 return;
             }
             
             if (string.IsNullOrEmpty(versionInfo.MainClass))
             {
-                LaunchStatus = $"无法获取游戏主类";
+                LaunchStatus = "LaunchPage_FailedToGetMainClassText".GetLocalized();
                 return;
             }
             
             // 5. 构建Classpath
-            LaunchStatus = $"正在构建Classpath...";
+            LaunchStatus = "LaunchPage_BuildingClasspathText".GetLocalized();
             HashSet<string> classpathEntries = new HashSet<string>(); // 使用HashSet避免重复
             
             // 添加游戏JAR文件
@@ -1700,10 +1701,10 @@ public partial class 启动ViewModel : ObservableRecipient
             try
             {
                 gameProcess.Start();
-                LaunchStatus = "游戏启动命令已执行，命令行窗口已打开！";
+                LaunchStatus = "LaunchPage_GameCommandExecutedText".GetLocalized();
                 
                 // 显示启动成功InfoBar
-                LaunchSuccessMessage = $"{SelectedVersion} 启动成功！";
+                LaunchSuccessMessage = $"{SelectedVersion} {"LaunchPage_GameStartedSuccessfullyText".GetLocalized()}";
                 IsLaunchSuccessInfoBarOpen = true;
                 
                 // 设置EnableRaisingEvents为true

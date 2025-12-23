@@ -54,6 +54,7 @@
                     Margin="16,0,0,0"
                     VerticalAlignment="Center">
                     <TextBlock
+                        x:Uid="ProfileManagementPage_CurrentProfileLabel"
                         Text="当前角色"
                         Style="{StaticResource CaptionTextBlockStyle}"
                         Foreground="{ThemeResource TextFillColorSecondary}" />
@@ -81,11 +82,13 @@
                     <StackPanel Spacing="16">
                         <StackPanel Spacing="8">
                             <TextBlock
+                                x:Uid="ProfileManagementPage_RenameTitle"
                                 Text="改名"
                                 Style="{StaticResource TitleTextBlockStyle}"
                                 FontSize="18"
                                 FontWeight="SemiBold" />
                             <TextBlock
+                                x:Uid="ProfileManagementPage_OfflineOnlyNote"
                                 Text="仅对离线角色启用"
                                 Style="{StaticResource CaptionTextBlockStyle}"
                                 Foreground="{ThemeResource TextFillColorSecondary}" />
@@ -98,6 +101,7 @@
                             </Grid.ColumnDefinitions>
                             
                             <TextBox
+                                x:Uid="ProfileManagementPage_NewUsernameTextBox"
                                 Grid.Column="0"
                                 Text="{x:Bind ViewModel.NewUsername, Mode=TwoWay}"
                                 PlaceholderText="输入新用户名"
@@ -105,6 +109,7 @@
                                 Margin="0,0,12,0" />
                             
                             <Button
+                                x:Uid="ProfileManagementPage_SaveUsernameButton"
                                 Grid.Column="1"
                                 Content="保存"
                                 Command="{x:Bind ViewModel.SaveUsernameCommand}"
@@ -123,11 +128,13 @@
                     <StackPanel Spacing="16">
                         <StackPanel Spacing="8">
                             <TextBlock
+                                x:Uid="ProfileManagementPage_ChangeUuidTitle"
                                 Text="修改UUID"
                                 Style="{StaticResource TitleTextBlockStyle}"
                                 FontSize="18"
                                 FontWeight="SemiBold" />
                             <TextBlock
+                                x:Uid="ProfileManagementPage_OfflineOnlyNote"
                                 Text="仅对离线角色启用"
                                 Style="{StaticResource CaptionTextBlockStyle}"
                                 Foreground="{ThemeResource TextFillColorSecondary}" />
@@ -140,6 +147,7 @@
                             </Grid.ColumnDefinitions>
                             
                             <TextBox
+                                x:Uid="ProfileManagementPage_NewUuidTextBox"
                                 Grid.Column="0"
                                 Text="{x:Bind ViewModel.NewUUID, Mode=TwoWay}"
                                 PlaceholderText="输入新UUID"
@@ -147,6 +155,7 @@
                                 Margin="0,0,12,0" />
                             
                             <Button
+                                x:Uid="ProfileManagementPage_SaveUuidButton"
                                 Grid.Column="1"
                                 Content="保存"
                                 Command="{x:Bind ViewModel.SaveUUIDCommand}"
@@ -164,6 +173,7 @@
                     Padding="20">
                     <StackPanel Spacing="16">
                         <TextBlock
+                            x:Uid="ProfileManagementPage_SetSkinTitle"
                             Text="设置皮肤"
                             Style="{StaticResource TitleTextBlockStyle}"
                             FontSize="18"
@@ -178,11 +188,13 @@
                             <!-- 左侧：皮肤上传区域，保持居左 -->
                             <StackPanel Grid.Column="0" Spacing="12">
                                 <TextBlock
+                                    x:Uid="ProfileManagementPage_SkinUploadNote"
                                     Text="上传或选择新皮肤"
                                     Style="{StaticResource BodyTextBlockStyle}"
                                     Foreground="{ThemeResource TextFillColorSecondary}" />
                                 
                                 <Button
+                                    x:Uid="ProfileManagementPage_BrowseSkinButton"
                                     Content="浏览皮肤文件"
                                     Click="BrowseSkinFileButton_Click"
                                     IsEnabled="{x:Bind ViewModel.CurrentProfile.IsOffline, Mode=OneWay, Converter={StaticResource BoolNegationConverter}}" />
@@ -212,6 +224,7 @@
                     Padding="20">
                     <StackPanel Spacing="16">
                         <TextBlock
+                            x:Uid="ProfileManagementPage_SetCapeTitle"
                             Text="设置披风"
                             Style="{StaticResource TitleTextBlockStyle}"
                             FontSize="18"
@@ -219,11 +232,13 @@
                         
                         <StackPanel Spacing="12">
                             <TextBlock
+                                x:Uid="ProfileManagementPage_CapeSelectionNote"
                                 Text="选择当前账号的披风"
                                 Style="{StaticResource BodyTextBlockStyle}"
                                 Foreground="{ThemeResource TextFillColorSecondary}" />
                             
                             <ComboBox
+                                x:Uid="ProfileManagementPage_CapeComboBox"
                                 x:Name="CapeComboBox"
                                 ItemsSource="{x:Bind ViewModel.CapeList, Mode=OneWay}"
                                 SelectedItem="{x:Bind ViewModel.SelectedCape, Mode=TwoWay}"
@@ -247,6 +262,7 @@
                             </ComboBox>
                             
                             <Button
+                                x:Uid="ProfileManagementPage_ApplyCapeButton"
                                 Content="应用所选披风"
                                 Command="{x:Bind ViewModel.SetCapeCommand}"
                                 IsEnabled="{x:Bind ViewModel.IsCapeApplyEnabled, Mode=OneWay}" />
@@ -258,14 +274,16 @@
         
         <!-- 皮肤信息TeachingTip - 移到ScrollViewer之外，避免Content多次设置错误 -->
         <TeachingTip
+            x:Uid="ProfileManagementPage_SkinTeachingTip"
             x:Name="SkinTeachingTip"
             Title="皮肤信息"
             Subtitle="当前皮肤的详细信息"
             Target="{x:Bind SkinTextureImage}">
             <StackPanel Spacing="8">
-                <TextBlock Text="适用的模型:" />
+                <TextBlock x:Uid="ProfileManagementPage_SkinModelLabel" Text="适用的模型:" />
                 <TextBlock Text="{x:Bind ViewModel.CurrentSkinModel, Mode=OneWay}" />
                 <Button
+                    x:Uid="ProfileManagementPage_SaveSkinButton"
                     Content="保存皮肤纹理"
                     Click="SaveSkinTextureButton_Click" />
             </StackPanel>
