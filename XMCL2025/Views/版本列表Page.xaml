@@ -15,8 +15,8 @@
 
         <!-- 标题区域 -->
         <StackPanel Grid.Row="0" Margin="0,0,0,32">
-            <TextBlock Text="版本列表" Style="{StaticResource PageTitleStyle}" FontSize="36" FontWeight="Bold" />
-            <TextBlock Text="管理已安装的Minecraft版本" Style="{StaticResource BodyTextStyle}" Margin="0,8,0,0" Opacity="0.7" />
+            <TextBlock x:Uid="VersionListPage_Title" Style="{StaticResource PageTitleStyle}" FontSize="36" FontWeight="Bold" />
+            <TextBlock x:Uid="VersionListPage_Subtitle" Style="{StaticResource BodyTextStyle}" Margin="0,8,0,0" Opacity="0.7" />
         </StackPanel>
 
         <!-- 控制区域 -->
@@ -36,7 +36,7 @@
             <!-- 刷新按钮 -->
             <Button 
                 Grid.Column="1"
-                Content="刷新列表"
+                x:Uid="VersionListPage_RefreshButton"
                 Command="{Binding LoadVersionsCommand}"
                 IsEnabled="{Binding IsLoading, Mode=OneWay, Converter={StaticResource BoolNegationConverter}}"
                 Style="{StaticResource DefaultButtonStyle}"
@@ -168,7 +168,7 @@
                                 <Grid.ContextFlyout>
                                     <MenuFlyout>
                                         <MenuFlyoutItem 
-                                            Text="打开文件夹" 
+                                            x:Uid="VersionListPage_OpenFolderMenuItem"
                                             Command="{Binding DataContext.OpenFolderCommand, ElementName=VersionsListView}" 
                                             CommandParameter="{Binding}">
                                             <MenuFlyoutItem.Icon>
@@ -177,7 +177,7 @@
                                         </MenuFlyoutItem>
                                         <MenuFlyoutSeparator />
                                         <MenuFlyoutItem 
-                                            Text="删除" 
+                                            x:Uid="VersionListPage_DeleteMenuItem"
                                             Command="{Binding DataContext.DeleteVersionCommand, ElementName=VersionsListView}" 
                                             CommandParameter="{Binding}">
                                             <MenuFlyoutItem.Icon>
@@ -229,7 +229,7 @@
                                     Foreground="{ThemeResource SystemControlForegroundBaseMediumBrush}" 
                                     FontSize="14" 
                                     VerticalAlignment="Center">
-                                    <Run Text="版本号: " />
+                                    <Run x:Uid="VersionListPage_VersionNumberLabel" Text="版本号: " />
                                     <Run Text="{Binding VersionNumber}" />
                                 </TextBlock>
                                 
@@ -240,7 +240,7 @@
                                     Foreground="{ThemeResource SystemControlForegroundBaseMediumBrush}" 
                                     FontSize="14" 
                                     VerticalAlignment="Bottom">
-                                    <Run Text="安装日期: " />
+                                    <Run x:Uid="VersionListPage_InstallDateLabel" Text="安装日期: " />
                                     <Run Text="{Binding InstallDate, Mode=OneWay, Converter={StaticResource DateTimeConverter}}" />
                                 </TextBlock>
                             </Grid>
@@ -268,14 +268,14 @@
                     Margin="0,0,0,24" 
                     HorizontalAlignment="Center"/>
                 <TextBlock 
-                    Text="未找到已安装的版本" 
+                    x:Uid="VersionListPage_EmptyListTitle"
                     Style="{StaticResource PageTitleStyle}" 
                     FontSize="20" 
                     Foreground="{ThemeResource SystemControlForegroundBaseMediumBrush}" 
                     TextAlignment="Center" 
                     Margin="0,0,0,8"/>
                 <TextBlock 
-                    Text="请先在启动页面下载或安装Minecraft版本" 
+                    x:Uid="VersionListPage_EmptyListDescription"
                     Style="{StaticResource BodyTextStyle}" 
                     Foreground="{ThemeResource SystemControlForegroundBaseMediumLowBrush}" 
                     Margin="0,0,0,0" 

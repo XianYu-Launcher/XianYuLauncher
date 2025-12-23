@@ -6,6 +6,7 @@ using Microsoft.UI.Xaml.Media.Animation;
 using Windows.ApplicationModel.DataTransfer;
 using Windows.Storage;
 using XMCL2025.ViewModels;
+using XMCL2025.Helpers;
 
 namespace XMCL2025.Views;
 
@@ -39,13 +40,13 @@ public sealed partial class 版本管理Page : Page
     {
         if (ViewModel.SelectedVersion != null)
         {
-            PageTitle.Text = $"版本管理 - {ViewModel.SelectedVersion.Name}";
-            PageSubtitle.Text = $"管理版本 {ViewModel.SelectedVersion.Name} 的组件和资源";
+            PageTitle.Text = $"{"VersionManagerPage_Title".GetLocalized()} - {ViewModel.SelectedVersion.Name}";
+            PageSubtitle.Text = $"{"VersionManagerPage_Subtitle_WithVersion".GetLocalized()} {ViewModel.SelectedVersion.Name} {"VersionManagerPage_Subtitle_Components".GetLocalized()}";
         }
         else
         {
-            PageTitle.Text = "版本管理";
-            PageSubtitle.Text = "请选择一个版本进行管理";
+            PageTitle.Text = "VersionManagerPage_Title".GetLocalized();
+            PageSubtitle.Text = "VersionManagerPage_Subtitle_SelectVersion".GetLocalized();
         }
     }
     
