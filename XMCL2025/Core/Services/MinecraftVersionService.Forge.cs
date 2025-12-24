@@ -32,6 +32,11 @@ public partial class MinecraftVersionService
     /// <param name="skipJarJsonDownload">是否跳过jar和json下载（在Optifine之后安装时使用）</param>
     internal async Task DownloadForgeVersionAsync(string minecraftVersionId, string forgeVersion, string versionsDirectory, string librariesDirectory, Action<double> progressCallback, CancellationToken cancellationToken = default, string customVersionName = null, bool skipJarJsonDownload = false)
     {
+        // 声明需要在finally块中访问的变量
+        string cacheDirectory = string.Empty;
+        string forgeInstallerPath = string.Empty;
+        string extractedPath = string.Empty;
+        
         try
         {
             const int bufferSize = 65536; // 缓冲区大小，整个方法共享
@@ -131,13 +136,13 @@ public partial class MinecraftVersionService
             
             // 获取应用数据路径，创建forge缓存目录（与NeoForge保持一致）
             string appDataPath = _fileService.GetAppDataPath();
-            string cacheDirectory = Path.Combine(appDataPath, "cache", "forge");
+            cacheDirectory = Path.Combine(appDataPath, "cache", "forge");
             Directory.CreateDirectory(cacheDirectory);
             _logger.LogInformation("使用Forge缓存目录: {CacheDirectory}", cacheDirectory);
             System.Diagnostics.Debug.WriteLine($"[DEBUG] Forge缓存目录: {cacheDirectory}");
             
             // 设置Forge安装包路径（与NeoForge命名格式保持一致）
-            string forgeInstallerPath = Path.Combine(cacheDirectory, $"forge-{minecraftVersionId}-{forgeVersion}-installer.jar");
+            forgeInstallerPath = Path.Combine(cacheDirectory, $"forge-{minecraftVersionId}-{forgeVersion}-installer.jar");
             System.Diagnostics.Debug.WriteLine($"[DEBUG] Forge安装包保存路径: {forgeInstallerPath}");
             
             // 下载Forge Installer JAR
@@ -171,7 +176,7 @@ public partial class MinecraftVersionService
 
             // 6. 自动解压Forge Installer至缓存目录下的解压子目录
             _logger.LogInformation("开始解压Forge Installer至缓存目录");
-            string extractedPath = Path.Combine(cacheDirectory, $"extracted-{minecraftVersionId}-{forgeVersion}");
+            extractedPath = Path.Combine(cacheDirectory, $"extracted-{minecraftVersionId}-{forgeVersion}");
             Directory.CreateDirectory(extractedPath);
             System.Diagnostics.Debug.WriteLine($"[DEBUG] Forge Installer解压路径: {extractedPath}");
             
@@ -495,6 +500,32 @@ public partial class MinecraftVersionService
         {
             _logger.LogError(ex, "下载Forge版本失败: {ForgeVersion} for Minecraft {MinecraftVersion}", forgeVersion, minecraftVersionId);
             throw;
+        }
+        finally
+        {
+            // 清理临时文件
+            _logger.LogInformation("开始清理Forge安装临时文件");
+            
+            try
+            {
+                // 删除临时提取目录
+                if (!string.IsNullOrEmpty(extractedPath) && Directory.Exists(extractedPath))
+                {
+                    Directory.Delete(extractedPath, true);
+                    _logger.LogInformation("已删除临时提取目录: {ExtractDirectory}", extractedPath);
+                }
+                
+                // 删除安装器文件
+                if (!string.IsNullOrEmpty(forgeInstallerPath) && File.Exists(forgeInstallerPath))
+                {
+                    File.Delete(forgeInstallerPath);
+                    _logger.LogInformation("已删除Forge安装器文件: {InstallerPath}", forgeInstallerPath);
+                }
+            }
+            catch (Exception cleanupEx)
+            {
+                _logger.LogWarning(cleanupEx, "清理临时文件时发生错误");
+            }
         }
     }
 }

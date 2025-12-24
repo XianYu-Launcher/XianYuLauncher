@@ -67,6 +67,29 @@ public sealed partial class 启动Page : Page
         // 每次导航到该页面时都加载头像
         // 对于正版玩家，会先显示缓存头像，然后后台静默刷新
         LoadAvatar();
+        
+        // 订阅SelectedProfile变化事件，确保头像在角色切换时自动更新
+        ViewModel.PropertyChanged += ViewModel_PropertyChanged;
+    }
+    
+    protected override void OnNavigatedFrom(NavigationEventArgs e)
+    {
+        base.OnNavigatedFrom(e);
+        
+        // 取消订阅事件，避免内存泄漏
+        ViewModel.PropertyChanged -= ViewModel_PropertyChanged;
+    }
+    
+    /// <summary>
+    /// 当ViewModel属性变化时触发
+    /// </summary>
+    private void ViewModel_PropertyChanged(object sender, System.ComponentModel.PropertyChangedEventArgs e)
+    {
+        // 当SelectedProfile变化时，重新加载头像
+        if (e.PropertyName == nameof(ViewModel.SelectedProfile))
+        {
+            LoadAvatar();
+        }
     }
 
     /// <summary>

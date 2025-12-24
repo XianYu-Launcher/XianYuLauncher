@@ -174,4 +174,29 @@ public class OfficialDownloadSource : IDownloadSource
         System.Diagnostics.Debug.WriteLine($"[DEBUG] 为Minecraft {minecraftVersion} 获取官方Forge {forgeVersion} 安装包URL: {url}");
         return url;
     }
+    
+    /// <summary>
+    /// 获取Fabric版本列表URL
+    /// </summary>
+    /// <param name="minecraftVersion">Minecraft版本</param>
+    /// <returns>官方Fabric版本列表URL</returns>
+    public string GetFabricVersionsUrl(string minecraftVersion)
+    {
+        string url = $"https://meta.fabricmc.net/v2/versions/loader/{minecraftVersion}";
+        System.Diagnostics.Debug.WriteLine($"[DEBUG] 为Minecraft {minecraftVersion} 获取官方Fabric版本列表URL: {url}");
+        return url;
+    }
+    
+    /// <summary>
+    /// 获取Fabric完整配置URL
+    /// </summary>
+    /// <param name="minecraftVersion">Minecraft版本</param>
+    /// <param name="fabricVersion">Fabric版本号</param>
+    /// <returns>官方Fabric完整配置URL</returns>
+    public string GetFabricProfileUrl(string minecraftVersion, string fabricVersion)
+    {
+        string url = $"https://meta.fabricmc.net/v2/versions/loader/{minecraftVersion}/{fabricVersion}/profile/json";
+        System.Diagnostics.Debug.WriteLine($"[DEBUG] 为Minecraft {minecraftVersion} 获取官方Fabric {fabricVersion} 完整配置URL: {url}");
+        return url;
+    }
 }

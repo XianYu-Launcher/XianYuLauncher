@@ -49,26 +49,23 @@ public partial class ResourceDownloadViewModel : ObservableRecipient
     /// <summary>
     /// 更新过滤后的版本列表
     /// </summary>
-    private void UpdateFilteredVersions()
+    public void UpdateFilteredVersions()
     {
-        // 使用临时列表存储过滤结果，减少UI更新次数
-        var tempList = new List<Core.Contracts.Services.VersionEntry>();
+        // 1. 使用临时列表存储过滤结果
+        List<Core.Contracts.Services.VersionEntry> tempList;
         
         if (!string.IsNullOrWhiteSpace(SearchText))
         {
-            tempList.AddRange(Versions.Where(v => v.Id.Contains(SearchText, System.StringComparison.OrdinalIgnoreCase)));
+            tempList = Versions.Where(v => v.Id.Contains(SearchText, System.StringComparison.OrdinalIgnoreCase)).ToList();
         }
         else
         {
-            tempList.AddRange(Versions);
+            tempList = Versions.ToList();
         }
         
-        // 一次性更新FilteredVersions，避免多次UI更新
-        FilteredVersions.Clear();
-        foreach (var version in tempList)
-        {
-            FilteredVersions.Add(version);
-        }
+        // 2. 使用一次性替换集合的方式更新FilteredVersions，这是性能优化的关键
+        // 直接替换集合可以避免Clear()和多次Add()操作导致的频繁UI更新
+        FilteredVersions = new ObservableCollection<Core.Contracts.Services.VersionEntry>(tempList);
     }
 
     // Mod下载相关属性和命令
@@ -290,17 +287,15 @@ public partial class ResourceDownloadViewModel : ObservableRecipient
             LatestReleaseVersion = versionList.FirstOrDefault(v => v.Type == "release")?.Id ?? string.Empty;
             LatestSnapshotVersion = versionList.FirstOrDefault(v => v.Type == "snapshot")?.Id ?? string.Empty;
             
-            // 使用Clear和AddRange的方式更新Versions集合，确保UI正确更新
-            Versions.Clear();
-            foreach (var version in versionList)
-            {
-                Versions.Add(version);
-            }
+            // 1. 使用临时列表存储所有版本，然后一次性替换Versions集合
+            // 这是性能优化的关键：减少UI更新次数
+            var tempVersions = new ObservableCollection<Core.Contracts.Services.VersionEntry>(versionList);
+            Versions = tempVersions;
             
-            // 一次性更新过滤后的版本列表
+            // 2. 一次性更新过滤后的版本列表
             UpdateFilteredVersions();
             
-            // 同时更新可用版本列表，避免重复请求
+            // 3. 同时更新可用版本列表，避免重复请求
             await UpdateAvailableVersionsFromManifest(versionList);
         }
         catch (Exception ex)
@@ -325,12 +320,8 @@ public partial class ResourceDownloadViewModel : ObservableRecipient
             // 保存当前选中的版本
             var currentSelectedVersion = SelectedVersion;
             
-            // 使用Clear和Add的方式更新AvailableVersions，确保UI正确更新
-            AvailableVersions.Clear();
-            foreach (var version in versions)
-            {
-                AvailableVersions.Add(version);
-            }
+            // 使用一次性替换集合的方式更新AvailableVersions，减少UI更新次数
+            AvailableVersions = new ObservableCollection<string>(versions);
             
             // 如果当前选中的版本仍然在可用版本列表中，则保留选中状态
             if (!string.IsNullOrEmpty(currentSelectedVersion) && versions.Contains(currentSelectedVersion))

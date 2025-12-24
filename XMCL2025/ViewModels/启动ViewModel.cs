@@ -126,18 +126,7 @@ public partial class 启动ViewModel : ObservableRecipient
             int exitCode = process.ExitCode;
             LaunchStatus += $"\n游戏进程已退出，退出代码: {exitCode}";
             
-            // 无论退出代码如何，都保存启动命令到temp文件夹
-            try
-            {
-                string tempPath = Path.GetTempPath();
-                string launchCommandPath = Path.Combine(tempPath, $"minecraft_launch_command_{DateTime.Now:yyyyMMdd_HHmmss}.txt");
-                await File.WriteAllTextAsync(launchCommandPath, launchCommand);
-                Console.WriteLine($"启动命令已保存到: {launchCommandPath}");
-            }
-            catch (Exception ex)
-            {
-                Console.WriteLine($"保存启动命令失败: {ex.Message}");
-            }
+            // 移除自动保存启动命令到文件的操作
             
             // 检查是否异常退出
             if (exitCode != 0)
@@ -521,6 +510,7 @@ public partial class 启动ViewModel : ObservableRecipient
         public bool IsJDK { get; set; }
     }
     private const string EnableVersionIsolationKey = "EnableVersionIsolation";
+    private const string SelectedVersionKey = "SelectedMinecraftVersion";
 
     [ObservableProperty]
     private ObservableCollection<string> _installedVersions = new();
@@ -743,10 +733,21 @@ public partial class 启动ViewModel : ObservableRecipient
                     }
                 }
 
-                // 按版本号降序排序并选择最新版本
                 if (InstalledVersions.Any())
                 {
-                    SelectedVersion = InstalledVersions.OrderByDescending(v => v).First();
+                    // 尝试从本地设置中读取保存的版本
+                    string savedVersion = await _localSettingsService.ReadSettingAsync<string>(SelectedVersionKey);
+                    
+                    // 如果保存的版本存在于安装列表中，则使用保存的版本，否则选择最新版本
+                    if (!string.IsNullOrEmpty(savedVersion) && InstalledVersions.Contains(savedVersion))
+                    {
+                        SelectedVersion = savedVersion;
+                    }
+                    else
+                    {
+                        // 按版本号降序排序并选择最新版本
+                        SelectedVersion = InstalledVersions.OrderByDescending(v => v).First();
+                    }
                 }
             }
         }
@@ -782,6 +783,8 @@ public partial class 启动ViewModel : ObservableRecipient
     // 当用户点击版本列表时触发
     partial void OnSelectedVersionChanged(string value)
     {
+        // 保存选中的版本到本地设置
+        _localSettingsService.SaveSettingAsync(SelectedVersionKey, value).ConfigureAwait(false);
         ShowMinecraftPathInfo();
     }
 
@@ -793,14 +796,32 @@ public partial class 启动ViewModel : ObservableRecipient
     {
         try
         {
+            // 获取当前CultureInfo
+            var currentCulture = System.Globalization.CultureInfo.CurrentCulture;
+            var currentUICulture = System.Globalization.CultureInfo.CurrentUICulture;
+            
             // 使用RegionInfo检测地区
-            var regionInfo = new System.Globalization.RegionInfo(System.Globalization.CultureInfo.CurrentCulture.Name);
-            return regionInfo.TwoLetterISORegionName == "CN";
-        }
-        catch
+            var regionInfo = new System.Globalization.RegionInfo(currentCulture.Name);
+            bool isCN = regionInfo.TwoLetterISORegionName == "CN";
+            
+            // 添加Debug输出，显示详细信息
+            System.Diagnostics.Debug.WriteLine($"[地区检测] 当前CultureInfo: {currentCulture.Name} ({currentCulture.DisplayName})");
+            System.Diagnostics.Debug.WriteLine($"[地区检测] 当前UICulture: {currentUICulture.Name} ({currentUICulture.DisplayName})");
+            System.Diagnostics.Debug.WriteLine($"[地区检测] 当前RegionInfo: {regionInfo.Name} ({regionInfo.DisplayName})");
+            System.Diagnostics.Debug.WriteLine($"[地区检测] 两字母ISO代码: {regionInfo.TwoLetterISORegionName}");
+            System.Diagnostics.Debug.WriteLine($"[地区检测] 三字母ISO代码: {regionInfo.ThreeLetterISORegionName}");
+            System.Diagnostics.Debug.WriteLine($"[地区检测] 英文名称: {regionInfo.EnglishName}");
+            System.Diagnostics.Debug.WriteLine($"[地区检测] 本地化名称: {regionInfo.NativeName}");
+            System.Diagnostics.Debug.WriteLine($"[地区检测] 是否为中国大陆: {isCN}");
+            
+            return isCN;
+        } catch (Exception ex)
         {
-            // 如果检测失败，默认允许离线登录
-            return true;
+            // 添加Debug输出，显示异常信息
+            System.Diagnostics.Debug.WriteLine($"[地区检测] 检测失败，异常: {ex.Message}");
+            System.Diagnostics.Debug.WriteLine($"[地区检测] 默认不允许离线登录");
+            // 如果检测失败，默认不允许离线登录
+            return false;
         }
     }
 

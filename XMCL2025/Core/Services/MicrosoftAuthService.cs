@@ -260,19 +260,7 @@ public class MicrosoftAuthService
         {
             Log.Error(ex, "获取设备代码失败");
             
-            // 将错误详情保存到临时文件
-            string errorDetails = ex.ToString();
-            string tempFilePath = Path.Combine(Path.GetTempPath(), $"XMCL2025_MicrosoftLogin_Error_{DateTime.Now:yyyyMMdd_HHmmss}.txt");
-            
-            try
-            {
-                File.WriteAllText(tempFilePath, errorDetails);
-                Log.Information($"获取设备代码失败详情已保存到: {tempFilePath}");
-            }
-            catch (Exception writeEx)
-            {
-                Log.Error(writeEx, "无法保存获取设备代码失败详情到临时文件");
-            }
+            // 移除自动保存错误日志到文件的操作，保留日志记录
             
             return null;
         }
@@ -300,23 +288,11 @@ public class MicrosoftAuthService
                 
                 Log.Information($"授权失败: {detailedMsg}");
                 
-                // 将授权失败详情保存到临时文件
-                string errorDetails = tokenResponse != null ? 
+                // 移除自动保存授权失败详情到文件的操作，保留日志记录
+                string responseJson = tokenResponse != null ? 
                     JsonConvert.SerializeObject(tokenResponse, Formatting.Indented) : 
                     "tokenResponse为null";
-                
-                string tempFilePath = Path.Combine(Path.GetTempPath(), $"XMCL2025_MicrosoftLogin_Error_{DateTime.Now:yyyyMMdd_HHmmss}.txt");
-                
-                try
-                {
-                    File.WriteAllText(tempFilePath, errorDetails);
-                    Log.Information($"授权失败详情已保存到: {tempFilePath}");
-                }
-                catch (Exception writeEx)
-                {
-                    Log.Error(writeEx, "无法保存授权失败详情到临时文件");
-                    tempFilePath = "无法保存错误日志";
-                }
+                Log.Information($"授权失败详情: {responseJson}");
                 
                 return new LoginResult
                 {
@@ -339,19 +315,7 @@ public class MicrosoftAuthService
                 
                 Log.Information($"{errorMsg}: {responseJson}");
                 
-                // 保存错误详情到临时文件
-                string tempFilePath = Path.Combine(Path.GetTempPath(), $"XMCL2025_MicrosoftLogin_Error_{DateTime.Now:yyyyMMdd_HHmmss}.txt");
-                
-                try
-                {
-                    File.WriteAllText(tempFilePath, responseJson);
-                    Log.Information($"Xbox Live身份验证失败详情已保存到: {tempFilePath}");
-                }
-                catch (Exception writeEx)
-                {
-                    Log.Error(writeEx, "无法保存Xbox Live身份验证失败详情到临时文件");
-                    tempFilePath = "无法保存错误日志";
-                }
+                // 移除自动保存Xbox Live身份验证失败详情到文件的操作，保留日志记录
                 
                 return new LoginResult
                 {
@@ -374,19 +338,7 @@ public class MicrosoftAuthService
                 
                 Log.Information($"{errorMsg}: {responseJson}");
                 
-                // 保存错误详情到临时文件
-                string tempFilePath = Path.Combine(Path.GetTempPath(), $"XMCL2025_MicrosoftLogin_Error_{DateTime.Now:yyyyMMdd_HHmmss}.txt");
-                
-                try
-                {
-                    File.WriteAllText(tempFilePath, responseJson);
-                    Log.Information($"XSTS身份验证失败详情已保存到: {tempFilePath}");
-                }
-                catch (Exception writeEx)
-                {
-                    Log.Error(writeEx, "无法保存XSTS身份验证失败详情到临时文件");
-                    tempFilePath = "无法保存错误日志";
-                }
+                // 移除自动保存XSTS身份验证失败详情到文件的操作，保留日志记录
                 
                 return new LoginResult
                 {
@@ -408,19 +360,7 @@ public class MicrosoftAuthService
                 
                 Log.Information($"{errorMsg}: {responseJson}");
                 
-                // 保存错误详情到临时文件
-                string tempFilePath = Path.Combine(Path.GetTempPath(), $"XMCL2025_MicrosoftLogin_Error_{DateTime.Now:yyyyMMdd_HHmmss}.txt");
-                
-                try
-                {
-                    File.WriteAllText(tempFilePath, responseJson);
-                    Log.Information($"获取Minecraft访问令牌失败详情已保存到: {tempFilePath}");
-                }
-                catch (Exception writeEx)
-                {
-                    Log.Error(writeEx, "无法保存获取Minecraft访问令牌失败详情到临时文件");
-                    tempFilePath = "无法保存错误日志";
-                }
+                // 移除自动保存获取Minecraft访问令牌失败详情到文件的操作，保留日志记录
                 
                 return new LoginResult
                 {
@@ -442,19 +382,7 @@ public class MicrosoftAuthService
                 
                 Log.Information($"{errorMsg}: {responseJson}");
                 
-                // 保存错误详情到临时文件
-                string tempFilePath = Path.Combine(Path.GetTempPath(), $"XMCL2025_MicrosoftLogin_Error_{DateTime.Now:yyyyMMdd_HHmmss}.txt");
-                
-                try
-                {
-                    File.WriteAllText(tempFilePath, responseJson);
-                    Log.Information($"游戏拥有情况检查失败详情已保存到: {tempFilePath}");
-                }
-                catch (Exception writeEx)
-                {
-                    Log.Error(writeEx, "无法保存游戏拥有情况检查失败详情到临时文件");
-                    tempFilePath = "无法保存错误日志";
-                }
+                // 移除自动保存游戏拥有情况检查失败详情到文件的操作，保留日志记录
                 
                 return new LoginResult
                 {
@@ -474,19 +402,7 @@ public class MicrosoftAuthService
                 
                 Log.Information($"{errorMsg}: {responseJson}");
                 
-                // 保存错误详情到临时文件
-                string tempFilePath = Path.Combine(Path.GetTempPath(), $"XMCL2025_MicrosoftLogin_Error_{DateTime.Now:yyyyMMdd_HHmmss}.txt");
-                
-                try
-                {
-                    File.WriteAllText(tempFilePath, responseJson);
-                    Log.Information($"获取玩家信息失败详情已保存到: {tempFilePath}");
-                }
-                catch (Exception writeEx)
-                {
-                    Log.Error(writeEx, "无法保存获取玩家信息失败详情到临时文件");
-                    tempFilePath = "无法保存错误日志";
-                }
+                // 移除自动保存获取玩家信息失败详情到文件的操作，保留日志记录
                 
                 return new LoginResult
                 {
@@ -516,20 +432,7 @@ public class MicrosoftAuthService
         {
             Log.Error(ex, "完成微软登录失败");
             
-            // 将详细错误信息保存到临时文件
-            string errorDetails = ex.ToString();
-            string tempFilePath = Path.Combine(Path.GetTempPath(), $"XMCL2025_MicrosoftLogin_Error_{DateTime.Now:yyyyMMdd_HHmmss}.txt");
-            
-            try
-            {
-                File.WriteAllText(tempFilePath, errorDetails);
-                Log.Information($"错误日志已保存到: {tempFilePath}");
-            }
-            catch (Exception writeEx)
-            {
-                Log.Error(writeEx, "无法保存错误日志到临时文件");
-                tempFilePath = "无法保存错误日志";
-            }
+            // 移除自动保存完成微软登录失败详情到文件的操作，保留日志记录
             
             // 返回简洁的异常信息
             return new LoginResult

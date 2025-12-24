@@ -62,6 +62,21 @@ public interface IDownloadSource
     string GetForgeInstallerUrl(string minecraftVersion, string forgeVersion);
     
     /// <summary>
+    /// 获取Fabric版本列表URL
+    /// </summary>
+    /// <param name="minecraftVersion">Minecraft版本</param>
+    /// <returns>Fabric版本列表URL</returns>
+    string GetFabricVersionsUrl(string minecraftVersion);
+    
+    /// <summary>
+    /// 获取Fabric完整配置URL
+    /// </summary>
+    /// <param name="minecraftVersion">Minecraft版本</param>
+    /// <param name="fabricVersion">Fabric版本号</param>
+    /// <returns>Fabric完整配置URL</returns>
+    string GetFabricProfileUrl(string minecraftVersion, string fabricVersion);
+    
+    /// <summary>
     /// 获取依赖库下载URL
     /// </summary>
     /// <param name="libraryName">库名称</param>

@@ -31,6 +31,12 @@ public partial class MinecraftVersionService
     /// <param name="customVersionName">自定义版本名称</param>
     internal async Task DownloadOptifineVersionAsync(string minecraftVersionId, string optifineType, string optifinePatch, string versionsDirectory, string librariesDirectory, Action<double> progressCallback, CancellationToken cancellationToken = default, string customVersionName = null)
     {
+        // 声明需要在finally块中访问的变量
+        string cacheDirectory = string.Empty;
+        string optifineJarPath = string.Empty;
+        string tempMinecraftDirectory = string.Empty;
+        string tempDirectoryParent = string.Empty;
+        
         try
         {
             _logger.LogInformation("开始下载Optifine版本: {Type}_{Patch} for Minecraft {MinecraftVersion}", optifineType, optifinePatch, minecraftVersionId);
@@ -167,13 +173,13 @@ public partial class MinecraftVersionService
             
             // 获取应用数据路径，创建optifine缓存目录
             string appDataPath = _fileService.GetAppDataPath();
-            string cacheDirectory = Path.Combine(appDataPath, "cache", "Optifine");
+            cacheDirectory = Path.Combine(appDataPath, "cache", "Optifine");
             Directory.CreateDirectory(cacheDirectory);
             _logger.LogInformation("使用Optifine缓存目录: {CacheDirectory}", cacheDirectory);
             System.Diagnostics.Debug.WriteLine($"[DEBUG] Optifine缓存目录: {cacheDirectory}");
             
             // 设置Optifine安装包路径，使用API返回的完整type和patch
-            string optifineJarPath = Path.Combine(cacheDirectory, $"optifine-{minecraftVersionId}-{optifineType}-{optifinePatch}.jar");
+            optifineJarPath = Path.Combine(cacheDirectory, $"optifine-{minecraftVersionId}-{optifineType}-{optifinePatch}.jar");
             System.Diagnostics.Debug.WriteLine($"[DEBUG] Optifine安装包保存路径: {optifineJarPath}");
             
             // 下载Optifine JAR
@@ -207,7 +213,7 @@ public partial class MinecraftVersionService
 
             // 5. 创建临时目录结构
             _logger.LogInformation("开始创建临时目录结构");
-            string tempMinecraftDirectory = Path.Combine(appDataPath, "cache", ".minecraft");
+            tempMinecraftDirectory = Path.Combine(appDataPath, "cache", ".minecraft");
             string tempVersionsDirectory = Path.Combine(tempMinecraftDirectory, "versions");
             string tempLibrariesDirectory = Path.Combine(tempMinecraftDirectory, "libraries");
             string tempAssetsDirectory = Path.Combine(tempMinecraftDirectory, "assets");
@@ -285,7 +291,7 @@ public partial class MinecraftVersionService
             }
             
             // 设置进程启动信息
-            var tempDirectoryParent = Path.GetDirectoryName(tempMinecraftDirectory);
+            tempDirectoryParent = Path.GetDirectoryName(tempMinecraftDirectory);
             var processStartInfo = new System.Diagnostics.ProcessStartInfo
             {
                 FileName = javaPath,
@@ -503,6 +509,43 @@ public partial class MinecraftVersionService
         {
             _logger.LogError(ex, "下载Optifine版本失败: {Type}_{Patch} for Minecraft {MinecraftVersion}", optifineType, optifinePatch, minecraftVersionId);
             throw;
+        }
+        finally
+        {
+            // 清理临时文件
+            _logger.LogInformation("开始清理Optifine安装临时文件");
+            
+            try
+            {
+                // 删除临时Minecraft目录
+                if (!string.IsNullOrEmpty(tempMinecraftDirectory) && Directory.Exists(tempMinecraftDirectory))
+                {
+                    Directory.Delete(tempMinecraftDirectory, true);
+                    _logger.LogInformation("已删除临时Minecraft目录: {TempMinecraftDirectory}", tempMinecraftDirectory);
+                }
+                
+                // 删除OptiFine安装器文件
+                if (!string.IsNullOrEmpty(optifineJarPath) && File.Exists(optifineJarPath))
+                {
+                    File.Delete(optifineJarPath);
+                    _logger.LogInformation("已删除OptiFine安装器文件: {OptifineJarPath}", optifineJarPath);
+                }
+                
+                // 删除安装日志文件
+                if (!string.IsNullOrEmpty(tempDirectoryParent))
+                {
+                    string[] logFiles = Directory.GetFiles(tempDirectoryParent, "optifine-install-*.log");
+                    foreach (string logFile in logFiles)
+                    {
+                        File.Delete(logFile);
+                        _logger.LogInformation("已删除OptiFine安装日志文件: {LogFile}", logFile);
+                    }
+                }
+            }
+            catch (Exception cleanupEx)
+            {
+                _logger.LogWarning(cleanupEx, "清理OptiFine临时文件时发生错误");
+            }
         }
     }
     

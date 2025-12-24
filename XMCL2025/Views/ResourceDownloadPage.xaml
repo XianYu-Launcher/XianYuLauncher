@@ -94,7 +94,7 @@
                                     x:Name="VersionSearchBox"
                                     x:Uid="ResourceDownloadPage_VersionSearchBox"
                                     PlaceholderText="搜索版本..."
-                                    Text="{Binding SearchText, Mode=TwoWay}" 
+                                    Text="{Binding SearchText, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" 
                                     KeyDown="VersionSearchBox_KeyDown" 
                                     HorizontalAlignment="Stretch" />
 
@@ -110,55 +110,64 @@
                             </Grid>
 
                             <!-- 版本列表 -->
-                            <ScrollViewer Grid.Row="2" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled" Margin="12,0,12,0">
-                                <Grid>
-                                    <!-- 加载指示器 -->
-                                    <ProgressRing IsActive="{Binding IsVersionLoading, Mode=OneWay}" HorizontalAlignment="Center" VerticalAlignment="Center" />
-                                     
-                                    <!-- 版本列表 -->
-                                    <ListView 
-                                        x:Name="VersionListView"
-                                        ItemsSource="{Binding FilteredVersions, Mode=OneWay}"
-                                        IsItemClickEnabled="True"
-                                        ItemClick="VersionListView_ItemClick"
-                                        SelectionMode="None"
-                                        Background="Transparent"
-                                        BorderThickness="0"
-                                        Visibility="{Binding IsVersionLoading, Mode=OneWay, Converter={StaticResource BoolToVisibilityConverter}, ConverterParameter=Inverse}">
-                                        <ListView.Resources>
-                                            <Style TargetType="ScrollViewer">
-                                                <Setter Property="HorizontalScrollBarVisibility" Value="Disabled"/>
-                                            </Style>
-                                        </ListView.Resources>
-                                        <ListView.ItemsPanel>
-                                            <ItemsPanelTemplate>
-                                                <VirtualizingStackPanel VirtualizationMode="Recycling"/>
-                                            </ItemsPanelTemplate>
-                                        </ListView.ItemsPanel>
-                                        <ListView.ItemContainerStyle>
-                                            <Style TargetType="ListViewItem">
-                                                <Setter Property="HorizontalContentAlignment" Value="Stretch" />
-                                                <Setter Property="Margin" Value="0,0,0,10" />
-                                                <Setter Property="Padding" Value="10" />
-                                                <Setter Property="BorderThickness" Value="0" />
-                                                <Setter Property="Background" Value="Transparent" />
-                                            </Style>
-                                        </ListView.ItemContainerStyle>
-                                        <ListView.ItemTemplate>
-                                            <DataTemplate>
-                                                <StackPanel Padding="10">
-                                                    <TextBlock Text="{Binding Id}" Style="{StaticResource SubtitleTextBlockStyle}" />
-                                                    <StackPanel Orientation="Horizontal" Margin="0,5,0,0">
-                                                        <TextBlock Text="{Binding Type}" Style="{StaticResource CaptionTextBlockStyle}" Foreground="Gray" />
-                                                        <TextBlock Text=" | " Style="{StaticResource CaptionTextBlockStyle}" Foreground="Gray" />
-                                                        <TextBlock Text="{Binding ReleaseTime}" Style="{StaticResource CaptionTextBlockStyle}" Foreground="Gray" />
-                                                    </StackPanel>
+                            <Grid Grid.Row="2" Margin="12,0,12,0">
+                                <!-- 加载指示器 -->
+                                <ProgressRing IsActive="{Binding IsVersionLoading, Mode=OneWay}" HorizontalAlignment="Center" VerticalAlignment="Center" />
+                                  
+                                <!-- 版本列表 -->
+                                <ListView 
+                                    x:Name="VersionListView"
+                                    ItemsSource="{Binding FilteredVersions, Mode=OneWay}"
+                                    IsItemClickEnabled="True"
+                                    ItemClick="VersionListView_ItemClick"
+                                    SelectionMode="None"
+                                    Background="Transparent"
+                                    BorderThickness="0"
+                                    Visibility="{Binding IsVersionLoading, Mode=OneWay, Converter={StaticResource BoolToVisibilityConverter}, ConverterParameter=Inverse}"
+                                    ShowsScrollingPlaceholders="True">
+                                    <ListView.Resources>
+                                        <Style TargetType="ScrollViewer">
+                                            <Setter Property="HorizontalScrollBarVisibility" Value="Disabled"/>
+                                            <Setter Property="VerticalScrollBarVisibility" Value="Auto"/>
+                                            <Setter Property="IsScrollInertiaEnabled" Value="True"/>
+                                            <Setter Property="ScrollViewer.VerticalScrollMode" Value="Enabled"/>
+                                            <Setter Property="ScrollViewer.VerticalScrollBarVisibility" Value="Auto"/>
+                                        </Style>
+                                    </ListView.Resources>
+                                    <ListView.ItemsPanel>
+                                        <ItemsPanelTemplate>
+                                            <!-- 使用ItemsStackPanel替代VirtualizingStackPanel，提供更好的平滑滚动支持 -->
+                                            <!-- ItemsStackPanel默认启用虚拟化，不需要设置VirtualizationMode属性 -->
+                                            <ItemsStackPanel/>
+                                        </ItemsPanelTemplate>
+                                    </ListView.ItemsPanel>
+                                    <ListView.ItemContainerStyle>
+                                        <Style TargetType="ListViewItem">
+                                            <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+                                            <Setter Property="Margin" Value="0,0,0,10" />
+                                            <Setter Property="Padding" Value="10" />
+                                            <Setter Property="BorderThickness" Value="0" />
+                                            <Setter Property="Background" Value="Transparent" />
+                                            <!-- 优化项容器的布局更新频率 -->
+                                            <Setter Property="UseLayoutRounding" Value="True" />
+                                            <Setter Property="CacheMode" Value="BitmapCache" />
+                                            <!-- 移除自定义ControlTemplate，使用默认模板，保持原有间距 -->
+                                        </Style>
+                                    </ListView.ItemContainerStyle>
+                                    <ListView.ItemTemplate>
+                                        <DataTemplate>
+                                            <StackPanel Padding="10">
+                                                <TextBlock Text="{Binding Id}" Style="{StaticResource SubtitleTextBlockStyle}" />
+                                                <StackPanel Orientation="Horizontal" Margin="0,5,0,0">
+                                                    <TextBlock Text="{Binding Type}" Style="{StaticResource CaptionTextBlockStyle}" Foreground="Gray" />
+                                                    <TextBlock Text=" | " Style="{StaticResource CaptionTextBlockStyle}" Foreground="Gray" />
+                                                    <TextBlock Text="{Binding ReleaseTime}" Style="{StaticResource CaptionTextBlockStyle}" Foreground="Gray" />
                                                 </StackPanel>
-                                            </DataTemplate>
-                                        </ListView.ItemTemplate>
-                                    </ListView>
-                                </Grid>
-                            </ScrollViewer>
+                                            </StackPanel>
+                                        </DataTemplate>
+                                    </ListView.ItemTemplate>
+                                </ListView>
+                            </Grid>
                         </Grid>
                     </TabViewItem>
 

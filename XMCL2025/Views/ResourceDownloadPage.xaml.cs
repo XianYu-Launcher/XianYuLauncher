@@ -194,11 +194,12 @@ public sealed partial class ResourceDownloadPage : Page, INavigationAware
         }
     }
 
-    private async void VersionSearchBox_KeyDown(object sender, KeyRoutedEventArgs e)
+    private void VersionSearchBox_KeyDown(object sender, KeyRoutedEventArgs e)
     {
         if (e.Key == Windows.System.VirtualKey.Enter)
         {
-            await ViewModel.SearchVersionsCommand.ExecuteAsync(null);
+            // 按下Enter键时，确保搜索结果正确应用
+            ViewModel.UpdateFilteredVersions();
         }
     }
 

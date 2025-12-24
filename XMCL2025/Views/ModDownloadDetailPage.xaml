@@ -278,20 +278,23 @@
                 <!-- 支持的加载器/标签 -->
                 <StackPanel Spacing="8">
                     <TextBlock Text="{x:Bind ViewModel.SupportedLoadersText, Mode=OneWay}" FontSize="18" FontWeight="Bold" />
-                    <ItemsControl ItemsSource="{x:Bind ViewModel.SupportedLoaders, Mode=OneWay}">
-                        <ItemsControl.ItemTemplate>
-                            <DataTemplate>
-                                <Border Background="{ThemeResource SolidBackgroundFillColorSecondary}" Padding="8,4" Margin="0,0,8,0" CornerRadius="4">
-                                    <TextBlock Text="{Binding}" FontSize="14" />
-                                </Border>
-                            </DataTemplate>
-                        </ItemsControl.ItemTemplate>
-                        <ItemsControl.ItemsPanel>
-                            <ItemsPanelTemplate>
-                                <WrapGrid Orientation="Horizontal" />
-                            </ItemsPanelTemplate>
-                        </ItemsControl.ItemsPanel>
-                    </ItemsControl>
+                    <!-- 使用ScrollViewer + StackPanel替代WrapGrid，确保所有标签完整显示 -->
+                    <ScrollViewer HorizontalScrollMode="Auto" VerticalScrollMode="Disabled" HorizontalScrollBarVisibility="Auto">
+                        <ItemsControl ItemsSource="{x:Bind ViewModel.SupportedLoaders, Mode=OneWay}">
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate>
+                                    <Border Background="{ThemeResource SolidBackgroundFillColorSecondary}" Padding="8,4" Margin="0,0,8,0" CornerRadius="4">
+                                        <TextBlock Text="{Binding}" FontSize="14" />
+                                    </Border>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                            <ItemsControl.ItemsPanel>
+                                <ItemsPanelTemplate>
+                                    <StackPanel Orientation="Horizontal" />
+                                </ItemsPanelTemplate>
+                            </ItemsControl.ItemsPanel>
+                        </ItemsControl>
+                    </ScrollViewer>
                 </StackPanel>
 
                 <!-- 游戏版本和资源包/Mod版本下载列表 -->

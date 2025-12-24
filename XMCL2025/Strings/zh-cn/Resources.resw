@@ -607,6 +607,54 @@
   <data name="ResourceDownloadPage_TweaksCategory.Content" xml:space="preserve">
     <value>微调</value>
   </data>
+  <!-- 数据包下载翻译 -->
+  <data name="ResourceDownloadPage_DatapackSearchBox.PlaceholderText" xml:space="preserve">
+    <value>搜索数据包...</value>
+  </data>
+  <data name="ResourceDownloadPage_DatapackVersionComboBox.Header" xml:space="preserve">
+    <value>版本</value>
+  </data>
+  <data name="ResourceDownloadPage_DatapackVersionComboBox.PlaceholderText" xml:space="preserve">
+    <value>版本</value>
+  </data>
+  <data name="ResourceDownloadPage_DatapackCategoryComboBox.Header" xml:space="preserve">
+    <value>类别</value>
+  </data>
+  <data name="ResourceDownloadPage_DatapackCategoryComboBox.PlaceholderText" xml:space="preserve">
+    <value>所有类别</value>
+  </data>
+  <!-- 整合包下载翻译 -->
+  <data name="ResourceDownloadPage_ModpackSearchBox.PlaceholderText" xml:space="preserve">
+    <value>搜索整合包...</value>
+  </data>
+  <data name="ResourceDownloadPage_ModpackVersionComboBox.Header" xml:space="preserve">
+    <value>版本</value>
+  </data>
+  <data name="ResourceDownloadPage_ModpackVersionComboBox.PlaceholderText" xml:space="preserve">
+    <value>版本</value>
+  </data>
+  <data name="ResourceDownloadPage_ModpackCategoryComboBox.Header" xml:space="preserve">
+    <value>类别</value>
+  </data>
+  <data name="ResourceDownloadPage_ModpackCategoryComboBox.PlaceholderText" xml:space="preserve">
+    <value>所有类别</value>
+  </data>
+  <!-- 整合包类别翻译 -->
+  <data name="ResourceDownloadPage_ChallengingCategory.Content" xml:space="preserve">
+    <value>硬核</value>
+  </data>
+  <data name="ResourceDownloadPage_KitchenSinkCategory.Content" xml:space="preserve">
+    <value>全能型</value>
+  </data>
+  <data name="ResourceDownloadPage_LightweightCategory.Content" xml:space="preserve">
+    <value>轻量</value>
+  </data>
+  <data name="ResourceDownloadPage_MultiplayerCategory.Content" xml:space="preserve">
+    <value>联机</value>
+  </data>
+  <data name="ResourceDownloadPage_QuestsCategory.Content" xml:space="preserve">
+    <value>任务</value>
+  </data>
   <!-- ModLoader选择页面翻译 -->
   <data name="ModLoaderSelectionPage_TitleText.Text" xml:space="preserve">
     <value>下载Minecraft</value>

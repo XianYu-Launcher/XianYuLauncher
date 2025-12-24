@@ -196,18 +196,62 @@ namespace XMCL2025.ViewModels
         }
 
         /// <summary>
+        /// 检测当前地区是否为中国大陆
+        /// </summary>
+        /// <returns>如果是中国大陆地区返回true，否则返回false</returns>
+        private bool IsChinaMainland()
+        {
+            try
+            {
+                // 获取当前文化和UI文化信息
+                var currentCulture = System.Globalization.CultureInfo.CurrentCulture;
+                var currentUICulture = System.Globalization.CultureInfo.CurrentUICulture;
+                
+                // 使用RegionInfo检测地区
+                var regionInfo = new System.Globalization.RegionInfo(currentCulture.Name);
+                bool isCN = regionInfo.TwoLetterISORegionName == "CN";
+                
+                // 添加Debug输出，显示详细信息
+                System.Diagnostics.Debug.WriteLine($"[地区检测] 当前CultureInfo: {currentCulture.Name} ({currentCulture.DisplayName})");
+                System.Diagnostics.Debug.WriteLine($"[地区检测] 当前UICulture: {currentUICulture.Name} ({currentUICulture.DisplayName})");
+                System.Diagnostics.Debug.WriteLine($"[地区检测] 当前RegionInfo: {regionInfo.Name} ({regionInfo.DisplayName})");
+                System.Diagnostics.Debug.WriteLine($"[地区检测] 两字母ISO代码: {regionInfo.TwoLetterISORegionName}");
+                System.Diagnostics.Debug.WriteLine($"[地区检测] 是否为中国大陆: {isCN}");
+                
+                return isCN;
+            }
+            catch (Exception ex)
+            {
+                // 添加Debug输出，显示异常信息
+                System.Diagnostics.Debug.WriteLine($"[地区检测] 检测失败，异常: {ex.Message}");
+                System.Diagnostics.Debug.WriteLine($"[地区检测] 默认不允许离线登录");
+                // 如果检测失败，默认不允许离线登录
+                return false;
+            }
+        }
+
+        /// <summary>
         /// 离线登录对话框确认命令
         /// </summary>
         [RelayCommand]
         private void ConfirmOfflineLogin()
         {
+            // 检查是否为中国大陆地区
+            if (!IsChinaMainland())
+            {
+                // 非中国大陆地区，不允许创建离线角色
+                System.Diagnostics.Debug.WriteLine("[地区检测] 非中国大陆地区，不允许创建离线角色");
+                OfflineUsername = string.Empty;
+                return;
+            }
+
             // 只有当用户名不为空时才创建角色
             if (!string.IsNullOrWhiteSpace(OfflineUsername))
             {
                 // 创建离线角色
                 var offlineProfile = new MinecraftProfile
                 {
-                    Id = Guid.NewGuid().ToString(),
+                    Id = XMCL2025.Helpers.OfflineUUIDHelper.GenerateMinecraftOfflineUUIDString(OfflineUsername),
                     Name = OfflineUsername,
                     AccessToken = Guid.NewGuid().ToString(),
                     TokenType = "offline",
