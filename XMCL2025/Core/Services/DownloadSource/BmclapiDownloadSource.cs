@@ -207,4 +207,31 @@ public class BmclapiDownloadSource : IDownloadSource
         System.Diagnostics.Debug.WriteLine($"[DEBUG] 为Minecraft {minecraftVersion} 获取BMCLAPI Forge {forgeVersion} 安装包URL: {url}");
         return url;
     }
+    
+    /// <summary>
+    /// 获取Fabric版本列表URL
+    /// </summary>
+    /// <param name="minecraftVersion">Minecraft版本</param>
+    /// <returns>BMCLAPI Fabric版本列表URL</returns>
+    public string GetFabricVersionsUrl(string minecraftVersion)
+    {
+        // BMCLAPI Fabric版本列表URL格式：https://bmclapi2.bangbang93.com/fabric-meta/v2/versions/loader/{minecraftVersion}
+        string url = $"https://bmclapi2.bangbang93.com/fabric-meta/v2/versions/loader/{minecraftVersion}";
+        System.Diagnostics.Debug.WriteLine($"[DEBUG] 为Minecraft {minecraftVersion} 获取BMCLAPI Fabric版本列表URL: {url}");
+        return url;
+    }
+    
+    /// <summary>
+    /// 获取Fabric完整配置URL
+    /// </summary>
+    /// <param name="minecraftVersion">Minecraft版本</param>
+    /// <param name="fabricVersion">Fabric版本号</param>
+    /// <returns>BMCLAPI Fabric完整配置URL</returns>
+    public string GetFabricProfileUrl(string minecraftVersion, string fabricVersion)
+    {
+        // BMCLAPI Fabric完整配置URL格式：https://bmclapi2.bangbang93.com/fabric-meta/v2/versions/loader/{minecraftVersion}/{fabricVersion}/profile/json
+        string url = $"https://bmclapi2.bangbang93.com/fabric-meta/v2/versions/loader/{minecraftVersion}/{fabricVersion}/profile/json";
+        System.Diagnostics.Debug.WriteLine($"[DEBUG] 为Minecraft {minecraftVersion} 获取BMCLAPI Fabric {fabricVersion} 完整配置URL: {url}");
+        return url;
+    }
 }
