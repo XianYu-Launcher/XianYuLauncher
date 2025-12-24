@@ -32,10 +32,6 @@ public class FabricService
     {
         try
         {
-            // Fabric API URL
-            // BMCLAPI源暂不支持Fabric版本列表获取，因此始终使用官方源
-            string url = $"https://meta.fabricmc.net/v2/versions/loader/{minecraftVersion}/";
-            
             // 获取当前版本列表源设置（枚举类型）
             var versionListSourceEnum = await _localSettingsService.ReadSettingAsync<XMCL2025.ViewModels.SettingsViewModel.VersionListSourceType>("VersionListSource");
             var versionListSource = versionListSourceEnum.ToString();
@@ -43,9 +39,11 @@ public class FabricService
             // 根据设置获取对应的下载源
             var downloadSource = _downloadSourceFactory.GetSource(versionListSource.ToLower());
             
+            // 使用下载源获取Fabric版本列表URL
+            string url = downloadSource.GetFabricVersionsUrl(minecraftVersion);
+            
             // 添加Debug输出，显示当前下载源和请求URL
-            // 注意：Fabric版本列表始终使用官方源，因为BMCLAPI不支持Fabric
-            System.Diagnostics.Debug.WriteLine($"[DEBUG] 正在加载Fabric版本列表，下载源:官方源(fabric默认仅使用官方源)，请求URL: {url}");
+            System.Diagnostics.Debug.WriteLine($"[DEBUG] 正在加载Fabric版本列表，下载源: {downloadSource.Name}，请求URL: {url}");
             
             // 发送HTTP请求
             HttpResponseMessage response = await _httpClient.GetAsync(url);

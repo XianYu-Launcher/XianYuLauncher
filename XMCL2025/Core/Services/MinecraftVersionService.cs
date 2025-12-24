@@ -835,8 +835,10 @@ public partial class MinecraftVersionService : IMinecraftVersionService
             }
 
             // 2. 使用新的API获取完整的Fabric配置信息
-            string fabricProfileUrl = $"https://meta.fabricmc.net/v2/versions/loader/{minecraftVersionId}/{fabricVersion}/profile/json";
-            _logger.LogInformation("从新API获取Fabric完整配置: {FabricProfileUrl}", fabricProfileUrl);
+            // 使用下载源获取Fabric完整配置URL
+            string fabricProfileUrl = downloadSource.GetFabricProfileUrl(minecraftVersionId, fabricVersion);
+            _logger.LogInformation("从API获取Fabric完整配置: {FabricProfileUrl}", fabricProfileUrl);
+            System.Diagnostics.Debug.WriteLine($"[DEBUG] 当前下载源: {downloadSource.Name}, Fabric完整配置URL: {fabricProfileUrl}");
             string fabricProfileJson = await _httpClient.GetStringAsync(fabricProfileUrl);
             
             // 解析Fabric Profile JSON
@@ -1737,15 +1739,7 @@ public partial class MinecraftVersionService : IMinecraftVersionService
                                 _logger.LogError(extractEx, "解压原生库文件失败: {NativeLibraryPath}", nativeLibraryPath);
                                 
                                 // 输出错误文件到TEMP文件夹
-                                string errorLogPath = Path.Combine(Path.GetTempPath(), $"native_extract_error_{DateTime.Now:yyyyMMdd_HHmmss}.txt");
-                                string errorContent = $"解压原生库文件失败: {nativeLibraryPath}\n" +
-                                                     $"错误时间: {DateTime.Now:yyyy-MM-dd HH:mm:ss}\n" +
-                                                     $"错误类型: {extractEx.GetType().Name}\n" +
-                                                     $"错误信息: {extractEx.Message}\n" +
-                                                     $"堆栈跟踪: {extractEx.StackTrace}\n" +
-                                                     $"内部错误: {extractEx.InnerException?.Message}\n";
-                                File.WriteAllText(errorLogPath, errorContent);
-                                _logger.LogInformation("错误日志已保存到: {ErrorLogPath}", errorLogPath);
+                                _logger.LogError(extractEx, "解压原生库文件失败: {NativeLibraryPath}", nativeLibraryPath);
                             }
                             }
                             else
@@ -1801,16 +1795,8 @@ public partial class MinecraftVersionService : IMinecraftVersionService
         {
             _logger.LogError(ex, "提取原生库失败: {VersionId}", versionId);
             
-            // 输出错误文件
-            string errorLogPath = Path.Combine(nativesDirectory, $"native_extract_error_{DateTime.Now:yyyyMMdd_HHmmss}.txt");
-            string errorContent = $"提取原生库失败: {versionId}\n" +
-                                 $"错误时间: {DateTime.Now:yyyy-MM-dd HH:mm:ss}\n" +
-                                 $"错误类型: {ex.GetType().Name}\n" +
-                                 $"错误信息: {ex.Message}\n" +
-                                 $"堆栈跟踪: {ex.StackTrace}\n" +
-                                 $"内部错误: {ex.InnerException?.Message}\n";
-            File.WriteAllText(errorLogPath, errorContent);
-            _logger.LogInformation("错误日志已保存到: {ErrorLogPath}", errorLogPath);
+            // 移除自动保存错误日志的操作，保留日志记录
+            _logger.LogError(ex, "提取原生库失败: {VersionId}", versionId);
             
             throw new Exception($"Failed to extract native libraries for version {versionId}", ex);
         }
@@ -1858,6 +1844,10 @@ public partial class MinecraftVersionService : IMinecraftVersionService
     /// </summary>
     private async Task EnsureNeoForgeDependenciesAsync(string versionId, string minecraftDirectory, string librariesDirectory, Action<double> progressCallback, Action<string> currentDownloadCallback)
     {
+        // 声明需要在finally块中访问的变量
+        string installerPath = string.Empty;
+        string extractDirectory = string.Empty;
+        
         try
         {
             // 检查是否是NeoForge版本
@@ -1930,7 +1920,7 @@ public partial class MinecraftVersionService : IMinecraftVersionService
             string neoforgeDownloadUrl = downloadSource.GetNeoForgeInstallerUrl(neoforgeVersion);
             System.Diagnostics.Debug.WriteLine($"[DEBUG] 使用下载源: {downloadSource.Name}，NeoForge安装器URL: {neoforgeDownloadUrl}");
             
-            string installerPath = Path.Combine(cacheDirectory, $"neoforge-{neoforgeVersion}-installer.jar");
+            installerPath = Path.Combine(cacheDirectory, $"neoforge-{neoforgeVersion}-installer.jar");
             
             // 设置最大重试次数
             int maxRetries = 3;
@@ -1968,7 +1958,7 @@ public partial class MinecraftVersionService : IMinecraftVersionService
             }
             
             // 2. 拆包NeoForge安装器
-            string extractDirectory = Path.Combine(cacheDirectory, $"neoforge-{neoforgeVersion}-{DateTime.Now.Ticks}");
+            extractDirectory = Path.Combine(cacheDirectory, $"neoforge-{neoforgeVersion}-{DateTime.Now.Ticks}");
             Directory.CreateDirectory(extractDirectory);
             
             ExtractNeoForgeInstallerFiles(installerPath, extractDirectory);
@@ -2004,17 +1994,6 @@ public partial class MinecraftVersionService : IMinecraftVersionService
             string neoforgeVersionDirectory = Path.Combine(versionsDirectory, versionId);
             await ProcessNeoForgeInstallProfile(installProfilePath, installerPath, neoforgeVersionDirectory, librariesDirectory, progressCallback, extractDirectory);
             
-            // 5. 清理临时提取目录
-            try
-            {
-                Directory.Delete(extractDirectory, true);
-                _logger.LogInformation("已清理临时提取目录: {ExtractDirectory}", extractDirectory);
-            }
-            catch (IOException ex)
-            {
-                _logger.LogWarning(ex, "无法清理临时提取目录: {ExtractDirectory}", extractDirectory);
-            }
-            
             _logger.LogInformation("NeoForge处理器执行完成: {VersionId}", versionId);
             progressCallback?.Invoke(1); // 保持1%进度
         }
@@ -2022,6 +2001,32 @@ public partial class MinecraftVersionService : IMinecraftVersionService
         {
             _logger.LogError(ex, "执行NeoForge处理器失败: {VersionId}", versionId);
             throw new Exception($"执行NeoForge处理器失败 (版本: {versionId}): {ex.Message}", ex);
+        }
+        finally
+        {
+            // 清理临时文件
+            _logger.LogInformation("开始清理NeoForge安装临时文件");
+            
+            try
+            {
+                // 删除临时提取目录
+                if (Directory.Exists(extractDirectory))
+                {
+                    Directory.Delete(extractDirectory, true);
+                    _logger.LogInformation("已删除临时提取目录: {ExtractDirectory}", extractDirectory);
+                }
+                
+                // 删除安装器文件
+                if (File.Exists(installerPath))
+                {
+                    File.Delete(installerPath);
+                    _logger.LogInformation("已删除NeoForge安装器文件: {InstallerPath}", installerPath);
+                }
+            }
+            catch (Exception cleanupEx)
+            {
+                _logger.LogWarning(cleanupEx, "清理临时文件时发生错误");
+            }
         }
     }
     
@@ -2642,6 +2647,10 @@ public partial class MinecraftVersionService : IMinecraftVersionService
     /// </summary>
     private async Task DownloadNeoForgeVersionAsync(string minecraftVersionId, string neoforgeVersion, string versionsDirectory, string librariesDirectory, Action<double> progressCallback, CancellationToken cancellationToken = default, string customVersionName = null)
     {
+        // 声明需要在finally块中访问的变量
+        string installerPath = string.Empty;
+        string extractDirectory = string.Empty;
+        
         try
         {
             _logger.LogInformation("开始下载NeoForge版本: {NeoForgeVersion} for Minecraft {MinecraftVersion}", neoforgeVersion, minecraftVersionId);
@@ -2818,7 +2827,7 @@ public partial class MinecraftVersionService : IMinecraftVersionService
             
             string cacheDirectory = Path.Combine(_fileService.GetAppDataPath(), "cache", "neoforge");
             Directory.CreateDirectory(cacheDirectory);
-            string installerPath = Path.Combine(cacheDirectory, $"neoforge-{neoforgeVersion}-installer.jar");
+            installerPath = Path.Combine(cacheDirectory, $"neoforge-{neoforgeVersion}-installer.jar");
             
             // 确保在下载前清理旧文件（如果存在）
             if (File.Exists(installerPath))
@@ -2847,7 +2856,7 @@ public partial class MinecraftVersionService : IMinecraftVersionService
             _logger.LogInformation("开始拆包NeoForge安装器");
             System.Diagnostics.Debug.WriteLine("[DEBUG] 开始拆包NeoForge安装器");
             
-            string extractDirectory = Path.Combine(cacheDirectory, $"neoforge-{neoforgeVersion}-{DateTime.Now.Ticks}");
+            extractDirectory = Path.Combine(cacheDirectory, $"neoforge-{neoforgeVersion}-{DateTime.Now.Ticks}");
             System.Diagnostics.Debug.WriteLine($"[DEBUG] 拆包目标目录: {extractDirectory}");
             
             Directory.CreateDirectory(extractDirectory);
@@ -3143,6 +3152,32 @@ public partial class MinecraftVersionService : IMinecraftVersionService
             
             // 抛出带有详细信息的新异常
             throw new Exception(detailedMessage, ex);
+        }
+        finally
+        {
+            // 清理临时文件
+            _logger.LogInformation("开始清理NeoForge安装临时文件");
+            
+            try
+            {
+                // 删除临时提取目录
+                if (Directory.Exists(extractDirectory))
+                {
+                    Directory.Delete(extractDirectory, true);
+                    _logger.LogInformation("已删除临时提取目录: {ExtractDirectory}", extractDirectory);
+                }
+                
+                // 删除安装器文件
+                if (File.Exists(installerPath))
+                {
+                    File.Delete(installerPath);
+                    _logger.LogInformation("已删除NeoForge安装器文件: {InstallerPath}", installerPath);
+                }
+            }
+            catch (Exception cleanupEx)
+            {
+                _logger.LogWarning(cleanupEx, "清理临时文件时发生错误");
+            }
         }
     }
     
