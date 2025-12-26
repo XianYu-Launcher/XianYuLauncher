@@ -113,19 +113,69 @@
             </Border>
         </Grid>
 
-        <!-- 占位内容 -->
-        <StackPanel Grid.Row="2" VerticalAlignment="Center" HorizontalAlignment="Center" Spacing="16">
-            <FontIcon 
-                FontFamily="{StaticResource SymbolThemeFontFamily}" 
-                Glyph="&#xe716;" 
-                FontSize="64" 
-                Foreground="{ThemeResource SystemControlForegroundBaseMediumBrush}" />
+        <!-- 玩家列表 -->
+        <StackPanel Grid.Row="2" Spacing="16">
+            <!-- 玩家列表标题 -->
             <TextBlock 
-                Text="等待其他玩家加入..." 
-                Style="{ThemeResource BodyTextBlockStyle}" 
-                FontSize="18" 
-                Opacity="0.7" 
-                TextAlignment="Center" />
+                Text="玩家列表" 
+                Style="{ThemeResource TitleTextBlockStyle}" 
+                FontSize="20" 
+                FontWeight="SemiBold" />
+            
+            <!-- 玩家列表 -->
+            <ItemsControl ItemsSource="{x:Bind ViewModel.PlayerList, Mode=OneWay}" VerticalAlignment="Top">
+                <ItemsControl.ItemTemplate>
+                    <DataTemplate x:DataType="viewModels:RoomPlayer">
+                        <Border 
+                            Background="{ThemeResource CardBackgroundFillColorDefault}" 
+                            BorderBrush="{ThemeResource CardStrokeColorDefault}" 
+                            BorderThickness="1" 
+                            CornerRadius="8" 
+                            Padding="16" 
+                            Margin="0,4,0,4">
+                            <StackPanel Orientation="Horizontal" Spacing="12" VerticalAlignment="Center">
+                                <!-- 玩家头像 -->
+                                <Border 
+                                    Width="32" 
+                                    Height="32" 
+                                    CornerRadius="8" 
+                                    Background="{ThemeResource CardBackgroundFillColorSecondary}" 
+                                    Padding="4">
+                                    <Image 
+                                        Source="{x:Bind Avatar, Mode=OneWay}" 
+                                        Width="24" 
+                                        Height="24" 
+                                        Stretch="Fill" />
+                                </Border>
+                                <!-- 玩家名称 -->
+                                <TextBlock 
+                                    Text="{x:Bind Name, Mode=OneWay}" 
+                                    Style="{ThemeResource BodyTextBlockStyle}" 
+                                    FontSize="16" />
+                            </StackPanel>
+                        </Border>
+                    </DataTemplate>
+                </ItemsControl.ItemTemplate>
+            </ItemsControl>
+            
+            <!-- 当玩家列表为空时显示 -->
+            <StackPanel 
+                Visibility="{x:Bind ViewModel.IsPlayerListEmpty, Mode=OneWay, Converter={StaticResource BoolToVisibilityConverter}}" 
+                VerticalAlignment="Center" 
+                HorizontalAlignment="Center" 
+                Spacing="16">
+                <FontIcon 
+                    FontFamily="{StaticResource SymbolThemeFontFamily}" 
+                    Glyph="&#xe716;" 
+                    FontSize="48" 
+                    Foreground="{ThemeResource SystemControlForegroundBaseMediumBrush}" />
+                <TextBlock 
+                    Text="当前没有其他玩家..." 
+                    Style="{ThemeResource BodyTextBlockStyle}" 
+                    FontSize="16" 
+                    Opacity="0.7" 
+                    TextAlignment="Center" />
+            </StackPanel>
         </StackPanel>
     </Grid>
 </Page>

@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Net.Http;
@@ -10,6 +11,8 @@ using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using XMCL2025.Contracts.Services;
 using XMCL2025.Contracts.ViewModels;
+using XMCL2025.Core.Contracts.Services;
+using Newtonsoft.Json;
 
 namespace XMCL2025.ViewModels;
 
@@ -41,10 +44,53 @@ public partial class 联机ViewModel : ObservableRecipient, INavigationAware
         get => _pollingResult;
         set => SetProperty(ref _pollingResult, value);
     }
+    
+    // FileService用于获取文件路径
+    private readonly IFileService _fileService;
+    
+    // 角色信息类
+    private class MinecraftProfile
+    {
+        public string Id { get; set; }
+        public string Name { get; set; }
+        public bool IsActive { get; set; }
+    }
 
-    public 联机ViewModel(INavigationService navigationService)
+    public 联机ViewModel(INavigationService navigationService, IFileService fileService)
     {
         _navigationService = navigationService;
+        _fileService = fileService;
+    }
+    
+    /// <summary>
+    /// 获取当前活跃角色名称
+    /// </summary>
+    /// <returns>当前角色名称，如果没有找到则返回空字符串</returns>
+    private string GetCurrentProfileName()
+    {
+        try
+        {
+            // 获取角色数据文件路径
+            string profilesFilePath = Path.Combine(_fileService.GetMinecraftDataPath(), "profiles.json");
+            
+            if (File.Exists(profilesFilePath))
+            {
+                string json = File.ReadAllText(profilesFilePath);
+                var profiles = JsonConvert.DeserializeObject<List<MinecraftProfile>>(json) ?? new List<MinecraftProfile>();
+                
+                // 查找活跃角色
+                var activeProfile = profiles.FirstOrDefault(p => p.IsActive) ?? profiles.FirstOrDefault();
+                if (activeProfile != null)
+                {
+                    return activeProfile.Name;
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"加载角色信息失败: {ex.Message}");
+        }
+        return string.Empty;
     }
 
     public void OnNavigatedFrom()
@@ -199,8 +245,12 @@ public partial class 联机ViewModel : ObservableRecipient, INavigationAware
     {
         try
         {
+            // 获取当前启动器内选择的角色名
+            string playerName = GetCurrentProfileName();
+            
             string stateUrl = $"http://localhost:{port}/state";
-            string scanningUrl = $"http://localhost:{port}/state/scanning";
+            // 在扫描URL后面加上?player={当前角色名}
+            string scanningUrl = $"http://localhost:{port}/state/scanning?player={Uri.EscapeDataString(playerName)}";
             
             // 首先发送一次请求到/scanning，用于设置当前为查询状态
             try
@@ -273,7 +323,7 @@ public partial class 联机ViewModel : ObservableRecipient, INavigationAware
                                 }
                             }
                         }
-                        catch (JsonException ex)
+                        catch (System.Text.Json.JsonException ex)
                         {
                             // JSON解析错误，忽略
                             System.Diagnostics.Debug.WriteLine($"解析轮询结果JSON错误: {ex.Message}");
@@ -466,10 +516,13 @@ public partial class 联机ViewModel : ObservableRecipient, INavigationAware
             
             if (isSuccess && !string.IsNullOrEmpty(port))
             {
-                // 3. 访问http://localhost:{端口}/state/guesting?room=房间号
+                // 3. 访问http://localhost:{端口}/state/guesting?room=房间号&player=角色名
                 try
                 {
-                    string guestingUrl = $"http://localhost:{port}/state/guesting?room={roomId}";
+                    // 获取当前启动器内选择的角色名
+                    string playerName = GetCurrentProfileName();
+                    // 构建包含玩家名的URL
+                    string guestingUrl = $"http://localhost:{port}/state/guesting?room={roomId}&player={Uri.EscapeDataString(playerName)}";
                     HttpResponseMessage response = await _httpClient.GetAsync(guestingUrl);
                     
                     if (response.StatusCode == System.Net.HttpStatusCode.BadRequest)
