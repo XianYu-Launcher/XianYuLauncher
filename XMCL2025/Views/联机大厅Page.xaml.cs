@@ -4,6 +4,7 @@ using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Input;
 using Microsoft.UI.Xaml.Media;
 using Windows.ApplicationModel.DataTransfer;
+using Windows.UI;
 using Windows.UI.Core;
 using XMCL2025.ViewModels;
 
@@ -26,7 +27,8 @@ public sealed partial class 联机大厅Page : Page
     {
         if (sender is Border border)
         {
-            border.Background = (SolidColorBrush)Application.Current.Resources["SystemControlHighlightListLowBrush"];
+            // 使用与玩家列表项相同的悬停颜色
+            border.Background = new SolidColorBrush(Color.FromArgb(255, 243, 243, 243));
             // 设置手型光标
             if (Window.Current != null)
             {
@@ -69,4 +71,6 @@ public sealed partial class 联机大厅Page : Page
             // 例如显示一个短暂的消息
         }
     }
+    
+
 }
