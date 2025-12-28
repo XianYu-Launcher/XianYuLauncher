@@ -271,76 +271,287 @@ public class ModrinthService
     }
 
     /// <summary>
-    /// 通过多个文件哈希批量获取Modrinth版本文件信息
-    /// </summary>
-    /// <param name="hashes">文件哈希值列表</param>
-    /// <param name="algorithm">哈希算法，默认为sha1</param>
-    /// <returns>哈希值到Modrinth版本信息的映射</returns>
-    public async Task<Dictionary<string, ModrinthVersion>> GetVersionFilesByHashesAsync(List<string> hashes, string algorithm = "sha1")
-    {
-        string url = string.Empty;
-        string responseContent = string.Empty;
-        try
+        /// 通过多个文件哈希批量获取Modrinth版本文件信息
+        /// </summary>
+        /// <param name="hashes">文件哈希值列表</param>
+        /// <param name="algorithm">哈希算法，默认为sha1</param>
+        /// <returns>哈希值到Modrinth版本信息的映射</returns>
+        public async Task<Dictionary<string, ModrinthVersion>> GetVersionFilesByHashesAsync(List<string> hashes, string algorithm = "sha1")
         {
-            // 构建请求URL
-            url = "https://api.modrinth.com/v2/version_files";
-
-            // 构建请求体
-            var requestBody = new
+            string url = string.Empty;
+            string responseContent = string.Empty;
+            try
             {
-                hashes = hashes,
-                algorithm = algorithm
-            };
+                // 构建请求URL
+                url = "https://api.modrinth.com/v2/version_files";
 
-            // 将请求体转换为JSON字符串
-            string jsonBody = JsonSerializer.Serialize(requestBody);
+                // 构建请求体
+                var requestBody = new
+                {
+                    hashes = hashes,
+                    algorithm = algorithm
+                };
 
-            // 创建HTTP请求
-            var request = new HttpRequestMessage(HttpMethod.Post, url)
-            {
-                Content = new StringContent(jsonBody, Encoding.UTF8, "application/json")
-            };
+                // 将请求体转换为JSON字符串
+                string jsonBody = JsonSerializer.Serialize(requestBody);
 
-            // 输出调试信息，显示完整请求URL和请求体
-            System.Diagnostics.Debug.WriteLine($"Modrinth API Request: {url}");
-            System.Diagnostics.Debug.WriteLine($"Modrinth API Request Body: {jsonBody}");
+                // 创建HTTP请求
+                var request = new HttpRequestMessage(HttpMethod.Post, url)
+                {
+                    Content = new StringContent(jsonBody, Encoding.UTF8, "application/json")
+                };
 
-            // 发送请求
-            var response = await _httpClient.SendAsync(request);
-            
-            // 获取完整响应内容
-            responseContent = await response.Content.ReadAsStringAsync();
+                // 输出调试信息，显示完整请求URL和请求体
+                System.Diagnostics.Debug.WriteLine($"Modrinth API Request: {url}");
+                System.Diagnostics.Debug.WriteLine($"Modrinth API Request Body: {jsonBody}");
 
-            // 输出调试信息，显示响应内容
-            System.Diagnostics.Debug.WriteLine($"Modrinth API Response: {responseContent}");
+                // 发送请求
+                var response = await _httpClient.SendAsync(request);
+                
+                // 获取完整响应内容
+                responseContent = await response.Content.ReadAsStringAsync();
 
-            // 确保响应成功
-            response.EnsureSuccessStatusCode();
+                // 输出调试信息，显示响应内容
+                System.Diagnostics.Debug.WriteLine($"Modrinth API Response: {responseContent}");
 
-            // 解析响应，返回哈希值到版本信息的映射
-            return JsonSerializer.Deserialize<Dictionary<string, ModrinthVersion>>(responseContent);
-        }
-        catch (HttpRequestException ex)
-        {
-            // 处理HTTP请求异常，包含状态码
-            string errorMsg = $"通过哈希批量获取Mod文件失败: {ex.Message}";
-            if (ex.StatusCode.HasValue)
-            {
-                errorMsg += $" (状态码: {ex.StatusCode})";
+                // 确保响应成功
+                response.EnsureSuccessStatusCode();
+
+                // 解析响应，返回哈希值到版本信息的映射
+                return JsonSerializer.Deserialize<Dictionary<string, ModrinthVersion>>(responseContent);
             }
-            System.Diagnostics.Debug.WriteLine(errorMsg);
-            throw new Exception(errorMsg);
+            catch (HttpRequestException ex)
+            {
+                // 处理HTTP请求异常，包含状态码
+                string errorMsg = $"通过哈希批量获取Mod文件失败: {ex.Message}";
+                if (ex.StatusCode.HasValue)
+                {
+                    errorMsg += $" (状态码: {ex.StatusCode})";
+                }
+                System.Diagnostics.Debug.WriteLine(errorMsg);
+                throw new Exception(errorMsg);
+            }
+            catch (JsonException ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"解析Mod文件信息失败: {ex.Message}");
+                throw new Exception($"解析Mod文件信息失败: {ex.Message}");
+            }
+            catch (Exception ex)
+            {
+                // 处理其他异常
+                System.Diagnostics.Debug.WriteLine($"通过哈希批量获取Mod文件时发生错误: {ex.Message}");
+                throw new Exception($"通过哈希批量获取Mod文件时发生错误: {ex.Message}");
+            }
         }
-        catch (JsonException ex)
+        
+        /// <summary>
+        /// 获取指定版本ID的详细信息
+        /// </summary>
+        /// <param name="versionId">版本ID</param>
+        /// <returns>版本详细信息</returns>
+        public async Task<ModrinthVersion> GetVersionByIdAsync(string versionId)
         {
-            System.Diagnostics.Debug.WriteLine($"解析Mod文件信息失败: {ex.Message}");
-            throw new Exception($"解析Mod文件信息失败: {ex.Message}");
+            try
+            {
+                System.Diagnostics.Debug.WriteLine($"获取Mod版本信息: {versionId}");
+                
+                string apiUrl = $"https://api.modrinth.com/v2/version/{Uri.EscapeDataString(versionId)}";
+                var response = await _httpClient.GetAsync(apiUrl);
+                
+                if (response.IsSuccessStatusCode)
+                {
+                    string responseContent = await response.Content.ReadAsStringAsync();
+                    System.Diagnostics.Debug.WriteLine($"版本信息响应: {responseContent}");
+                    
+                    return System.Text.Json.JsonSerializer.Deserialize<ModrinthVersion>(responseContent);
+                }
+                else
+                {
+                    System.Diagnostics.Debug.WriteLine($"获取版本信息失败: {response.StatusCode}");
+                    return null;
+                }
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"获取版本信息失败: {ex.Message}");
+                throw new Exception($"获取版本信息失败: {ex.Message}");
+            }
         }
-        catch (Exception ex)
+        
+        /// <summary>
+        /// 处理Mod依赖关系
+        /// </summary>
+        /// <param name="dependencies">依赖列表</param>
+        /// <param name="destinationPath">保存路径</param>
+        /// <param name="progressCallback">进度回调</param>
+        /// <param name="cancellationToken">取消令牌</param>
+        /// <returns>成功处理的依赖数量</returns>
+        public async Task<int> ProcessDependenciesAsync(
+            List<Dependency> dependencies, 
+            string destinationPath, 
+            Action<string, double>? progressCallback = null,
+            CancellationToken cancellationToken = default)
         {
-            // 处理其他异常
-            System.Diagnostics.Debug.WriteLine($"通过哈希批量获取Mod文件时发生错误: {ex.Message}");
-            throw new Exception($"通过哈希批量获取Mod文件时发生错误: {ex.Message}");
+            int processedCount = 0;
+            
+            if (dependencies == null || dependencies.Count == 0)
+            {
+                System.Diagnostics.Debug.WriteLine("没有依赖需要处理");
+                return processedCount;
+            }
+            
+            System.Diagnostics.Debug.WriteLine($"开始处理{dependencies.Count}个依赖");
+            
+            // 跟踪已处理的依赖，避免循环依赖
+            var processedDependencies = new HashSet<string>();
+            
+            foreach (var dependency in dependencies)
+            {
+                cancellationToken.ThrowIfCancellationRequested();
+                
+                if (!string.IsNullOrEmpty(dependency.VersionId) && processedDependencies.Add(dependency.VersionId))
+                {
+                    // 获取依赖版本信息
+                    var depVersionInfo = await GetVersionByIdAsync(dependency.VersionId);
+                    if (depVersionInfo != null && depVersionInfo.Files != null && depVersionInfo.Files.Count > 0)
+                    {
+                        // 获取主要文件
+                        var primaryFile = depVersionInfo.Files.FirstOrDefault(f => f.Primary) ?? depVersionInfo.Files[0];
+                        
+                        if (primaryFile.Url != null && !string.IsNullOrEmpty(primaryFile.Filename))
+                        {
+                            // 检查是否已存在相同SHA1的Mod
+                            bool alreadyExists = false;
+                            string filePath = Path.Combine(destinationPath, primaryFile.Filename);
+                            
+                            if (File.Exists(filePath) && primaryFile.Hashes.TryGetValue("sha1", out string expectedSha1))
+                            {
+                                string existingSha1 = CalculateSHA1(filePath);
+                                alreadyExists = existingSha1.Equals(expectedSha1, StringComparison.OrdinalIgnoreCase);
+                                
+                                if (alreadyExists)
+                                {
+                                    System.Diagnostics.Debug.WriteLine($"依赖{primaryFile.Filename}已存在，跳过下载");
+                                    processedCount++;
+                                    continue;
+                                }
+                            }
+                            
+                            // 下载依赖
+                            bool downloadSuccess = await DownloadFileAsync(
+                                primaryFile.Url.AbsoluteUri, 
+                                filePath, 
+                                progressCallback, 
+                                cancellationToken);
+                            
+                            if (downloadSuccess)
+                            {
+                                // 处理依赖的依赖（递归）
+                                if (depVersionInfo.Dependencies != null && depVersionInfo.Dependencies.Count > 0)
+                                {
+                                    await ProcessDependenciesAsync(
+                                        depVersionInfo.Dependencies, 
+                                        destinationPath, 
+                                        progressCallback,
+                                        cancellationToken);
+                                }
+                                
+                                processedCount++;
+                            }
+                        }
+                    }
+                }
+            }
+            
+            System.Diagnostics.Debug.WriteLine($"已处理{dependencies.Count}个依赖，成功{processedCount}个");
+            return processedCount;
         }
-    }
+        
+        /// <summary>
+        /// 下载文件
+        /// </summary>
+        /// <param name="downloadUrl">下载URL</param>
+        /// <param name="destinationPath">保存路径</param>
+        /// <param name="progressCallback">进度回调</param>
+        /// <param name="cancellationToken">取消令牌</param>
+        /// <returns>是否下载成功</returns>
+        private async Task<bool> DownloadFileAsync(
+            string downloadUrl, 
+            string destinationPath, 
+            Action<string, double>? progressCallback = null,
+            CancellationToken cancellationToken = default)
+        {
+            try
+            {
+                string fileName = Path.GetFileName(destinationPath);
+                System.Diagnostics.Debug.WriteLine($"开始下载文件: {downloadUrl} 到 {destinationPath}");
+                
+                // 更新当前下载项
+                progressCallback?.Invoke(fileName, 0);
+                
+                // 创建父目录（如果不存在）
+                Directory.CreateDirectory(Path.GetDirectoryName(destinationPath) ?? string.Empty);
+                
+                // 下载文件
+                var response = await _httpClient.GetAsync(downloadUrl, HttpCompletionOption.ResponseHeadersRead, cancellationToken);
+                response.EnsureSuccessStatusCode();
+                
+                long totalBytes = response.Content.Headers.ContentLength ?? 0;
+                long downloadedBytes = 0;
+                
+                using (var contentStream = await response.Content.ReadAsStreamAsync(cancellationToken))
+                using (var fileStream = new FileStream(destinationPath, FileMode.Create, FileAccess.Write, FileShare.None, 8192, true))
+                {
+                    byte[] buffer = new byte[8192];
+                    int bytesRead;
+                    
+                    while ((bytesRead = await contentStream.ReadAsync(buffer, 0, buffer.Length, cancellationToken)) > 0)
+                    {
+                        cancellationToken.ThrowIfCancellationRequested();
+                        
+                        await fileStream.WriteAsync(buffer, 0, bytesRead, cancellationToken);
+                        downloadedBytes += bytesRead;
+                        
+                        // 计算并报告进度
+                        if (totalBytes > 0)
+                        {
+                            double progress = (double)downloadedBytes / totalBytes * 100;
+                            progressCallback?.Invoke(fileName, Math.Round(progress, 2));
+                        }
+                    }
+                }
+                
+                System.Diagnostics.Debug.WriteLine($"文件下载完成: {destinationPath}");
+                
+                // 下载完成，报告100%进度
+                progressCallback?.Invoke(fileName, 100);
+                
+                return true;
+            }
+            catch (OperationCanceledException)
+            {
+                System.Diagnostics.Debug.WriteLine($"文件下载已取消: {destinationPath}");
+                return false;
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"下载文件失败: {ex.Message}");
+                return false;
+            }
+        }
+        
+        /// <summary>
+        /// 计算文件的SHA1哈希值
+        /// </summary>
+        /// <param name="filePath">文件路径</param>
+        /// <returns>SHA1哈希值</returns>
+        private string CalculateSHA1(string filePath)
+        {
+            using (var sha1 = System.Security.Cryptography.SHA1.Create())
+            using (var stream = File.OpenRead(filePath))
+            {
+                byte[] hashBytes = sha1.ComputeHash(stream);
+                return BitConverter.ToString(hashBytes).Replace("-", "").ToLowerInvariant();
+            }
+        }
 }
