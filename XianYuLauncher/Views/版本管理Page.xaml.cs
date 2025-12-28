@@ -20,19 +20,46 @@ public sealed partial class 版本管理Page : Page
         this.DataContext = ViewModel;
         InitializeComponent();
         
-        // 监听SelectedVersion变化，更新页面标题
-        ViewModel.PropertyChanged += (sender, e) =>
-        {
-            if (e.PropertyName == nameof(ViewModel.SelectedVersion))
-            {
-                UpdatePageTitle();
-            }
-        };
+        // 立即注册ViewModel的属性变化事件，确保OnNavigatedTo时能触发
+        ViewModel.PropertyChanged += ViewModel_PropertyChanged;
         
         // 初始更新标题
         UpdatePageTitle();
     }
-
+    
+    /// <summary>
+    /// 监听ViewModel属性变化，显示或隐藏弹窗
+    /// </summary>
+    private async void ViewModel_PropertyChanged(object sender, System.ComponentModel.PropertyChangedEventArgs e)
+    {
+        if (e.PropertyName == nameof(ViewModel.IsDownloading) && ViewModel.IsDownloading)
+        {
+            // 显示下载进度弹窗
+            await DownloadProgressDialog.ShowAsync();
+        }
+        else if (e.PropertyName == nameof(ViewModel.IsResultDialogVisible) && ViewModel.IsResultDialogVisible)
+        {
+            // 关闭下载进度弹窗（如果显示）
+            DownloadProgressDialog.Hide();
+            // 显示结果弹窗
+            await ResultDialog.ShowAsync();
+        }
+        else if (e.PropertyName == nameof(ViewModel.SelectedVersion))
+        {
+            // 更新页面标题
+            UpdatePageTitle();
+        }
+    }
+    
+    /// <summary>
+    /// 结果弹窗确定按钮点击事件处理
+    /// </summary>
+    private void ResultDialog_PrimaryButtonClick(ContentDialog sender, ContentDialogButtonClickEventArgs args)
+    {
+        // 关闭结果弹窗
+        ViewModel.IsResultDialogVisible = false;
+    }
+    
     /// <summary>
     /// 更新页面标题
     /// </summary>
