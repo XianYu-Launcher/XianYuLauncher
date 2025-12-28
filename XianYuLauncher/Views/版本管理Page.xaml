@@ -33,6 +33,17 @@
         <helpers:BoolToVisibilityConverter x:Key="BoolToVisibilityConverter" />
         <helpers:PathToUriConverter x:Key="PathToUriConverter" />
         <helpers:StringNullOrEmptyToBoolConverter x:Key="StringNullOrEmptyToVisibilityConverter" />
+        <helpers:DoubleToPercentageConverter x:Key="DoubleToPercentageConverter" />
+        
+        <!-- 简化的CheckBox样式，精确控制点击区域 -->
+        <Style x:Key="CustomCheckboxStyle" TargetType="CheckBox">
+            <Setter Property="Width" Value="20" />
+            <Setter Property="Height" Value="20" />
+            <Setter Property="Padding" Value="0" />
+            <Setter Property="Margin" Value="0,0,8,0" />
+            <Setter Property="HorizontalAlignment" Value="Left" />
+            <Setter Property="VerticalAlignment" Value="Center" />
+        </Style>
         
 
     </Grid.Resources>
@@ -102,7 +113,7 @@
             Width="48"
             Height="48"
             Foreground="{ThemeResource SystemControlHighlightAccentBrush}"/>
-
+        
         <!-- 主内容区域 - TabView -->
         <TabView 
             x:Name="MainTabView"
@@ -289,83 +300,42 @@
                     <!-- Mod列表容器 -->
                     <Grid Grid.Row="1" AllowDrop="True">
                         <!-- Mod列表 -->
-                        <ScrollViewer
-                            x:Name="ModListScrollViewer"
-                            Margin="0"
-                            VerticalScrollBarVisibility="Auto"
-                            HorizontalScrollBarVisibility="Disabled"
-                            AllowDrop="True">
-                            <ListView 
-                                x:Name="ModListView"
-                                ItemsSource="{Binding Mods, Mode=OneWay}"
-                                SelectionMode="Single"
-                                IsItemClickEnabled="False"
-                                CanReorderItems="False"
-                                AllowDrop="True"
-                                Background="Transparent"
-                                BorderThickness="0"
-                                VerticalAlignment="Stretch">
-                                <ListView.Resources>
-                                    <Style TargetType="ScrollViewer">
-                                        <Setter Property="HorizontalScrollBarVisibility" Value="Disabled"/>
-                                        <Setter Property="VerticalScrollBarVisibility" Value="Auto"/>
-                                    </Style>
-                                </ListView.Resources>
-                                <ListView.ItemContainerStyle>
-                                    <Style TargetType="ListViewItem">
-                                        <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
-                                        <Setter Property="Margin" Value="0,0,0,16"/>
-                                        <Setter Property="Padding" Value="0"/>
-                                        <Setter Property="BorderThickness" Value="0"/>
-                                        <Setter Property="Background" Value="Transparent"/>
-                                        <Setter Property="Template">
-                                            <Setter.Value>
-                                                <ControlTemplate TargetType="ListViewItem">
-                                                    <Grid x:Name="RootGrid" Background="{TemplateBinding Background}" CornerRadius="8">
-                                                        <VisualStateManager.VisualStateGroups>
-                                                            <VisualStateGroup x:Name="CommonStates">
-                                                                <VisualState x:Name="Normal" />
-                                                                <VisualState x:Name="PointerOver">
-                                                                    <Storyboard>
-                                                                        <ObjectAnimationUsingKeyFrames Storyboard.TargetName="ContentPresenter" Storyboard.TargetProperty="Background">
-                                                                            <DiscreteObjectKeyFrame KeyTime="0" Value="{ThemeResource SystemControlBackgroundListLowBrush}" />
-                                                                        </ObjectAnimationUsingKeyFrames>
-                                                                    </Storyboard>
-                                                                </VisualState>
-                                                                <VisualState x:Name="Pressed">
-                                                                    <Storyboard>
-                                                                        <ObjectAnimationUsingKeyFrames Storyboard.TargetName="ContentPresenter" Storyboard.TargetProperty="Background">
-                                                                            <DiscreteObjectKeyFrame KeyTime="0" Value="{ThemeResource SystemControlBackgroundListMediumBrush}" />
-                                                                        </ObjectAnimationUsingKeyFrames>
-                                                                    </Storyboard>
-                                                                </VisualState>
-                                                                <VisualState x:Name="Selected">
-                                                                    <Storyboard>
-                                                                        <ObjectAnimationUsingKeyFrames Storyboard.TargetName="ContentPresenter" Storyboard.TargetProperty="Background">
-                                                                            <DiscreteObjectKeyFrame KeyTime="0" Value="{ThemeResource SystemControlHighlightListAccentLowBrush}" />
-                                                                        </ObjectAnimationUsingKeyFrames>
-                                                                        <ObjectAnimationUsingKeyFrames Storyboard.TargetName="ContentPresenter" Storyboard.TargetProperty="BorderBrush">
-                                                                            <DiscreteObjectKeyFrame KeyTime="0" Value="{ThemeResource SystemControlHighlightAccentBrush}" />
-                                                                        </ObjectAnimationUsingKeyFrames>
-                                                                        <ObjectAnimationUsingKeyFrames Storyboard.TargetName="ContentPresenter" Storyboard.TargetProperty="BorderThickness">
-                                                                            <DiscreteObjectKeyFrame KeyTime="0" Value="2" />
-                                                                        </ObjectAnimationUsingKeyFrames>
-                                                                    </Storyboard>
-                                                                </VisualState>
-                                                            </VisualStateGroup>
-                                                        </VisualStateManager.VisualStateGroups>
-                                                        <ContentPresenter x:Name="ContentPresenter"
-                                                                          Content="{TemplateBinding Content}"
-                                                                          ContentTemplate="{TemplateBinding ContentTemplate}"
-                                                                          HorizontalContentAlignment="{TemplateBinding HorizontalContentAlignment}"
-                                                                          VerticalContentAlignment="{TemplateBinding VerticalContentAlignment}"
-                                                                          Padding="{TemplateBinding Padding}"/>
-                                                    </Grid>
-                                                </ControlTemplate>
-                                            </Setter.Value>
-                                        </Setter>
-                                    </Style>
-                                </ListView.ItemContainerStyle>
+                        <ListView 
+                            x:Name="ModListView"
+                            ItemsSource="{Binding Mods, Mode=OneWay}"
+                            SelectionMode="Single"
+                            IsItemClickEnabled="False"
+                            CanReorderItems="False"
+                            AllowDrop="True"
+                            Background="Transparent"
+                            BorderThickness="0"
+                            VerticalAlignment="Stretch">
+                            <ListView.Resources>
+                                <Style TargetType="ScrollViewer">
+                                    <Setter Property="HorizontalScrollBarVisibility" Value="Disabled"/>
+                                    <Setter Property="VerticalScrollBarVisibility" Value="Auto"/>
+                                    <Setter Property="IsScrollInertiaEnabled" Value="True"/>
+                                </Style>
+                            </ListView.Resources>
+                            <ListView.ItemsPanel>
+                                <ItemsPanelTemplate>
+                                    <!-- 使用ItemsStackPanel替代ScrollViewer+ListView，提供更好的性能和虚拟化支持 -->
+                                    <ItemsStackPanel/>
+                                </ItemsPanelTemplate>
+                            </ListView.ItemsPanel>
+                            <ListView.ItemContainerStyle>
+                                <Style TargetType="ListViewItem">
+                                    <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
+                                    <Setter Property="Margin" Value="0,0,0,16"/>
+                                    <Setter Property="Padding" Value="0"/>
+                                    <Setter Property="BorderThickness" Value="0"/>
+                                    <Setter Property="Background" Value="Transparent"/>
+                                    <!-- 优化布局性能 -->
+                                    <Setter Property="UseLayoutRounding" Value="True"/>
+                                    <Setter Property="CacheMode" Value="BitmapCache"/>
+                                    <!-- 简化模板，移除复杂的VisualStateManager，使用默认模板 -->
+                                </Style>
+                            </ListView.ItemContainerStyle>
                                 <ListView.ItemTemplate>
                                     <DataTemplate x:DataType="viewModels:ModInfo">
                                         <Grid Height="60" 
@@ -374,15 +344,50 @@
                                               Padding="16,8,16,8" 
                                               BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
                                               BorderThickness="1">
+                                            <!-- 右键菜单 -->
+                                            <Grid.ContextFlyout>
+                                                <MenuFlyout>
+                                                    <MenuFlyoutItem Text="{Binding DataContext.SelectAllMenuItemText, ElementName=ModListView}" Command="{Binding DataContext.SelectAllModsCommand, ElementName=ModListView}">
+                                                        <MenuFlyoutItem.Icon>
+                                                            <SymbolIcon Symbol="AllApps" />
+                                                        </MenuFlyoutItem.Icon>
+                                                    </MenuFlyoutItem>
+                                                    <MenuFlyoutItem Text="更新" Command="{Binding DataContext.UpdateModsCommand, ElementName=ModListView}">
+                                                        <MenuFlyoutItem.Icon>
+                                                            <SymbolIcon Symbol="Refresh" />
+                                                        </MenuFlyoutItem.Icon>
+                                                    </MenuFlyoutItem>
+                                                    <MenuFlyoutItem Text="转移至其它版本" Command="{Binding DataContext.MoveModsToOtherVersionCommand, ElementName=ModListView}">
+                                                        <MenuFlyoutItem.Icon>
+                                                            <SymbolIcon Symbol="MoveToFolder" />
+                                                        </MenuFlyoutItem.Icon>
+                                                    </MenuFlyoutItem>
+                                                </MenuFlyout>
+                                            </Grid.ContextFlyout>
+                                            
                                             <Grid.ColumnDefinitions>
+                                                <!-- 复选框列 -->
                                                 <ColumnDefinition Width="Auto" />
+                                                <!-- Mod图标列 -->
+                                                <ColumnDefinition Width="Auto" />
+                                                <!-- Mod名称列 -->
                                                 <ColumnDefinition Width="*" />
+                                                <!-- 启用/禁用开关列 -->
                                                 <ColumnDefinition Width="Auto" />
+                                                <!-- 删除按钮列 -->
                                                 <ColumnDefinition Width="Auto" />
                                             </Grid.ColumnDefinitions>
                                             
+                                            <!-- 多选复选框容器 -->
+                                            <Grid Grid.Column="0" Width="24" Height="Auto" Margin="0,0,8,0">
+                                                <!-- 复选框 -->
+                                                <CheckBox 
+                                                    IsChecked="{Binding IsSelected, Mode=TwoWay}"
+                                                    Visibility="Visible"/>
+                                            </Grid>
+                                            
                                             <!-- Mod图标 -->
-                                            <Grid Grid.Column="0" Width="24" Height="24" VerticalAlignment="Center" Margin="0,0,12,0">
+                                            <Grid Grid.Column="1" Width="24" Height="24" VerticalAlignment="Center" Margin="0,0,12,0">
                                                 <FontIcon 
                                                     Glyph="" 
                                                     FontSize="20" 
@@ -400,7 +405,7 @@
                                             
                                             <!-- Mod名称 -->
                                             <TextBlock 
-                                                Grid.Column="1"
+                                                Grid.Column="2"
                                                 Text="{Binding Name}" 
                                                 VerticalAlignment="Center" 
                                                 FontSize="14" 
@@ -409,7 +414,7 @@
                                             
                                             <!-- 启用/禁用开关 -->
                                             <ToggleSwitch 
-                                                Grid.Column="2"
+                                                Grid.Column="3"
                                                 IsOn="{Binding IsEnabled, Mode=OneWay}" 
                                                 x:Uid="VersionManagerPage_EnabledText"
                                                 OffContent="禁用" 
@@ -422,7 +427,7 @@
                                             
                                             <!-- 删除按钮 -->
                                             <Button 
-                                                Grid.Column="3"
+                                                Grid.Column="4"
                                                 x:Uid="VersionManagerPage_DeleteButton"
                                                 VerticalAlignment="Center" 
                                                 Command="{Binding DataContext.DeleteModCommand, ElementName=ModListView}" 
@@ -435,7 +440,6 @@
                                     </DataTemplate>
                                 </ListView.ItemTemplate>
                             </ListView>
-                        </ScrollViewer>
                         
                         <!-- 空列表提示 -->
                         <StackPanel 
@@ -501,80 +505,42 @@
                     <!-- 光影列表容器 -->
                     <Grid Grid.Row="1" AllowDrop="True">
                         <!-- 光影列表 -->
-                        <ScrollViewer
-                            x:Name="ShaderListScrollViewer"
-                            Margin="0"
-                            VerticalScrollBarVisibility="Auto"
-                            HorizontalScrollBarVisibility="Disabled"
-                            AllowDrop="True">
-                            <ListView 
-                                x:Name="ShaderListView"
-                                ItemsSource="{Binding Shaders, Mode=OneWay}"
-                                SelectionMode="Single"
-                                IsItemClickEnabled="False"
-                                CanReorderItems="False"
-                                AllowDrop="True"
-                                Background="Transparent"
-                                BorderThickness="0"
-                                VerticalAlignment="Stretch">
-                                <ListView.Resources>
-                                    <Style TargetType="ScrollViewer">
-                                        <Setter Property="HorizontalScrollBarVisibility" Value="Disabled"/>
-                                        <Setter Property="VerticalScrollBarVisibility" Value="Auto"/>
-                                    </Style>
-                                </ListView.Resources>
-                                <ListView.ItemContainerStyle>
-                                    <Style TargetType="ListViewItem">
-                                        <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
-                                        <Setter Property="Margin" Value="0,0,0,16"/>
-                                        <Setter Property="Padding" Value="0"/>
-                                        <Setter Property="BorderThickness" Value="0"/>
-                                        <Setter Property="Background" Value="Transparent"/>
-                                        <Setter Property="Template">
-                                            <Setter.Value>
-                                                <ControlTemplate TargetType="ListViewItem">
-                                                    <Grid x:Name="RootGrid" Background="{TemplateBinding Background}" CornerRadius="8">
-                                                        <VisualStateManager.VisualStateGroups>
-                                                            <VisualStateGroup x:Name="CommonStates">
-                                                                <VisualState x:Name="Normal" />
-                                                                <VisualState x:Name="PointerOver">
-                                                                    <Storyboard>
-                                                                        <ObjectAnimationUsingKeyFrames Storyboard.TargetName="ContentPresenter" Storyboard.TargetProperty="Background">
-                                                                            <DiscreteObjectKeyFrame KeyTime="0" Value="{ThemeResource SystemControlBackgroundListLowBrush}" />
-                                                                        </ObjectAnimationUsingKeyFrames>
-                                                                    </Storyboard>
-                                                                </VisualState>
-                                                                <VisualState x:Name="Pressed">
-                                                                    <Storyboard>
-                                                                        <ObjectAnimationUsingKeyFrames Storyboard.TargetName="ContentPresenter" Storyboard.TargetProperty="Background">
-                                                                            <DiscreteObjectKeyFrame KeyTime="0" Value="{ThemeResource SystemControlBackgroundListMediumBrush}" />
-                                                                        </ObjectAnimationUsingKeyFrames>
-                                                                    </Storyboard>
-                                                                </VisualState>
-                                                                <VisualState x:Name="Selected">
-                                                                    <Storyboard>
-                                                                        <ObjectAnimationUsingKeyFrames Storyboard.TargetName="ContentPresenter" Storyboard.TargetProperty="BorderBrush">
-                                                                            <DiscreteObjectKeyFrame KeyTime="0" Value="{ThemeResource SystemControlHighlightAccentBrush}" />
-                                                                        </ObjectAnimationUsingKeyFrames>
-                                                                        <ObjectAnimationUsingKeyFrames Storyboard.TargetName="ContentPresenter" Storyboard.TargetProperty="BorderThickness">
-                                                                            <DiscreteObjectKeyFrame KeyTime="0" Value="2" />
-                                                                        </ObjectAnimationUsingKeyFrames>
-                                                                    </Storyboard>
-                                                                </VisualState>
-                                                            </VisualStateGroup>
-                                                        </VisualStateManager.VisualStateGroups>
-                                                        <ContentPresenter x:Name="ContentPresenter"
-                                                                          Content="{TemplateBinding Content}"
-                                                                          ContentTemplate="{TemplateBinding ContentTemplate}"
-                                                                          HorizontalContentAlignment="{TemplateBinding HorizontalContentAlignment}"
-                                                                          VerticalContentAlignment="{TemplateBinding VerticalContentAlignment}"
-                                                                          Padding="{TemplateBinding Padding}"/>
-                                                    </Grid>
-                                                </ControlTemplate>
-                                            </Setter.Value>
-                                        </Setter>
-                                    </Style>
-                                </ListView.ItemContainerStyle>
+                        <ListView 
+                            x:Name="ShaderListView"
+                            ItemsSource="{Binding Shaders, Mode=OneWay}"
+                            SelectionMode="Single"
+                            IsItemClickEnabled="False"
+                            CanReorderItems="False"
+                            AllowDrop="True"
+                            Background="Transparent"
+                            BorderThickness="0"
+                            VerticalAlignment="Stretch">
+                            <ListView.Resources>
+                                <Style TargetType="ScrollViewer">
+                                    <Setter Property="HorizontalScrollBarVisibility" Value="Disabled"/>
+                                    <Setter Property="VerticalScrollBarVisibility" Value="Auto"/>
+                                    <Setter Property="IsScrollInertiaEnabled" Value="True"/>
+                                </Style>
+                            </ListView.Resources>
+                            <ListView.ItemsPanel>
+                                <ItemsPanelTemplate>
+                                    <!-- 使用ItemsStackPanel替代ScrollViewer+ListView，提供更好的性能和虚拟化支持 -->
+                                    <ItemsStackPanel/>
+                                </ItemsPanelTemplate>
+                            </ListView.ItemsPanel>
+                            <ListView.ItemContainerStyle>
+                                <Style TargetType="ListViewItem">
+                                    <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
+                                    <Setter Property="Margin" Value="0,0,0,16"/>
+                                    <Setter Property="Padding" Value="0"/>
+                                    <Setter Property="BorderThickness" Value="0"/>
+                                    <Setter Property="Background" Value="Transparent"/>
+                                    <!-- 优化布局性能 -->
+                                    <Setter Property="UseLayoutRounding" Value="True"/>
+                                    <Setter Property="CacheMode" Value="BitmapCache"/>
+                                    <!-- 简化模板，移除复杂的VisualStateManager，使用默认模板 -->
+                                </Style>
+                            </ListView.ItemContainerStyle>
                                 <ListView.ItemTemplate>
                                     <DataTemplate x:DataType="viewModels:ShaderInfo">
                                         <Grid Height="60" Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
@@ -627,7 +593,6 @@
                                     </DataTemplate>
                                 </ListView.ItemTemplate>
                             </ListView>
-                        </ScrollViewer>
                         
                         <!-- 空列表提示 -->
                         <StackPanel 
@@ -693,80 +658,42 @@
                     <!-- 资源包列表容器 -->
                     <Grid Grid.Row="1" AllowDrop="True">
                         <!-- 资源包列表 -->
-                        <ScrollViewer
-                            x:Name="ResourcePackListScrollViewer"
-                            Margin="0"
-                            VerticalScrollBarVisibility="Auto"
-                            HorizontalScrollBarVisibility="Disabled"
-                            AllowDrop="True">
-                            <ListView 
-                                x:Name="ResourcePackListView"
-                                ItemsSource="{Binding ResourcePacks, Mode=OneWay}"
-                                SelectionMode="Single"
-                                IsItemClickEnabled="False"
-                                CanReorderItems="False"
-                                AllowDrop="True"
-                                Background="Transparent"
-                                BorderThickness="0"
-                                VerticalAlignment="Stretch">
-                                <ListView.Resources>
-                                    <Style TargetType="ScrollViewer">
-                                        <Setter Property="HorizontalScrollBarVisibility" Value="Disabled"/>
-                                        <Setter Property="VerticalScrollBarVisibility" Value="Auto"/>
-                                    </Style>
-                                </ListView.Resources>
-                                <ListView.ItemContainerStyle>
-                                    <Style TargetType="ListViewItem">
-                                        <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
-                                        <Setter Property="Margin" Value="0,0,0,16"/>
-                                        <Setter Property="Padding" Value="0"/>
-                                        <Setter Property="BorderThickness" Value="0"/>
-                                        <Setter Property="Background" Value="Transparent"/>
-                                        <Setter Property="Template">
-                                            <Setter.Value>
-                                                <ControlTemplate TargetType="ListViewItem">
-                                                    <Grid x:Name="RootGrid" Background="{TemplateBinding Background}" CornerRadius="8">
-                                                        <VisualStateManager.VisualStateGroups>
-                                                            <VisualStateGroup x:Name="CommonStates">
-                                                                <VisualState x:Name="Normal" />
-                                                                <VisualState x:Name="PointerOver">
-                                                                    <Storyboard>
-                                                                        <ObjectAnimationUsingKeyFrames Storyboard.TargetName="ContentPresenter" Storyboard.TargetProperty="Background">
-                                                                            <DiscreteObjectKeyFrame KeyTime="0" Value="{ThemeResource SystemControlBackgroundListLowBrush}" />
-                                                                        </ObjectAnimationUsingKeyFrames>
-                                                                    </Storyboard>
-                                                                </VisualState>
-                                                                <VisualState x:Name="Pressed">
-                                                                    <Storyboard>
-                                                                        <ObjectAnimationUsingKeyFrames Storyboard.TargetName="ContentPresenter" Storyboard.TargetProperty="Background">
-                                                                            <DiscreteObjectKeyFrame KeyTime="0" Value="{ThemeResource SystemControlBackgroundListMediumBrush}" />
-                                                                        </ObjectAnimationUsingKeyFrames>
-                                                                    </Storyboard>
-                                                                </VisualState>
-                                                                <VisualState x:Name="Selected">
-                                                                    <Storyboard>
-                                                                        <ObjectAnimationUsingKeyFrames Storyboard.TargetName="ContentPresenter" Storyboard.TargetProperty="BorderBrush">
-                                                                            <DiscreteObjectKeyFrame KeyTime="0" Value="{ThemeResource SystemControlHighlightAccentBrush}" />
-                                                                        </ObjectAnimationUsingKeyFrames>
-                                                                        <ObjectAnimationUsingKeyFrames Storyboard.TargetName="ContentPresenter" Storyboard.TargetProperty="BorderThickness">
-                                                                            <DiscreteObjectKeyFrame KeyTime="0" Value="2" />
-                                                                        </ObjectAnimationUsingKeyFrames>
-                                                                    </Storyboard>
-                                                                </VisualState>
-                                                            </VisualStateGroup>
-                                                        </VisualStateManager.VisualStateGroups>
-                                                        <ContentPresenter x:Name="ContentPresenter"
-                                                                          Content="{TemplateBinding Content}"
-                                                                          ContentTemplate="{TemplateBinding ContentTemplate}"
-                                                                          HorizontalContentAlignment="{TemplateBinding HorizontalContentAlignment}"
-                                                                          VerticalContentAlignment="{TemplateBinding VerticalContentAlignment}"
-                                                                          Padding="{TemplateBinding Padding}"/>
-                                                    </Grid>
-                                                </ControlTemplate>
-                                            </Setter.Value>
-                                        </Setter>
-                                    </Style>
-                                </ListView.ItemContainerStyle>
+                        <ListView 
+                            x:Name="ResourcePackListView"
+                            ItemsSource="{Binding ResourcePacks, Mode=OneWay}"
+                            SelectionMode="Single"
+                            IsItemClickEnabled="False"
+                            CanReorderItems="False"
+                            AllowDrop="True"
+                            Background="Transparent"
+                            BorderThickness="0"
+                            VerticalAlignment="Stretch">
+                            <ListView.Resources>
+                                <Style TargetType="ScrollViewer">
+                                    <Setter Property="HorizontalScrollBarVisibility" Value="Disabled"/>
+                                    <Setter Property="VerticalScrollBarVisibility" Value="Auto"/>
+                                    <Setter Property="IsScrollInertiaEnabled" Value="True"/>
+                                </Style>
+                            </ListView.Resources>
+                            <ListView.ItemsPanel>
+                                <ItemsPanelTemplate>
+                                    <!-- 使用ItemsStackPanel替代ScrollViewer+ListView，提供更好的性能和虚拟化支持 -->
+                                    <ItemsStackPanel/>
+                                </ItemsPanelTemplate>
+                            </ListView.ItemsPanel>
+                            <ListView.ItemContainerStyle>
+                                <Style TargetType="ListViewItem">
+                                    <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
+                                    <Setter Property="Margin" Value="0,0,0,16"/>
+                                    <Setter Property="Padding" Value="0"/>
+                                    <Setter Property="BorderThickness" Value="0"/>
+                                    <Setter Property="Background" Value="Transparent"/>
+                                    <!-- 优化布局性能 -->
+                                    <Setter Property="UseLayoutRounding" Value="True"/>
+                                    <Setter Property="CacheMode" Value="BitmapCache"/>
+                                    <!-- 简化模板，移除复杂的VisualStateManager，使用默认模板 -->
+                                </Style>
+                            </ListView.ItemContainerStyle>
                                 <ListView.ItemTemplate>
                                     <DataTemplate x:DataType="viewModels:ResourcePackInfo">
                                         <Grid Height="60" Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
@@ -819,7 +746,6 @@
                                     </DataTemplate>
                                 </ListView.ItemTemplate>
                             </ListView>
-                        </ScrollViewer>
                         
                         <!-- 空列表提示 -->
                         <StackPanel 
@@ -867,198 +793,7 @@
                 </Grid>
             </TabViewItem>
 
-            <!-- 数据包管理模块 -->
-            <TabViewItem>
-                <TabViewItem.Header>
-                    <StackPanel Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
-                        <FontIcon Glyph="" FontSize="16" />
-                        <TextBlock x:Uid="VersionManagerPage_DatapackManagementTab" Text="数据包管理" VerticalAlignment="Center" />
-                    </StackPanel>
-                </TabViewItem.Header>
-                <Grid>
-                    <Grid.RowDefinitions>
-                        <RowDefinition Height="Auto" />
-                        <RowDefinition Height="*" />
-                    </Grid.RowDefinitions>
-                    
 
-                    
-                    <!-- 数据包列表容器 -->
-                    <Grid Grid.Row="1" AllowDrop="True">
-                        <!-- 数据包列表 -->
-                        <ScrollViewer
-                            x:Name="DataPackListScrollViewer"
-                            Margin="0"
-                            VerticalScrollBarVisibility="Auto"
-                            HorizontalScrollBarVisibility="Disabled"
-                            AllowDrop="True">
-                            <ListView 
-                                x:Name="DataPackListView"
-                                ItemsSource="{Binding DataPacks, Mode=OneWay}"
-                                SelectionMode="Single"
-                                IsItemClickEnabled="False"
-                                CanReorderItems="False"
-                                AllowDrop="True"
-                                Background="Transparent"
-                                BorderThickness="0"
-                                VerticalAlignment="Stretch">
-                                <ListView.Resources>
-                                    <Style TargetType="ScrollViewer">
-                                        <Setter Property="HorizontalScrollBarVisibility" Value="Disabled"/>
-                                        <Setter Property="VerticalScrollBarVisibility" Value="Auto"/>
-                                    </Style>
-                                </ListView.Resources>
-                                <ListView.ItemContainerStyle>
-                                    <Style TargetType="ListViewItem">
-                                        <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
-                                        <Setter Property="Margin" Value="0,0,0,16"/>
-                                        <Setter Property="Padding" Value="0"/>
-                                        <Setter Property="BorderThickness" Value="0"/>
-                                        <Setter Property="Background" Value="Transparent"/>
-                                        <Setter Property="Template">
-                                            <Setter.Value>
-                                                <ControlTemplate TargetType="ListViewItem">
-                                                    <Grid x:Name="RootGrid" Background="{TemplateBinding Background}" CornerRadius="8">
-                                                        <VisualStateManager.VisualStateGroups>
-                                                            <VisualStateGroup x:Name="CommonStates">
-                                                                <VisualState x:Name="Normal" />
-                                                                <VisualState x:Name="PointerOver">
-                                                                    <Storyboard>
-                                                                        <ObjectAnimationUsingKeyFrames Storyboard.TargetName="ContentPresenter" Storyboard.TargetProperty="Background">
-                                                                            <DiscreteObjectKeyFrame KeyTime="0" Value="{ThemeResource SystemControlBackgroundListLowBrush}" />
-                                                                        </ObjectAnimationUsingKeyFrames>
-                                                                    </Storyboard>
-                                                                </VisualState>
-                                                                <VisualState x:Name="Pressed">
-                                                                    <Storyboard>
-                                                                        <ObjectAnimationUsingKeyFrames Storyboard.TargetName="ContentPresenter" Storyboard.TargetProperty="Background">
-                                                                            <DiscreteObjectKeyFrame KeyTime="0" Value="{ThemeResource SystemControlBackgroundListMediumBrush}" />
-                                                                        </ObjectAnimationUsingKeyFrames>
-                                                                    </Storyboard>
-                                                                </VisualState>
-                                                                <VisualState x:Name="Selected">
-                                                                    <Storyboard>
-                                                                        <ObjectAnimationUsingKeyFrames Storyboard.TargetName="ContentPresenter" Storyboard.TargetProperty="BorderBrush">
-                                                                            <DiscreteObjectKeyFrame KeyTime="0" Value="{ThemeResource SystemControlHighlightAccentBrush}" />
-                                                                        </ObjectAnimationUsingKeyFrames>
-                                                                        <ObjectAnimationUsingKeyFrames Storyboard.TargetName="ContentPresenter" Storyboard.TargetProperty="BorderThickness">
-                                                                            <DiscreteObjectKeyFrame KeyTime="0" Value="2" />
-                                                                        </ObjectAnimationUsingKeyFrames>
-                                                                    </Storyboard>
-                                                                </VisualState>
-                                                            </VisualStateGroup>
-                                                        </VisualStateManager.VisualStateGroups>
-                                                        <ContentPresenter x:Name="ContentPresenter"
-                                                                          Content="{TemplateBinding Content}"
-                                                                          ContentTemplate="{TemplateBinding ContentTemplate}"
-                                                                          HorizontalContentAlignment="{TemplateBinding HorizontalContentAlignment}"
-                                                                          VerticalContentAlignment="{TemplateBinding VerticalContentAlignment}"
-                                                                          Padding="{TemplateBinding Padding}"/>
-                                                    </Grid>
-                                                </ControlTemplate>
-                                            </Setter.Value>
-                                        </Setter>
-                                    </Style>
-                                </ListView.ItemContainerStyle>
-                                <ListView.ItemTemplate>
-                                    <DataTemplate x:DataType="viewModels:DataPackInfo">
-                                        <Grid Height="60" Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
-                                              CornerRadius="8" Padding="16" BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
-                                              BorderThickness="1">
-                                            <Grid.ColumnDefinitions>
-                                                <ColumnDefinition Width="Auto" />
-                                                <ColumnDefinition Width="*" />
-                                                <ColumnDefinition Width="Auto" />
-                                            </Grid.ColumnDefinitions>
-                                            
-                                            <!-- 数据包图标 -->
-                                            <Grid Grid.Column="0" Width="24" Height="24" VerticalAlignment="Center" Margin="0,0,12,0">
-                                                <FontIcon 
-                                                    Glyph="" 
-                                                    FontSize="20" 
-                                                    VerticalAlignment="Center" 
-                                                    HorizontalAlignment="Center"
-                                                    Foreground="{ThemeResource SystemControlForegroundBaseHighBrush}"
-                                                    Visibility="{Binding Icon, Mode=OneWay, Converter={StaticResource StringNullOrEmptyToVisibilityConverter}, ConverterParameter=inverse}"/>
-                                                <Image 
-                                                    Source="{Binding Icon, Mode=OneWay, Converter={StaticResource PathToUriConverter}}" 
-                                                    Width="24" 
-                                                    Height="24" 
-                                                    Stretch="UniformToFill"
-                                                    Visibility="{Binding Icon, Mode=OneWay, Converter={StaticResource StringNullOrEmptyToVisibilityConverter}}"/>
-                                            </Grid>
-                                            
-                                            <!-- 数据包名称 -->
-                                            <TextBlock 
-                                                Grid.Column="1"
-                                                Text="{Binding Name}" 
-                                                VerticalAlignment="Center" 
-                                                FontSize="14" 
-                                                FontWeight="Medium"
-                                                Foreground="{ThemeResource SystemControlForegroundBaseHighBrush}"/>
-                                            
-                                            <!-- 删除按钮 -->
-                                            <Button 
-                                                Grid.Column="2"
-                                                Content="删除" 
-                                                VerticalAlignment="Center" 
-                                                Command="{Binding DataContext.DeleteDataPackCommand, ElementName=DataPackListView}" 
-                                                CommandParameter="{Binding}" 
-                                                Style="{StaticResource DefaultButtonStyle}"
-                                                Height="28" 
-                                                Padding="10,0,10,0" 
-                                                FontSize="11" />
-                                        </Grid>
-                                    </DataTemplate>
-                                </ListView.ItemTemplate>
-                            </ListView>
-                        </ScrollViewer>
-                        
-                        <!-- 空列表提示 -->
-                        <StackPanel 
-                            x:Name="DataPackEmptyPanel"
-                            Visibility="{Binding IsDataPackListEmpty, Converter={StaticResource BoolToVisibilityConverter}}"
-                            HorizontalAlignment="Center" 
-                            VerticalAlignment="Center" 
-                            Margin="0,100,0,0"
-                            Padding="60,40,60,40"
-                            Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
-                            CornerRadius="16"
-                            BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
-                            BorderThickness="1">
-                            <FontIcon 
-                                FontFamily="{StaticResource SymbolThemeFontFamily}" 
-                                Glyph="&#xE8B7;" 
-                                FontSize="80" 
-                                Foreground="{ThemeResource SystemControlForegroundBaseMediumBrush}" 
-                                Margin="0,0,0,24" 
-                                HorizontalAlignment="Center"/>
-                            <TextBlock 
-                                x:Uid="VersionManagerPage_NoDatapacksTitle" 
-                                Style="{StaticResource PageTitleStyle}" 
-                                FontSize="20" 
-                                Foreground="{ThemeResource SystemControlForegroundBaseMediumBrush}" 
-                                TextAlignment="Center" 
-                                Margin="0,0,0,8"/>
-                            <TextBlock 
-                                x:Uid="VersionManagerPage_NoDatapacksDescription" 
-                                Style="{StaticResource BodyTextStyle}" 
-                                FontSize="14" 
-                                Foreground="{ThemeResource SystemControlForegroundBaseMediumLowBrush}" 
-                                Margin="0,0,24,0" 
-                                TextAlignment="Center" 
-                                MaxWidth="300"/>
-                            <Button 
-                                x:Uid="VersionManagerPage_NavigateToDatapackPageButton" 
-                                Style="{StaticResource DefaultButtonStyle}" 
-                                Command="{Binding NavigateToDataPackPageCommand}" 
-                                HorizontalAlignment="Center" 
-                                Margin="0,16,0,0" 
-                                Width="160"/>
-                        </StackPanel>
-                    </Grid>
-                </Grid>
-            </TabViewItem>
 
 
 
@@ -1282,80 +1017,42 @@
                     <!-- 地图列表容器 -->
                     <Grid Grid.Row="1" AllowDrop="True">
                         <!-- 地图列表 -->
-                        <ScrollViewer
-                            x:Name="MapsListScrollViewer"
-                            Margin="0"
-                            VerticalScrollBarVisibility="Auto"
-                            HorizontalScrollBarVisibility="Disabled"
-                            AllowDrop="True">
-                            <ListView 
-                                x:Name="MapListView"
-                                ItemsSource="{Binding Maps, Mode=OneWay}"
-                                SelectionMode="Single"
-                                IsItemClickEnabled="False"
-                                CanReorderItems="False"
-                                AllowDrop="True"
-                                Background="Transparent"
-                                BorderThickness="0"
-                                VerticalAlignment="Stretch">
-                                <ListView.Resources>
-                                    <Style TargetType="ScrollViewer">
-                                        <Setter Property="HorizontalScrollBarVisibility" Value="Disabled"/>
-                                        <Setter Property="VerticalScrollBarVisibility" Value="Auto"/>
-                                    </Style>
-                                </ListView.Resources>
-                                <ListView.ItemContainerStyle>
-                                    <Style TargetType="ListViewItem">
-                                        <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
-                                        <Setter Property="Margin" Value="0,0,0,16"/>
-                                        <Setter Property="Padding" Value="0"/>
-                                        <Setter Property="BorderThickness" Value="0"/>
-                                        <Setter Property="Background" Value="Transparent"/>
-                                        <Setter Property="Template">
-                                            <Setter.Value>
-                                                <ControlTemplate TargetType="ListViewItem">
-                                                    <Grid x:Name="RootGrid" Background="{TemplateBinding Background}" CornerRadius="8">
-                                                        <VisualStateManager.VisualStateGroups>
-                                                            <VisualStateGroup x:Name="CommonStates">
-                                                                <VisualState x:Name="Normal" />
-                                                                <VisualState x:Name="PointerOver">
-                                                                    <Storyboard>
-                                                                        <ObjectAnimationUsingKeyFrames Storyboard.TargetName="ContentPresenter" Storyboard.TargetProperty="Background">
-                                                                            <DiscreteObjectKeyFrame KeyTime="0" Value="{ThemeResource SystemControlBackgroundListLowBrush}" />
-                                                                        </ObjectAnimationUsingKeyFrames>
-                                                                    </Storyboard>
-                                                                </VisualState>
-                                                                <VisualState x:Name="Pressed">
-                                                                    <Storyboard>
-                                                                        <ObjectAnimationUsingKeyFrames Storyboard.TargetName="ContentPresenter" Storyboard.TargetProperty="Background">
-                                                                            <DiscreteObjectKeyFrame KeyTime="0" Value="{ThemeResource SystemControlBackgroundListMediumBrush}" />
-                                                                        </ObjectAnimationUsingKeyFrames>
-                                                                    </Storyboard>
-                                                                </VisualState>
-                                                                <VisualState x:Name="Selected">
-                                                                    <Storyboard>
-                                                                        <ObjectAnimationUsingKeyFrames Storyboard.TargetName="ContentPresenter" Storyboard.TargetProperty="BorderBrush">
-                                                                            <DiscreteObjectKeyFrame KeyTime="0" Value="{ThemeResource SystemControlHighlightAccentBrush}" />
-                                                                        </ObjectAnimationUsingKeyFrames>
-                                                                        <ObjectAnimationUsingKeyFrames Storyboard.TargetName="ContentPresenter" Storyboard.TargetProperty="BorderThickness">
-                                                                            <DiscreteObjectKeyFrame KeyTime="0" Value="2" />
-                                                                        </ObjectAnimationUsingKeyFrames>
-                                                                    </Storyboard>
-                                                                </VisualState>
-                                                            </VisualStateGroup>
-                                                        </VisualStateManager.VisualStateGroups>
-                                                        <ContentPresenter x:Name="ContentPresenter"
-                                                                          Content="{TemplateBinding Content}"
-                                                                          ContentTemplate="{TemplateBinding ContentTemplate}"
-                                                                          HorizontalContentAlignment="{TemplateBinding HorizontalContentAlignment}"
-                                                                          VerticalContentAlignment="{TemplateBinding VerticalContentAlignment}"
-                                                                          Padding="{TemplateBinding Padding}"/>
-                                                    </Grid>
-                                                </ControlTemplate>
-                                            </Setter.Value>
-                                        </Setter>
-                                    </Style>
-                                </ListView.ItemContainerStyle>
+                        <ListView 
+                            x:Name="MapListView"
+                            ItemsSource="{Binding Maps, Mode=OneWay}"
+                            SelectionMode="Single"
+                            IsItemClickEnabled="False"
+                            CanReorderItems="False"
+                            AllowDrop="True"
+                            Background="Transparent"
+                            BorderThickness="0"
+                            VerticalAlignment="Stretch">
+                            <ListView.Resources>
+                                <Style TargetType="ScrollViewer">
+                                    <Setter Property="HorizontalScrollBarVisibility" Value="Disabled"/>
+                                    <Setter Property="VerticalScrollBarVisibility" Value="Auto"/>
+                                    <Setter Property="IsScrollInertiaEnabled" Value="True"/>
+                                </Style>
+                            </ListView.Resources>
+                            <ListView.ItemsPanel>
+                                <ItemsPanelTemplate>
+                                    <!-- 使用ItemsStackPanel替代ScrollViewer+ListView，提供更好的性能和虚拟化支持 -->
+                                    <ItemsStackPanel/>
+                                </ItemsPanelTemplate>
+                            </ListView.ItemsPanel>
+                            <ListView.ItemContainerStyle>
+                                <Style TargetType="ListViewItem">
+                                    <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
+                                    <Setter Property="Margin" Value="0,0,0,16"/>
+                                    <Setter Property="Padding" Value="0"/>
+                                    <Setter Property="BorderThickness" Value="0"/>
+                                    <Setter Property="Background" Value="Transparent"/>
+                                    <!-- 优化布局性能 -->
+                                    <Setter Property="UseLayoutRounding" Value="True"/>
+                                    <Setter Property="CacheMode" Value="BitmapCache"/>
+                                    <!-- 简化模板，移除复杂的VisualStateManager，使用默认模板 -->
+                                </Style>
+                            </ListView.ItemContainerStyle>
                                 <ListView.ItemTemplate>
                                     <DataTemplate x:DataType="viewModels:MapInfo">
                                         <Grid Height="60" Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
@@ -1408,7 +1105,6 @@
                                     </DataTemplate>
                                 </ListView.ItemTemplate>
                             </ListView>
-                        </ScrollViewer>
                         
                         <!-- 空列表提示 -->
                         <StackPanel 
@@ -1455,6 +1151,65 @@
                 </Grid>
             </TabViewItem>
         </TabView>
+        <!-- 下载进度弹窗 -->
+        <ContentDialog 
+            x:Name="DownloadProgressDialog"
+            Grid.RowSpan="3"
+            Title="正在更新Mod"
+            PrimaryButtonText=""
+            IsPrimaryButtonEnabled="False"
+            CloseButtonText=""
+            DefaultButton="None"
+            Width="400">
+            <StackPanel Spacing="16">
+                <!-- 当前下载项 -->
+                <TextBlock 
+                    Text="{Binding CurrentDownloadItem, Mode=OneWay}" 
+                    FontSize="16" 
+                    FontWeight="Medium"
+                    TextWrapping="WrapWholeWords"/>
+                
+                <!-- 进度条 -->
+                <ProgressBar 
+                    Value="{Binding DownloadProgress, Mode=OneWay}" 
+                    Minimum="0" 
+                    Maximum="100" 
+                    Height="8"
+                    CornerRadius="4"/>
+                
+                <!-- 进度百分比 -->
+                <TextBlock 
+                    Text="{Binding DownloadProgress, Mode=OneWay, Converter={StaticResource DoubleToPercentageConverter}}"
+                    FontSize="14" 
+                    Foreground="{ThemeResource TextFillColorSecondary}"
+                    HorizontalAlignment="Center"/>
+                
+                <!-- 状态信息 -->
+                <TextBlock 
+                    Text="{Binding StatusMessage, Mode=OneWay}" 
+                    FontSize="14" 
+                    TextWrapping="WrapWholeWords" 
+                    Foreground="{ThemeResource TextFillColorSecondary}"/>
+            </StackPanel>
+        </ContentDialog>
+        
+        <!-- 结果弹窗 -->
+        <ContentDialog 
+            x:Name="ResultDialog"
+            Grid.RowSpan="3"
+            Title="更新完成"
+            PrimaryButtonText="确定"
+            IsPrimaryButtonEnabled="True"
+            DefaultButton="Primary"
+            Width="400"
+            PrimaryButtonClick="ResultDialog_PrimaryButtonClick">
+            <!-- 结果信息 -->
+            <TextBlock 
+                Text="{Binding UpdateResults, Mode=OneWay}" 
+                FontSize="14" 
+                TextWrapping="WrapWholeWords" 
+                HorizontalAlignment="Center"/>
+        </ContentDialog>
     </Grid>
 </Page> 
                                
