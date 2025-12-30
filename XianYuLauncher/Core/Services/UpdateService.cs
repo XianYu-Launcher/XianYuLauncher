@@ -1,4 +1,17 @@
-using System; using System.IO; using System.Net.Http; using System.Threading; using System.Threading.Tasks; using Microsoft.Extensions.Logging; using Newtonsoft.Json; using XMCL2025.Contracts.Services; using XMCL2025.Core.Contracts.Services; using XMCL2025.Core.Models; using System.Diagnostics;
+using System;
+using System.IO;
+using System.IO.Compression;
+using System.Linq;
+using System.Net.Http;
+using System.Security.Cryptography.X509Certificates;
+using System.Threading;
+using System.Threading.Tasks;
+using Microsoft.Extensions.Logging;
+using Newtonsoft.Json;
+using XMCL2025.Contracts.Services;
+using XMCL2025.Core.Contracts.Services;
+using XMCL2025.Core.Models;
+using System.Diagnostics;
 
 namespace XMCL2025.Core.Services;
 
@@ -318,5 +331,271 @@ public class UpdateService
     public string GetCurrentVersionString()
     {
         return _currentVersion.ToString();
+    }
+    
+    /// <summary>
+    /// 解压更新包ZIP文件到临时目录
+    /// </summary>
+    /// <param name="zipFilePath">ZIP文件路径</param>
+    /// <returns>包含解压目录、证书文件路径和MSIX文件路径的元组</returns>
+    public async Task<(string ExtractDirectory, string CertificateFilePath, string MsixFilePath)> ExtractUpdatePackageAsync(string zipFilePath)
+    {
+        _logger.LogInformation("开始解压更新包: {ZipFilePath}", zipFilePath);
+        Debug.WriteLine($"[DEBUG] 开始解压更新包: {zipFilePath}");
+        
+        // 创建临时解压目录
+        string extractDirectory = Path.Combine(Path.GetTempPath(), $"XMCLUpdate_{Guid.NewGuid()}");
+        _logger.LogInformation("创建临时解压目录: {ExtractDirectory}", extractDirectory);
+        Debug.WriteLine($"[DEBUG] 创建临时解压目录: {extractDirectory}");
+        
+        try
+        {
+            // 解压ZIP文件
+            await Task.Run(() =>
+            {
+                ZipFile.ExtractToDirectory(zipFilePath, extractDirectory, true);
+                _logger.LogInformation("更新包解压成功: {ExtractDirectory}", extractDirectory);
+                Debug.WriteLine($"[DEBUG] 更新包解压成功: {extractDirectory}");
+            });
+            
+            // 查找证书文件 (*.cer)
+            string certificateFilePath = FindFileByPattern(extractDirectory, "*.cer");
+            if (string.IsNullOrEmpty(certificateFilePath))
+            {
+                _logger.LogWarning("在解压目录中未找到证书文件 (*.cer): {ExtractDirectory}", extractDirectory);
+                Debug.WriteLine($"[DEBUG] 在解压目录中未找到证书文件 (*.cer): {ExtractDirectory}");
+            }
+            else
+            {
+                _logger.LogInformation("找到证书文件: {CertificateFilePath}", certificateFilePath);
+                Debug.WriteLine($"[DEBUG] 找到证书文件: {CertificateFilePath}");
+            }
+            
+            // 查找MSIX文件 (*.msix)
+            string msixFilePath = FindFileByPattern(extractDirectory, "*.msix");
+            if (string.IsNullOrEmpty(msixFilePath))
+            {
+                _logger.LogError("在解压目录中未找到MSIX文件 (*.msix): {ExtractDirectory}", extractDirectory);
+                Debug.WriteLine($"[DEBUG] 在解压目录中未找到MSIX文件 (*.msix): {ExtractDirectory}");
+                throw new Exception("在解压目录中未找到MSIX文件 (*.msix)");
+            }
+            else
+            {
+                _logger.LogInformation("找到MSIX文件: {MsixFilePath}", msixFilePath);
+                Debug.WriteLine($"[DEBUG] 找到MSIX文件: {MsixFilePath}");
+            }
+            
+            return (extractDirectory, certificateFilePath, msixFilePath);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "解压更新包失败: {ZipFilePath}", zipFilePath);
+            Debug.WriteLine($"[DEBUG] 解压更新包失败: {ZipFilePath}, 错误: {ex.Message}");
+            
+            // 清理临时目录
+            if (Directory.Exists(extractDirectory))
+            {
+                Directory.Delete(extractDirectory, true);
+                _logger.LogInformation("清理失败的解压目录: {ExtractDirectory}", extractDirectory);
+            }
+            
+            throw;
+        }
+    }
+    
+    /// <summary>
+    /// 在指定目录中查找符合模式的文件
+    /// </summary>
+    /// <param name="directory">要搜索的目录</param>
+    /// <param name="searchPattern">搜索模式，如"*.cer"</param>
+    /// <returns>找到的第一个文件路径，如果没有找到则返回null</returns>
+    private string FindFileByPattern(string directory, string searchPattern)
+    {
+        _logger.LogInformation("在目录中查找文件: {Directory}, 模式: {SearchPattern}", directory, searchPattern);
+        Debug.WriteLine($"[DEBUG] 在目录中查找文件: {directory}, 模式: {searchPattern}");
+        
+        try
+        {
+            var files = Directory.GetFiles(directory, searchPattern, SearchOption.AllDirectories);
+            _logger.LogInformation("找到符合模式的文件数量: {FileCount}", files.Length);
+            Debug.WriteLine($"[DEBUG] 找到符合模式的文件数量: {files.Length}");
+            
+            foreach (var file in files)
+            {
+                _logger.LogDebug("找到文件: {FilePath}", file);
+                Debug.WriteLine($"[DEBUG] 找到文件: {file}");
+            }
+            
+            return files.FirstOrDefault();
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "查找文件失败: {Directory}, 模式: {SearchPattern}", directory, searchPattern);
+            Debug.WriteLine($"[DEBUG] 查找文件失败: {directory}, 模式: {searchPattern}, 错误: {ex.Message}");
+            return null;
+        }
+    }
+    
+    /// <summary>
+    /// 检查系统是否已安装指定证书
+    /// </summary>
+    /// <param name="certificateFilePath">证书文件路径</param>
+    /// <returns>如果证书已安装返回true，否则返回false</returns>
+    public bool IsCertificateInstalled(string certificateFilePath)
+    {
+        if (string.IsNullOrEmpty(certificateFilePath))
+        {
+            _logger.LogWarning("证书文件路径为空，跳过证书检查");
+            Debug.WriteLine("[DEBUG] 证书文件路径为空，跳过证书检查");
+            return true;
+        }
+        
+        _logger.LogInformation("检查证书是否已安装: {CertificateFilePath}", certificateFilePath);
+        Debug.WriteLine($"[DEBUG] 检查证书是否已安装: {CertificateFilePath}");
+        
+        try
+        {
+            // 加载证书
+            var certificate = new X509Certificate2(certificateFilePath);
+            _logger.LogInformation("加载证书成功，主题: {Subject}, 颁发者: {Issuer}, 序列号: {SerialNumber}", 
+                certificate.Subject, certificate.Issuer, certificate.SerialNumber);
+            Debug.WriteLine($"[DEBUG] 加载证书成功，主题: {certificate.Subject}, 颁发者: {certificate.Issuer}, 序列号: {certificate.SerialNumber}");
+            
+            // 检查证书是否已安装在受信任的根证书颁发机构
+            using (var store = new X509Store(StoreName.Root, StoreLocation.LocalMachine))
+            {
+                store.Open(OpenFlags.ReadOnly);
+                var certificates = store.Certificates.Find(X509FindType.FindByThumbprint, certificate.Thumbprint, false);
+                store.Close();
+                
+                bool isInstalled = certificates.Count > 0;
+                _logger.LogInformation("证书安装状态: {IsInstalled}, 指纹: {Thumbprint}", isInstalled, certificate.Thumbprint);
+                Debug.WriteLine($"[DEBUG] 证书安装状态: {isInstalled}, 指纹: {certificate.Thumbprint}");
+                
+                return isInstalled;
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "检查证书安装状态失败: {CertificateFilePath}", certificateFilePath);
+            Debug.WriteLine($"[DEBUG] 检查证书安装状态失败: {certificateFilePath}, 错误: {ex.Message}");
+            return false;
+        }
+    }
+    
+    /// <summary>
+    /// 打开证书文件属性页
+    /// </summary>
+    /// <param name="certificateFilePath">证书文件路径</param>
+    public void OpenCertificateProperties(string certificateFilePath)
+    {
+        if (string.IsNullOrEmpty(certificateFilePath))
+        {
+            _logger.LogWarning("证书文件路径为空，无法打开证书属性");
+            Debug.WriteLine("[DEBUG] 证书文件路径为空，无法打开证书属性");
+            return;
+        }
+        
+        _logger.LogInformation("打开证书属性页: {CertificateFilePath}", certificateFilePath);
+        Debug.WriteLine($"[DEBUG] 打开证书属性页: {certificateFilePath}");
+        
+        try
+        {
+            // 使用Process.Start打开证书文件属性页
+            Process.Start(new ProcessStartInfo
+            {
+                FileName = certificateFilePath,
+                UseShellExecute = true
+            });
+            
+            _logger.LogInformation("成功打开证书属性页");
+            Debug.WriteLine("[DEBUG] 成功打开证书属性页");
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "打开证书属性页失败: {CertificateFilePath}", certificateFilePath);
+            Debug.WriteLine($"[DEBUG] 打开证书属性页失败: {certificateFilePath}, 错误: {ex.Message}");
+        }
+    }
+    
+    /// <summary>
+    /// 安装MSIX包
+    /// </summary>
+    /// <param name="msixFilePath">MSIX包文件路径</param>
+    /// <returns>安装是否成功</returns>
+    public async Task<bool> InstallMsixPackageAsync(string msixFilePath)
+    {
+        _logger.LogInformation("开始安装MSIX包: {MsixFilePath}", msixFilePath);
+        Debug.WriteLine($"[DEBUG] 开始安装MSIX包: {msixFilePath}");
+        
+        try
+        {
+            // 使用PowerShell命令安装MSIX包（模拟Add-AppDevPackage.ps1的核心功能）
+            // 注意：在实际生产环境中，应使用Windows.Management.Deployment.PackageManager API
+            string powerShellCommand = $"Add-AppxPackage -Path '{msixFilePath}' -ForceApplicationShutdown";
+            _logger.LogInformation("执行PowerShell命令: {PowerShellCommand}", powerShellCommand);
+            Debug.WriteLine($"[DEBUG] 执行PowerShell命令: {powerShellCommand}");
+            
+            using (var process = new Process())
+            {
+                process.StartInfo = new ProcessStartInfo
+                {
+                    FileName = "powershell.exe",
+                    Arguments = $"-NoProfile -ExecutionPolicy Bypass -Command \"{powerShellCommand}\"",
+                    UseShellExecute = true,
+                    Verb = "runas", // 以管理员身份运行
+                    CreateNoWindow = false,
+                    RedirectStandardOutput = false,
+                    RedirectStandardError = false
+                };
+                
+                _logger.LogInformation("启动PowerShell进程安装MSIX包");
+                Debug.WriteLine("[DEBUG] 启动PowerShell进程安装MSIX包");
+                
+                process.Start();
+                await process.WaitForExitAsync();
+                
+                bool isSuccess = process.ExitCode == 0;
+                _logger.LogInformation("MSIX包安装完成，退出代码: {ExitCode}, 成功: {IsSuccess}", process.ExitCode, isSuccess);
+                Debug.WriteLine($"[DEBUG] MSIX包安装完成，退出代码: {process.ExitCode}, 成功: {isSuccess}");
+                
+                return isSuccess;
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "安装MSIX包失败: {MsixFilePath}", msixFilePath);
+            Debug.WriteLine($"[DEBUG] 安装MSIX包失败: {msixFilePath}, 错误: {ex.Message}");
+            return false;
+        }
+    }
+    
+    /// <summary>
+    /// 清理临时文件和目录
+    /// </summary>
+    /// <param name="directoryPath">要清理的目录路径</param>
+    public void CleanupTempFiles(string directoryPath)
+    {
+        if (string.IsNullOrEmpty(directoryPath) || !Directory.Exists(directoryPath))
+        {
+            _logger.LogWarning("清理目录不存在或路径为空: {DirectoryPath}", directoryPath);
+            Debug.WriteLine($"[DEBUG] 清理目录不存在或路径为空: {directoryPath}");
+            return;
+        }
+        
+        _logger.LogInformation("开始清理临时文件: {DirectoryPath}", directoryPath);
+        Debug.WriteLine($"[DEBUG] 开始清理临时文件: {directoryPath}");
+        
+        try
+        {
+            Directory.Delete(directoryPath, true);
+            _logger.LogInformation("临时文件清理成功: {DirectoryPath}", directoryPath);
+            Debug.WriteLine($"[DEBUG] 临时文件清理成功: {directoryPath}");
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "清理临时文件失败: {DirectoryPath}", directoryPath);
+            Debug.WriteLine($"[DEBUG] 清理临时文件失败: {directoryPath}, 错误: {ex.Message}");
+        }
     }
 }

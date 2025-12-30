@@ -135,11 +135,80 @@ public partial class UpdateDialogViewModel : ObservableRecipient
                 // 确保用户能看到下载完成的状态
                 await Task.Delay(1000);
                 
-                // 暂时预留安装逻辑
-                // 这里可以添加解压、证书安装和MSIX安装等步骤
-                
-                // 安装完成后关闭弹窗
-                OnCloseDialog(true);
+                try
+                {
+                    // 解压更新包
+                    _logger.LogInformation("开始解压更新包: {DownloadPath}", downloadPath);
+                    Debug.WriteLine($"[DEBUG] 开始解压更新包: {downloadPath}");
+                    DownloadStatusText = "正在解压更新包...";
+                    
+                    var extractResult = await _updateService.ExtractUpdatePackageAsync(downloadPath);
+                    
+                    // 检查证书是否已安装
+                    if (!string.IsNullOrEmpty(extractResult.CertificateFilePath))
+                    {
+                        _logger.LogInformation("检查证书安装状态: {CertificateFilePath}", extractResult.CertificateFilePath);
+                        Debug.WriteLine($"[DEBUG] 检查证书安装状态: {extractResult.CertificateFilePath}");
+                        DownloadStatusText = "正在检查证书...";
+                        
+                        bool isCertificateInstalled = _updateService.IsCertificateInstalled(extractResult.CertificateFilePath);
+                        if (!isCertificateInstalled)
+                        {
+                            _logger.LogInformation("证书未安装，打开证书属性页");
+                            Debug.WriteLine("[DEBUG] 证书未安装，打开证书属性页");
+                            DownloadStatusText = "正在打开证书属性页...";
+                            
+                            // 打开证书属性页
+                            _updateService.OpenCertificateProperties(extractResult.CertificateFilePath);
+                            
+                            // 显示证书安装提示（这里可以根据需要创建自定义弹窗）
+                            _logger.LogInformation("请右键证书->安装->本地计算机->受信任的根证书颁发者");
+                            Debug.WriteLine("[DEBUG] 请右键证书->安装->本地计算机->受信任的根证书颁发者");
+                            
+                            // 等待用户安装证书（这里可以根据需要添加等待逻辑）
+                            await Task.Delay(2000);
+                        }
+                    }
+                    
+                    // 安装MSIX包
+                    _logger.LogInformation("开始安装MSIX包: {MsixFilePath}", extractResult.MsixFilePath);
+                    Debug.WriteLine($"[DEBUG] 开始安装MSIX包: {extractResult.MsixFilePath}");
+                    DownloadStatusText = "正在安装MSIX包...";
+                    
+                    bool installSuccess = await _updateService.InstallMsixPackageAsync(extractResult.MsixFilePath);
+                    if (installSuccess)
+                    {
+                        _logger.LogInformation("MSIX包安装成功");
+                        Debug.WriteLine("[DEBUG] MSIX包安装成功");
+                        DownloadStatusText = "安装成功！";
+                        
+                        // 确保用户能看到安装成功的状态
+                        await Task.Delay(1000);
+                        
+                        // 清理临时文件
+                        _updateService.CleanupTempFiles(extractResult.ExtractDirectory);
+                        
+                        // 安装完成后关闭弹窗
+                        OnCloseDialog(true);
+                    }
+                    else
+                    {
+                        _logger.LogError("MSIX包安装失败");
+                        Debug.WriteLine("[DEBUG] MSIX包安装失败");
+                        DownloadStatusText = "安装失败，请重试";
+                        IsDownloading = false;
+                        
+                        // 清理临时文件
+                        _updateService.CleanupTempFiles(extractResult.ExtractDirectory);
+                    }
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError(ex, "安装过程中发生错误");
+                    Debug.WriteLine($"[DEBUG] 安装过程中发生错误: {ex.Message}");
+                    DownloadStatusText = $"安装失败: {ex.Message}";
+                    IsDownloading = false;
+                }
             }
             else
             {
