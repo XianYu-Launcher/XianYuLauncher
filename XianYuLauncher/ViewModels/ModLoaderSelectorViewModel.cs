@@ -45,18 +45,6 @@ public partial class ModLoaderSelectorViewModel : ObservableRecipient, INavigati
     /// <summary>
     /// 当SelectedModLoaderItem变化时触发
     /// </summary>
-    partial void OnSelectedModLoaderItemChanged(ModLoaderItem? oldValue, ModLoaderItem? newValue);
-    
-    /// <summary>
-    /// 当IsOptifineSelected变化时触发
-    /// </summary>
-    partial void OnIsOptifineSelectedChanged(bool oldValue, bool newValue);
-    
-    /// <summary>
-    /// 当SelectedOptifineVersion变化时触发
-    /// </summary>
-    partial void OnSelectedOptifineVersionChanged(string? oldValue, string? newValue);
-    
     partial void OnSelectedModLoaderItemChanged(ModLoaderItem? oldValue, ModLoaderItem? newValue)
     {
         // 通知计算属性变化
