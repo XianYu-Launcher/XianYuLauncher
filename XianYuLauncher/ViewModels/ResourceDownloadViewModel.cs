@@ -27,10 +27,10 @@ public partial class ResourceDownloadViewModel : ObservableRecipient
     private string _searchText = string.Empty;
 
     [ObservableProperty]
-    private ObservableCollection<Core.Contracts.Services.VersionEntry> _versions = new();
+    private ObservableCollection<Core.Models.VersionEntry> _versions = new();
 
     [ObservableProperty]
-    private ObservableCollection<Core.Contracts.Services.VersionEntry> _filteredVersions = new();
+    private ObservableCollection<Core.Models.VersionEntry> _filteredVersions = new();
 
     [ObservableProperty]
     private bool _isVersionLoading = false;
@@ -56,7 +56,7 @@ public partial class ResourceDownloadViewModel : ObservableRecipient
     public void UpdateFilteredVersions()
     {
         // 1. 使用临时列表存储过滤结果
-        List<Core.Contracts.Services.VersionEntry> tempList;
+        List<Core.Models.VersionEntry> tempList;
         
         if (!string.IsNullOrWhiteSpace(SearchText))
         {
@@ -69,7 +69,7 @@ public partial class ResourceDownloadViewModel : ObservableRecipient
         
         // 2. 使用一次性替换集合的方式更新FilteredVersions，这是性能优化的关键
         // 直接替换集合可以避免Clear()和多次Add()操作导致的频繁UI更新
-        FilteredVersions = new ObservableCollection<Core.Contracts.Services.VersionEntry>(tempList);
+        FilteredVersions = new ObservableCollection<Core.Models.VersionEntry>(tempList);
     }
 
     // Mod下载相关属性和命令
@@ -299,7 +299,7 @@ public partial class ResourceDownloadViewModel : ObservableRecipient
         IsVersionLoading = true;
         try
         {
-            List<Core.Contracts.Services.VersionEntry> versionList = null;
+            List<Core.Models.VersionEntry> versionList = null;
             
             // 检查缓存
             if (!forceRefresh)
@@ -329,7 +329,7 @@ public partial class ResourceDownloadViewModel : ObservableRecipient
                                     System.Diagnostics.Debug.WriteLine($"[版本缓存] 成功加载缓存，共 {cachedData.Count} 个版本");
                                     
                                     // 转换缓存数据为 VersionEntry
-                                    versionList = cachedData.Select(c => new Core.Contracts.Services.VersionEntry
+                                    versionList = cachedData.Select(c => new Core.Models.VersionEntry
                                     {
                                         Id = c.Id,
                                         Type = c.Type,
@@ -417,7 +417,7 @@ public partial class ResourceDownloadViewModel : ObservableRecipient
     /// <summary>
     /// 更新版本列表UI
     /// </summary>
-    private async Task UpdateVersionsUI(List<Core.Contracts.Services.VersionEntry> versionList)
+    private async Task UpdateVersionsUI(List<Core.Models.VersionEntry> versionList)
     {
         // 更新最新版本信息（使用延迟更新，减少UI刷新）
         LatestReleaseVersion = versionList.FirstOrDefault(v => v.Type == "release")?.Id ?? string.Empty;
@@ -425,7 +425,7 @@ public partial class ResourceDownloadViewModel : ObservableRecipient
         
         // 1. 使用临时列表存储所有版本，然后一次性替换Versions集合
         // 这是性能优化的关键：减少UI更新次数
-        var tempVersions = new ObservableCollection<Core.Contracts.Services.VersionEntry>(versionList);
+        var tempVersions = new ObservableCollection<Core.Models.VersionEntry>(versionList);
         Versions = tempVersions;
         
         // 2. 一次性更新过滤后的版本列表
@@ -450,7 +450,7 @@ public partial class ResourceDownloadViewModel : ObservableRecipient
     /// <summary>
     /// 从已获取的版本列表更新可用版本，避免重复网络请求
     /// </summary>
-    private async Task UpdateAvailableVersionsFromManifest(List<Core.Contracts.Services.VersionEntry> versionList)
+    private async Task UpdateAvailableVersionsFromManifest(List<Core.Models.VersionEntry> versionList)
     {
         try
         {
@@ -480,7 +480,7 @@ public partial class ResourceDownloadViewModel : ObservableRecipient
         string versionId = string.Empty;
         
         // 处理不同类型的参数
-        if (parameter is Core.Contracts.Services.VersionEntry versionEntry)
+        if (parameter is Core.Models.VersionEntry versionEntry)
         {
             versionId = versionEntry.Id;
         }

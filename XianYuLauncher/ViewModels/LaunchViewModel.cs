@@ -17,6 +17,7 @@ using Windows.System;
 using Microsoft.UI.Xaml.Media;
 using XianYuLauncher.Core.Contracts.Services;
 using XianYuLauncher.Core.Services;
+using XianYuLauncher.Core.Models;
 using XianYuLauncher.Contracts.Services;
 using XianYuLauncher.Helpers;
 using System.Collections.Specialized;

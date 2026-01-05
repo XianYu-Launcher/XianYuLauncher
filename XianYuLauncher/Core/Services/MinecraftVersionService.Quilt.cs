@@ -69,13 +69,9 @@ public partial class MinecraftVersionService
                 string resolvedVersionJsonUrl = downloadSource.GetVersionInfoUrl(minecraftVersionId, versionJsonUrl);
                 System.Diagnostics.Debug.WriteLine($"[DEBUG] 当前下载源: {downloadSource.Name}, 版本JSON URL: {resolvedVersionJsonUrl}");
                 
-                // 获取并解析原版version.json
-                using (var versionResponse = await _httpClient.GetAsync(resolvedVersionJsonUrl))
-                {
-                    versionResponse.EnsureSuccessStatusCode();
-                    var versionContent = await versionResponse.Content.ReadAsStringAsync();
-                    originalVersionInfo = JsonConvert.DeserializeObject<VersionInfo>(versionContent);
-                }
+                // 获取并解析原版version.json（使用 DownloadManager）
+                var versionContent = await DownloadStringWithManagerAsync(resolvedVersionJsonUrl, cancellationToken);
+                originalVersionInfo = JsonConvert.DeserializeObject<VersionInfo>(versionContent);
             }
             
             // 检查originalVersionInfo是否为null
@@ -95,14 +91,16 @@ public partial class MinecraftVersionService
             _logger.LogInformation("从API获取Quilt完整配置: {QuiltProfileUrl}", quiltProfileUrl);
             System.Diagnostics.Debug.WriteLine($"[DEBUG] 当前下载源: {downloadSource.Name}, Quilt完整配置URL: {quiltProfileUrl}");
             
-            // 发送HTTP请求
-            HttpResponseMessage profileResponse = await _httpClient.GetAsync(quiltProfileUrl);
-            
-            // 检查是否为BMCLAPI且返回404
-            if (downloadSource.Name == "BMCLAPI" && profileResponse.StatusCode == System.Net.HttpStatusCode.NotFound)
+            // 发送HTTP请求（使用 DownloadManager 获取 Quilt 配置）
+            string quiltProfileJson;
+            try
             {
-                // BMCLAPI 404，切换到官方源
-                System.Diagnostics.Debug.WriteLine($"[DEBUG] BMCLAPI返回404，切换到官方源重试获取Quilt配置");
+                quiltProfileJson = await DownloadStringWithManagerAsync(quiltProfileUrl, cancellationToken);
+            }
+            catch (Exception ex) when (downloadSource.Name == "BMCLAPI")
+            {
+                // BMCLAPI 失败，切换到官方源
+                System.Diagnostics.Debug.WriteLine($"[DEBUG] BMCLAPI获取Quilt配置失败，切换到官方源重试");
                 
                 // 获取官方源
                 var officialSource = _downloadSourceFactory.GetSource("official");
@@ -111,12 +109,8 @@ public partial class MinecraftVersionService
                 System.Diagnostics.Debug.WriteLine($"[DEBUG] 正在使用官方源获取Quilt配置，请求URL: {officialUrl}");
                 
                 // 使用官方源重试
-                profileResponse = await _httpClient.GetAsync(officialUrl);
+                quiltProfileJson = await DownloadStringWithManagerAsync(officialUrl, cancellationToken);
             }
-            
-            // 确保响应成功
-            profileResponse.EnsureSuccessStatusCode();
-            string quiltProfileJson = await profileResponse.Content.ReadAsStringAsync();
             
             // 解析Quilt Profile JSON
             dynamic quiltProfile = JsonConvert.DeserializeObject(quiltProfileJson);
@@ -155,53 +149,17 @@ public partial class MinecraftVersionService
                 var clientJarUrl = downloadSource.GetClientJarUrl(minecraftVersionId, clientDownload.Url);
                 System.Diagnostics.Debug.WriteLine($"[DEBUG] 当前下载源: {downloadSource.Name}, JAR核心文件(Quilt), 版本: {quiltVersionId}, 下载URL: {clientJarUrl}");
                 
-                // 设置64KB缓冲区大小，提高下载速度
-                const int bufferSize = 65536;
-                
-                using (var response = await _httpClient.GetAsync(clientJarUrl, HttpCompletionOption.ResponseHeadersRead))
-                {
-                    response.EnsureSuccessStatusCode();
-                    
-                    // 获取文件总大小
-                    long totalSize = response.Content.Headers.ContentLength ?? -1L;
-                    long totalRead = 0L;
-                    
-                    using (var stream = await response.Content.ReadAsStreamAsync())
-                    using (var fileStream = new FileStream(jarPath, FileMode.Create, FileAccess.Write, FileShare.None, bufferSize, FileOptions.Asynchronous))
+                // 使用 DownloadManager 下载 JAR 文件
+                await DownloadFileWithManagerOrThrowAsync(
+                    clientJarUrl,
+                    jarPath,
+                    clientDownload.Sha1,
+                    (progress) =>
                     {
-                        var buffer = new byte[bufferSize];
-                        int bytesRead;
-                        
-                        // 下载并报告进度
-                        while ((bytesRead = await stream.ReadAsync(buffer, 0, buffer.Length)) > 0)
-                        {
-                            await fileStream.WriteAsync(buffer, 0, bytesRead);
-                            totalRead += bytesRead;
-                            
-                            // 计算进度（10% - 30%用于JAR下载）
-                            if (totalSize > 0)
-                            {
-                                double progress = 10 + ((double)totalRead / totalSize) * 20;
-                                progressCallback?.Invoke(progress);
-                            }
-                        }
-                    }
-                }
-
-                // 验证JAR文件的SHA1哈希
-                progressCallback?.Invoke(30); // 30% - 开始验证JAR文件
-                var downloadedBytes = await File.ReadAllBytesAsync(jarPath);
-                using (var sha1 = System.Security.Cryptography.SHA1.Create())
-                {
-                    var hashBytes = sha1.ComputeHash(downloadedBytes);
-                    var hashString = BitConverter.ToString(hashBytes).Replace("-", "").ToLower();
-                    
-                    if (hashString != clientDownload.Sha1)
-                    {
-                        File.Delete(jarPath);
-                        throw new Exception($"SHA1 hash mismatch for version {minecraftVersionId} JAR file");
-                    }
-                }
+                        double adjustedProgress = 10 + (progress * 0.20); // 10% - 30% 用于JAR下载
+                        progressCallback?.Invoke(adjustedProgress);
+                    },
+                    cancellationToken);
             }
             progressCallback?.Invoke(35); // 35% 进度用于JAR文件下载
             _logger.LogInformation("原版Minecraft JAR文件下载完成");
@@ -326,28 +284,19 @@ public partial class MinecraftVersionService
                     {
                         _logger.LogInformation("下载Quilt库文件: {LibraryName} from {DownloadUrl}", libraryName, finalUrl);
                         
-                        // 发送HTTP请求
-                        HttpResponseMessage libResponse = await _httpClient.GetAsync(finalUrl, HttpCompletionOption.ResponseHeadersRead);
+                        // 获取官方源URL作为备用
+                        var officialSource = _downloadSourceFactory.GetSource("official");
+                        string officialLibUrl = officialSource.GetLibraryUrl(libraryName, downloadUrl);
                         
-                        // 检查是否需要切换下载源
-                        if (downloadSource.Name != "Official" && libResponse.StatusCode != System.Net.HttpStatusCode.OK)
-                        {
-                            // 非官方源且请求失败，切换到官方源重试
-                            System.Diagnostics.Debug.WriteLine($"[DEBUG] {downloadSource.Name}下载失败，切换到官方源重试: {libraryName}");
-                            var officialSource = _downloadSourceFactory.GetSource("official");
-                            string officialLibUrl = officialSource.GetLibraryUrl(libraryName, downloadUrl);
-                            
-                            System.Diagnostics.Debug.WriteLine($"[DEBUG] 正在使用官方源下载Quilt库文件: {libraryName}, URL: {officialLibUrl}");
-                            libResponse = await _httpClient.GetAsync(officialLibUrl, HttpCompletionOption.ResponseHeadersRead);
-                        }
+                        // 使用 DownloadManager 下载，支持自动重试和回退
+                        await DownloadFileWithFallbackAsync(
+                            finalUrl,
+                            officialLibUrl,
+                            libraryPath,
+                            library.Downloads.Artifact.Sha1,
+                            null,
+                            cancellationToken);
                         
-                        libResponse.EnsureSuccessStatusCode();
-                        
-                        using (var stream = await libResponse.Content.ReadAsStreamAsync())
-                        using (var fileStream = new FileStream(libraryPath, FileMode.Create, FileAccess.Write, FileShare.None))
-                        {
-                            await stream.CopyToAsync(fileStream);
-                        }
                         _logger.LogInformation("Quilt库文件下载完成: {LibraryPath}", libraryPath);
                         System.Diagnostics.Debug.WriteLine($"[DEBUG] Quilt库文件下载完成: {libraryPath}");
                     }

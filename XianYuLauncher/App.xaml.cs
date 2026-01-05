@@ -106,6 +106,19 @@ public partial class App : Application
             // Core Services
             services.AddSingleton<IFileService, FileService>();
             services.AddSingleton<DownloadSourceFactory>();
+            services.AddSingleton<IDownloadManager, DownloadManager>();
+            services.AddSingleton<ILibraryManager, LibraryManager>();
+            services.AddSingleton<IAssetManager, AssetManager>();
+            services.AddSingleton<IVersionInfoManager, VersionInfoManager>();
+            
+            // ModLoader Installers
+            services.AddSingleton<IModLoaderInstaller, XianYuLauncher.Core.Services.ModLoaderInstallers.FabricInstaller>();
+            services.AddSingleton<IModLoaderInstaller, XianYuLauncher.Core.Services.ModLoaderInstallers.QuiltInstaller>();
+            services.AddSingleton<IModLoaderInstaller, XianYuLauncher.Core.Services.ModLoaderInstallers.ForgeInstaller>();
+            services.AddSingleton<IModLoaderInstaller, XianYuLauncher.Core.Services.ModLoaderInstallers.NeoForgeInstaller>();
+            services.AddSingleton<IModLoaderInstaller, XianYuLauncher.Core.Services.ModLoaderInstallers.OptifineInstaller>();
+            services.AddSingleton<IModLoaderInstallerFactory, XianYuLauncher.Core.Services.ModLoaderInstallers.ModLoaderInstallerFactory>();
+            
             services.AddSingleton<IMinecraftVersionService, MinecraftVersionService>();
             services.AddSingleton<IVersionInfoService, VersionInfoService>();
             services.AddSingleton<MaterialService>();
