@@ -1,4 +1,9 @@
 using System; using System.Collections.Generic; using System.IO; using System.IO.Compression; using System.Net.Http; using System.Security.Cryptography; using System.Threading.Tasks; using Newtonsoft.Json; using Newtonsoft.Json.Linq; using XianYuLauncher.Core.Contracts.Services; using Microsoft.Extensions.Logging; using XianYuLauncher.Core.Models; using System.Linq; using System.Text.RegularExpressions; using XianYuLauncher.Core.Services.DownloadSource; using XianYuLauncher.ViewModels; using XianYuLauncher.Contracts.Services;
+using VersionManifest = XianYuLauncher.Core.Models.VersionManifest;
+using VersionInfo = XianYuLauncher.Core.Models.VersionInfo;
+using Library = XianYuLauncher.Core.Models.Library;
+using DownloadFile = XianYuLauncher.Core.Models.DownloadFile;
+using LibraryNative = XianYuLauncher.Core.Models.LibraryNative;
 
 namespace XianYuLauncher.Core.Services;
 
@@ -12,13 +17,21 @@ public partial class MinecraftVersionService : IMinecraftVersionService
     private readonly ILocalSettingsService _localSettingsService;
     private readonly DownloadSourceFactory _downloadSourceFactory;
     private readonly IVersionInfoService _versionInfoService;
+    private readonly IDownloadManager _downloadManager;
+    private readonly ILibraryManager _libraryManager;
+    private readonly IAssetManager _assetManager;
+    private readonly IVersionInfoManager _versionInfoManager;
 
     public MinecraftVersionService(
         ILogger<MinecraftVersionService> logger, 
         IFileService fileService,
         ILocalSettingsService localSettingsService,
         DownloadSourceFactory downloadSourceFactory,
-        IVersionInfoService versionInfoService)
+        IVersionInfoService versionInfoService,
+        IDownloadManager downloadManager,
+        ILibraryManager libraryManager,
+        IAssetManager assetManager,
+        IVersionInfoManager versionInfoManager)
     {
         _httpClient = new HttpClient();
         _httpClient.DefaultRequestHeaders.Add("User-Agent", "XianYuLauncher/1.0");
@@ -27,6 +40,10 @@ public partial class MinecraftVersionService : IMinecraftVersionService
         _localSettingsService = localSettingsService;
         _downloadSourceFactory = downloadSourceFactory;
         _versionInfoService = versionInfoService;
+        _downloadManager = downloadManager;
+        _libraryManager = libraryManager;
+        _assetManager = assetManager;
+        _versionInfoManager = versionInfoManager;
     }
 
     /// <summary>
@@ -1117,7 +1134,7 @@ public partial class MinecraftVersionService : IMinecraftVersionService
     }
 
     /// <summary>
-    /// 下载单个原版Minecraft库文件
+    /// 下载单个原版Minecraft库文件（使用 DownloadManager）
     /// </summary>
     private async Task DownloadLibraryAsync(Library library, string librariesDirectory)
     {
@@ -1173,35 +1190,11 @@ public partial class MinecraftVersionService : IMinecraftVersionService
 
             _logger.LogInformation("开始下载库文件: {LibraryName} from {DownloadUrl}", library.Name, artifact.Url);
 
-            // 设置64KB缓冲区大小，提高下载速度
-            const int bufferSize = 65536;
-            
-            // 下载文件
-            using (var response = await _httpClient.GetAsync(artifact.Url, HttpCompletionOption.ResponseHeadersRead))
-            {
-                response.EnsureSuccessStatusCode();
-
-                using (var stream = await response.Content.ReadAsStreamAsync())
-                // 使用异步文件IO，提高磁盘写入速度
-                using (var fileStream = new FileStream(libraryPath, FileMode.Create, FileAccess.Write, FileShare.None, bufferSize, FileOptions.Asynchronous))
-                {
-                    await stream.CopyToAsync(fileStream, bufferSize);
-                }
-            }
-
-            // 验证SHA1哈希
-            var downloadedBytes = await File.ReadAllBytesAsync(libraryPath);
-            using (var sha1 = System.Security.Cryptography.SHA1.Create())
-            {
-                var hashBytes = sha1.ComputeHash(downloadedBytes);
-                var hashString = BitConverter.ToString(hashBytes).Replace("-", "").ToLower();
-
-                if (hashString != artifact.Sha1)
-                {
-                    File.Delete(libraryPath);
-                    throw new Exception($"SHA1哈希不匹配 for library {library.Name}: expected {artifact.Sha1}, got {hashString}");
-                }
-            }
+            // 使用 DownloadManager 下载，自动处理重试和 SHA1 验证
+            await DownloadFileWithManagerOrThrowAsync(
+                artifact.Url,
+                libraryPath,
+                artifact.Sha1);
         }
         catch (Exception ex)
         {
@@ -1211,7 +1204,7 @@ public partial class MinecraftVersionService : IMinecraftVersionService
     }
 
     /// <summary>
-    /// 下载单个Fabric库文件
+    /// 下载单个Fabric库文件（使用 DownloadManager）
     /// </summary>
     private async Task DownloadFabricLibraryAsync(FabricLibrary library, string librariesDirectory)
     {
@@ -1246,17 +1239,8 @@ public partial class MinecraftVersionService : IMinecraftVersionService
 
             _logger.LogInformation("开始下载Fabric库文件: {LibraryName} from {DownloadUrl}", library.Name, downloadUrl);
 
-            // 下载文件
-            using (var response = await _httpClient.GetAsync(downloadUrl, HttpCompletionOption.ResponseHeadersRead))
-            {
-                response.EnsureSuccessStatusCode();
-
-                using (var stream = await response.Content.ReadAsStreamAsync())
-                using (var fileStream = new FileStream(libraryPath, FileMode.Create, FileAccess.Write, FileShare.None))
-                {
-                    await stream.CopyToAsync(fileStream);
-                }
-            }
+            // 使用 DownloadManager 下载
+            await DownloadFileWithManagerOrThrowAsync(downloadUrl, libraryPath);
 
             _logger.LogInformation("Fabric库文件下载完成: {LibraryPath}", libraryPath);
         }
@@ -1576,11 +1560,12 @@ public partial class MinecraftVersionService : IMinecraftVersionService
     }
 
     /// <summary>
-    /// 下载单个库文件
+    /// 下载单个库文件（使用 DownloadManager）
     /// </summary>
     private async Task DownloadLibraryFileAsync(DownloadFile downloadFile, string targetPath, string libraryName = null)
     {
         // 如果文件已存在且哈希匹配，则跳过下载
+        // DownloadManager 会自动处理 SHA1 验证，但我们先检查以避免不必要的下载
         if (File.Exists(targetPath) && !string.IsNullOrEmpty(downloadFile.Sha1))
         {
             var existingBytes = await File.ReadAllBytesAsync(targetPath);
@@ -1610,80 +1595,17 @@ public partial class MinecraftVersionService : IMinecraftVersionService
         _logger.LogInformation("使用下载源 {DownloadSource} 下载库文件: {Url}", downloadSource.Name, downloadUrl);
         System.Diagnostics.Debug.WriteLine($"[DEBUG] 使用下载源 {downloadSource.Name} 下载库文件: {downloadUrl}");
         
-        // 修复官方源重试时的URL
-        string officialUrl = string.Empty;
+        // 获取官方源URL作为备用
+        var officialSource = _downloadSourceFactory.GetSource("official");
+        string officialUrl = officialSource.GetLibraryUrl(libraryName ?? "", downloadFile.Url);
+        officialUrl = officialUrl.Replace("$extension", "jar");
         
-        // 下载文件 - 增加超时时间到60秒以适应较大的库文件
-        using (var cts = new CancellationTokenSource(TimeSpan.FromSeconds(60)))
-        {
-            try
-            {
-                using (var response = await _httpClient.GetAsync(downloadUrl, HttpCompletionOption.ResponseHeadersRead, cts.Token))
-                {
-                    response.EnsureSuccessStatusCode();
-                    
-                    using (var stream = await response.Content.ReadAsStreamAsync())
-                    using (var fileStream = new FileStream(targetPath, FileMode.Create, FileAccess.Write, FileShare.None))
-                    {
-                        // 使用Stream.CopyToAsync下载文件
-                        await stream.CopyToAsync(fileStream);
-                    }
-                }
-            }
-            catch (HttpRequestException ex) when (downloadUrl.Contains("bmclapi2.bangbang93.com"))
-            {
-                // 如果是BMCLAPI下载失败，切换到官方源重试
-                _logger.LogWarning("BMCLAPI下载失败: {Url}，错误: {ErrorMessage}，正在切换到官方源重试", downloadUrl, ex.Message);
-                System.Diagnostics.Debug.WriteLine($"[DEBUG] BMCLAPI下载失败: {downloadUrl}，错误: {ex.Message}，正在切换到官方源重试");
-                
-                // 使用官方源获取URL
-                var officialSource = _downloadSourceFactory.GetSource("official");
-                officialUrl = officialSource.GetLibraryUrl(libraryName ?? "", downloadFile.Url);
-                
-                // 修复官方源URL中的$extension占位符
-                officialUrl = officialUrl.Replace("$extension", "jar");
-                
-                _logger.LogInformation("使用官方源重试下载库文件: {Url}", officialUrl);
-                System.Diagnostics.Debug.WriteLine($"[DEBUG] 使用官方源重试下载库文件: {officialUrl}");
-                
-                // 使用官方源重试下载
-                using (var retryCts = new CancellationTokenSource(TimeSpan.FromSeconds(60)))
-                {
-                    using (var response = await _httpClient.GetAsync(officialUrl, HttpCompletionOption.ResponseHeadersRead, retryCts.Token))
-                    {
-                        response.EnsureSuccessStatusCode();
-                        
-                        using (var stream = await response.Content.ReadAsStreamAsync())
-                        using (var fileStream = new FileStream(targetPath, FileMode.Create, FileAccess.Write, FileShare.None))
-                        {
-                            await stream.CopyToAsync(fileStream);
-                        }
-                    }
-                }
-            }
-            catch (OperationCanceledException)
-            {
-                _logger.LogWarning("下载文件超时: {Url}", downloadUrl);
-                throw new TimeoutException($"Download timed out for {downloadUrl}");
-            }
-        }
-
-        // 验证下载的文件哈希（如果提供了）
-        if (!string.IsNullOrEmpty(downloadFile.Sha1))
-        {
-            var downloadedBytes = await File.ReadAllBytesAsync(targetPath);
-            using (var sha1 = System.Security.Cryptography.SHA1.Create())
-            {
-                var hashBytes = sha1.ComputeHash(downloadedBytes);
-                var hashString = BitConverter.ToString(hashBytes).Replace("-", "").ToLower();
-                
-                if (hashString != downloadFile.Sha1)
-                {
-                    File.Delete(targetPath);
-                    throw new Exception($"SHA1 hash mismatch for library file {targetPath}");
-                }
-            }
-        }
+        // 使用 DownloadManager 下载，支持自动重试和 SHA1 验证
+        await DownloadFileWithFallbackAsync(
+            downloadUrl,
+            officialUrl,
+            targetPath,
+            downloadFile.Sha1);
     }
 
     public async Task ExtractNativeLibrariesAsync(string versionId, string librariesDirectory, string nativesDirectory)
@@ -2581,78 +2503,41 @@ public partial class MinecraftVersionService : IMinecraftVersionService
                 }
             }
 
-            // 4. 索引文件下载和验证
+            // 4. 索引文件下载和验证（使用 DownloadManager）
             if (needDownload)
             {
-                int retryCount = 0;
-                int maxRetries = 3;
-                bool downloadSuccess = false;
-                
                 // 报告资源索引文件下载开始
-                progressCallback?.Invoke(0); // 开始下载索引文件时报告0%进度
+                progressCallback?.Invoke(0);
 
-                while (retryCount < maxRetries && !downloadSuccess)
-                {
-                    try
-                    {
-                        // 获取当前下载源
-                        var downloadSourceType = await _localSettingsService.ReadSettingAsync<ViewModels.SettingsViewModel.DownloadSourceType>("DownloadSource");
-                        var downloadSource = _downloadSourceFactory.GetSource(downloadSourceType.ToString().ToLower());
-                        
-                        // 转换资源索引URL
-                        string convertedAssetIndexUrl = downloadSource.GetResourceUrl("asset_index", assetIndexUrl);
-                        _logger.LogInformation("正在下载assets索引: {AssetIndexId}, 官方URL: {AssetIndexUrl}, 转换后URL: {ConvertedAssetIndexUrl}", assetIndexId, assetIndexUrl, convertedAssetIndexUrl);
-                        System.Diagnostics.Debug.WriteLine($"[DEBUG] 当前assets索引下载源: {downloadSource.Name}, 资源索引ID: {assetIndexId}, 官方URL: {assetIndexUrl}, 转换后URL: {convertedAssetIndexUrl}");
-                        
-                        // 下载索引文件
-                        var response = await _httpClient.GetAsync(convertedAssetIndexUrl);
-                        response.EnsureSuccessStatusCode();
-
-                        byte[] contentBytes = await response.Content.ReadAsByteArrayAsync();
-
-                        // 验证下载内容的完整性（如果提供了SHA1）
-                        if (!string.IsNullOrEmpty(assetIndexSha1))
-                        {
-                            using (var sha1 = SHA1.Create())
-                            {
-                                byte[] hashBytes = sha1.ComputeHash(contentBytes);
-                                string hashString = BitConverter.ToString(hashBytes).Replace("-", "").ToLower();
-                                if (hashString != assetIndexSha1)
-                                {
-                                    throw new Exception("Asset index file integrity check failed");
-                                }
-                            }
-                        }
-
-                        // 保存下载的文件
-                        await File.WriteAllBytesAsync(indexFilePath, contentBytes);
-                        downloadSuccess = true;
-                        
-                        // 报告资源索引文件下载完成
-                        progressCallback?.Invoke(100);
-                    }
-                    catch (Exception ex)
-                    {
-                        retryCount++;
-                        if (retryCount >= maxRetries)
-                        {
-                            throw new Exception($"Failed to download asset index after {maxRetries} attempts: {ex.Message}");
-                        }
-
-                        // 指数退避
-                        int delay = (int)Math.Pow(2, retryCount) * 1000;
-                        await Task.Delay(delay);
-                    }
-                }
+                // 获取当前下载源
+                var downloadSourceType = await _localSettingsService.ReadSettingAsync<ViewModels.SettingsViewModel.DownloadSourceType>("DownloadSource");
+                var downloadSource = _downloadSourceFactory.GetSource(downloadSourceType.ToString().ToLower());
+                
+                // 转换资源索引URL
+                string convertedAssetIndexUrl = downloadSource.GetResourceUrl("asset_index", assetIndexUrl);
+                _logger.LogInformation("正在下载assets索引: {AssetIndexId}, 官方URL: {AssetIndexUrl}, 转换后URL: {ConvertedAssetIndexUrl}", assetIndexId, assetIndexUrl, convertedAssetIndexUrl);
+                System.Diagnostics.Debug.WriteLine($"[DEBUG] 当前assets索引下载源: {downloadSource.Name}, 资源索引ID: {assetIndexId}, 官方URL: {assetIndexUrl}, 转换后URL: {convertedAssetIndexUrl}");
+                
+                // 获取官方源URL作为备用
+                var officialSource = _downloadSourceFactory.GetSource("official");
+                string officialAssetIndexUrl = officialSource.GetResourceUrl("asset_index", assetIndexUrl);
+                
+                // 使用 DownloadManager 下载，支持自动重试和 SHA1 验证
+                await DownloadFileWithFallbackAsync(
+                    convertedAssetIndexUrl,
+                    officialAssetIndexUrl,
+                    indexFilePath,
+                    assetIndexSha1,
+                    progressCallback);
             }
 
             // 5. 下载后处理
-            // 再次验证下载后的文件
+            // 如果索引文件已经存在且有效，直接报告完成
             if (!needDownload)
             {
-                // 如果索引文件已经存在且有效，直接报告完成
                 progressCallback?.Invoke(100);
             }
+            
             if (!File.Exists(indexFilePath))
             {
                 throw new Exception($"Asset index file {indexFilePath} not found after download attempt");

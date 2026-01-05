@@ -89,32 +89,17 @@ public partial class MinecraftVersionService
                 var clientJarUrl = downloadSource.GetClientJarUrl(minecraftVersionId, clientDownload.Url);
                 System.Diagnostics.Debug.WriteLine($"[DEBUG] 当前下载内容: JAR核心文件(Forge), 下载源: {downloadSource.Name}, 版本: {forgeVersionId}, 下载URL: {clientJarUrl}");
                 
-                // 下载JAR文件
-                using (var response = await _httpClient.GetAsync(clientJarUrl, HttpCompletionOption.ResponseHeadersRead))
-                {
-                    response.EnsureSuccessStatusCode();
-                    long totalSize = response.Content.Headers.ContentLength ?? -1L;
-                    long totalRead = 0L;
-                    
-                    using (var stream = await response.Content.ReadAsStreamAsync())
-                    using (var fileStream = new FileStream(jarPath, FileMode.Create, FileAccess.Write, FileShare.None, bufferSize, FileOptions.Asynchronous))
+                // 使用 DownloadManager 下载 JAR 文件
+                await DownloadFileWithManagerOrThrowAsync(
+                    clientJarUrl,
+                    jarPath,
+                    clientDownload.Sha1,
+                    (progress) =>
                     {
-                        var buffer = new byte[bufferSize];
-                        int bytesRead;
-                        
-                        while ((bytesRead = await stream.ReadAsync(buffer, 0, buffer.Length, cancellationToken)) > 0)
-                        {
-                            await fileStream.WriteAsync(buffer, 0, bytesRead, cancellationToken);
-                            totalRead += bytesRead;
-                            
-                            if (totalSize > 0)
-                            {
-                                double progress = 10 + ((double)totalRead / totalSize) * 25; // 10% - 35% 用于JAR下载
-                                progressCallback?.Invoke(progress);
-                            }
-                        }
-                    }
-                }
+                        double adjustedProgress = 10 + (progress * 0.25); // 10% - 35% 用于JAR下载
+                        progressCallback?.Invoke(adjustedProgress);
+                    },
+                    cancellationToken);
                 progressCallback?.Invoke(35); // 35% - JAR文件下载完成
                 _logger.LogInformation("原版Minecraft核心文件下载完成: {JarPath}", jarPath);
             }
@@ -145,32 +130,17 @@ public partial class MinecraftVersionService
             forgeInstallerPath = Path.Combine(cacheDirectory, $"forge-{minecraftVersionId}-{forgeVersion}-installer.jar");
             System.Diagnostics.Debug.WriteLine($"[DEBUG] Forge安装包保存路径: {forgeInstallerPath}");
             
-            // 下载Forge Installer JAR
-            using (var response = await _httpClient.GetAsync(forgeInstallerUrl, HttpCompletionOption.ResponseHeadersRead))
-            {
-                response.EnsureSuccessStatusCode();
-                long totalSize = response.Content.Headers.ContentLength ?? -1L;
-                long totalRead = 0L;
-                
-                using (var stream = await response.Content.ReadAsStreamAsync())
-                using (var fileStream = new FileStream(forgeInstallerPath, FileMode.Create, FileAccess.Write, FileShare.None, bufferSize, true))
+            // 下载Forge Installer JAR（使用 DownloadManager）
+            await DownloadFileWithManagerOrThrowAsync(
+                forgeInstallerUrl,
+                forgeInstallerPath,
+                null, // Forge Installer 没有提供 SHA1
+                (progress) =>
                 {
-                    var buffer = new byte[bufferSize];
-                    int bytesRead;
-                    
-                    while ((bytesRead = await stream.ReadAsync(buffer, 0, buffer.Length, cancellationToken)) > 0)
-                    {
-                        await fileStream.WriteAsync(buffer, 0, bytesRead, cancellationToken);
-                        totalRead += bytesRead;
-                        
-                        if (totalSize > 0)
-                        {
-                            double progress = 45 + ((double)totalRead / totalSize) * 30; // 45% - 75% 用于Installer下载
-                            progressCallback?.Invoke(progress);
-                        }
-                    }
-                }
-            }
+                    double adjustedProgress = 45 + (progress * 0.30); // 45% - 75% 用于Installer下载
+                    progressCallback?.Invoke(adjustedProgress);
+                },
+                cancellationToken);
             progressCallback?.Invoke(75); // 75% - Installer下载完成
             _logger.LogInformation("Forge Installer JAR包下载完成: {InstallerPath}", forgeInstallerPath);
 

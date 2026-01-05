@@ -1,0 +1,482 @@
+using System;
+using System.Collections.Generic;
+using System.IO;
+using System.IO.Compression;
+using System.Linq;
+using System.Net.Http;
+using System.Threading;
+using System.Threading.Tasks;
+using Microsoft.Extensions.Logging;
+using Newtonsoft.Json;
+using Newtonsoft.Json.Linq;
+using XianYuLauncher.Core.Contracts.Services;
+using XianYuLauncher.Core.Exceptions;
+using XianYuLauncher.Core.Models;
+
+namespace XianYuLauncher.Core.Services.ModLoaderInstallers;
+
+/// <summary>
+/// Forge ModLoader安装器
+/// </summary>
+public class ForgeInstaller : ModLoaderInstallerBase
+{
+    private readonly HttpClient _httpClient;
+    
+    /// <summary>
+    /// Forge Maven仓库URL
+    /// </summary>
+    private const string ForgeMavenUrl = "https://maven.minecraftforge.net";
+    
+    /// <inheritdoc/>
+    public override string ModLoaderType => "Forge";
+
+    public ForgeInstaller(
+        IDownloadManager downloadManager,
+        ILibraryManager libraryManager,
+        IVersionInfoManager versionInfoManager,
+        ILogger<ForgeInstaller> logger)
+        : base(downloadManager, libraryManager, versionInfoManager, logger)
+    {
+        _httpClient = new HttpClient();
+        _httpClient.DefaultRequestHeaders.Add("User-Agent", "XianYuLauncher/1.0");
+    }
+
+    /// <inheritdoc/>
+    public override async Task<string> InstallAsync(
+        string minecraftVersionId,
+        string modLoaderVersion,
+        string minecraftDirectory,
+        Action<double>? progressCallback = null,
+        CancellationToken cancellationToken = default,
+        string? customVersionName = null)
+    {
+        Logger.LogInformation("开始安装Forge: {ForgeVersion} for Minecraft {MinecraftVersion}",
+            modLoaderVersion, minecraftVersionId);
+
+        string? cacheDirectory = null;
+        string? forgeInstallerPath = null;
+        string? extractedPath = null;
+
+        try
+        {
+            // 1. 生成版本ID和创建目录
+            var versionId = GetVersionId(minecraftVersionId, modLoaderVersion, customVersionName);
+            var versionDirectory = CreateVersionDirectory(minecraftDirectory, versionId);
+            var librariesDirectory = Path.Combine(minecraftDirectory, "libraries");
+
+            progressCallback?.Invoke(5);
+
+            // 2. 保存版本配置（提前保存，确保处理器执行前能获取正确的版本信息）
+            await SaveVersionConfigAsync(versionDirectory, minecraftVersionId, modLoaderVersion);
+
+            // 3. 获取原版Minecraft版本信息
+            Logger.LogInformation("获取原版Minecraft版本信息: {MinecraftVersion}", minecraftVersionId);
+            var originalVersionInfo = await VersionInfoManager.GetVersionInfoAsync(
+                minecraftVersionId,
+                minecraftDirectory,
+                allowNetwork: true,
+                cancellationToken);
+
+            progressCallback?.Invoke(10);
+
+            // 4. 下载原版Minecraft JAR
+            Logger.LogInformation("下载Minecraft JAR");
+            await DownloadMinecraftJarAsync(
+                versionDirectory,
+                versionId,
+                originalVersionInfo,
+                p => ReportProgress(progressCallback, p, 10, 35),
+                cancellationToken);
+
+            progressCallback?.Invoke(35);
+
+            // 5. 下载Forge Installer
+            Logger.LogInformation("下载Forge Installer");
+            cacheDirectory = Path.Combine(Path.GetTempPath(), "XianYuLauncher", "cache", "forge");
+            Directory.CreateDirectory(cacheDirectory);
+            
+            forgeInstallerPath = Path.Combine(cacheDirectory, $"forge-{minecraftVersionId}-{modLoaderVersion}-installer.jar");
+            var forgeInstallerUrl = GetForgeInstallerUrl(minecraftVersionId, modLoaderVersion);
+            
+            var downloadResult = await DownloadManager.DownloadFileAsync(
+                forgeInstallerUrl,
+                forgeInstallerPath,
+                null, // Forge Installer 没有提供 SHA1
+                p => ReportProgress(progressCallback, p, 35, 55),
+                cancellationToken);
+
+            if (!downloadResult.Success)
+            {
+                throw new ModLoaderInstallException(
+                    $"下载Forge Installer失败: {downloadResult.ErrorMessage}",
+                    ModLoaderType,
+                    modLoaderVersion,
+                    minecraftVersionId,
+                    "下载Installer",
+                    downloadResult.Exception);
+            }
+
+            progressCallback?.Invoke(55);
+
+            // 6. 解压Forge Installer
+            Logger.LogInformation("解压Forge Installer");
+            extractedPath = Path.Combine(cacheDirectory, $"extracted-{minecraftVersionId}-{modLoaderVersion}");
+            Directory.CreateDirectory(extractedPath);
+            
+            await ExtractForgeInstallerAsync(forgeInstallerPath, extractedPath, cancellationToken);
+            progressCallback?.Invoke(65);
+
+            // 7. 读取install_profile.json判断Forge版本类型
+            var installProfilePath = Path.Combine(extractedPath, "install_profile.json");
+            if (!File.Exists(installProfilePath))
+            {
+                throw new ModLoaderInstallException(
+                    "install_profile.json文件不存在",
+                    ModLoaderType,
+                    modLoaderVersion,
+                    minecraftVersionId,
+                    "解析安装配置");
+            }
+
+            var installProfileContent = await File.ReadAllTextAsync(installProfilePath, cancellationToken);
+            var installProfile = JObject.Parse(installProfileContent);
+            var forgeVersionType = DetermineForgeVersionType(installProfile);
+            
+            Logger.LogInformation("Forge版本类型: {VersionType}", forgeVersionType);
+            progressCallback?.Invoke(70);
+
+            // 8. 下载install_profile中的依赖库
+            var installProfileLibraries = ParseInstallProfileLibraries(installProfile);
+            await DownloadInstallProfileLibrariesAsync(
+                installProfileLibraries,
+                librariesDirectory,
+                p => ReportProgress(progressCallback, p, 70, 80),
+                cancellationToken);
+
+            progressCallback?.Invoke(80);
+
+            // 9. 根据版本类型处理
+            VersionInfo? forgeVersionInfo;
+            if (forgeVersionType == ForgeVersionType.Old)
+            {
+                forgeVersionInfo = await ProcessOldForgeAsync(
+                    installProfile, forgeInstallerPath, librariesDirectory, cancellationToken);
+            }
+            else
+            {
+                forgeVersionInfo = await ProcessNewForgeAsync(
+                    extractedPath, installProfile, cancellationToken);
+            }
+
+            progressCallback?.Invoke(90);
+
+            // 10. 合并版本JSON并保存
+            var mergedVersionInfo = MergeVersionInfo(originalVersionInfo, forgeVersionInfo, installProfileLibraries);
+            mergedVersionInfo.Id = versionId;
+            
+            await SaveVersionJsonAsync(versionDirectory, versionId, mergedVersionInfo);
+            progressCallback?.Invoke(100);
+
+            Logger.LogInformation("Forge安装完成: {VersionId}", versionId);
+            return versionId;
+        }
+        catch (OperationCanceledException)
+        {
+            Logger.LogWarning("Forge安装已取消");
+            throw;
+        }
+        catch (Exception ex) when (ex is not ModLoaderInstallException)
+        {
+            Logger.LogError(ex, "Forge安装失败");
+            throw new ModLoaderInstallException(
+                $"Forge安装失败: {ex.Message}",
+                ModLoaderType,
+                modLoaderVersion,
+                minecraftVersionId,
+                innerException: ex);
+        }
+        finally
+        {
+            // 清理临时文件
+            CleanupTempFiles(extractedPath);
+        }
+    }
+
+    /// <inheritdoc/>
+    public override async Task<List<string>> GetAvailableVersionsAsync(
+        string minecraftVersionId,
+        CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            // Forge版本列表API
+            var url = $"https://files.minecraftforge.net/net/minecraftforge/forge/promotions_slim.json";
+            var response = await _httpClient.GetStringAsync(url, cancellationToken);
+            var promotions = JsonConvert.DeserializeObject<ForgePromotions>(response);
+
+            var versions = new List<string>();
+            if (promotions?.Promos != null)
+            {
+                foreach (var promo in promotions.Promos)
+                {
+                    if (promo.Key.StartsWith($"{minecraftVersionId}-"))
+                    {
+                        versions.Add(promo.Value);
+                    }
+                }
+            }
+
+            return versions.Distinct().ToList();
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "获取Forge版本列表失败: {MinecraftVersion}", minecraftVersionId);
+            return new List<string>();
+        }
+    }
+
+    #region 私有方法
+
+    private string GetForgeInstallerUrl(string minecraftVersionId, string forgeVersion)
+    {
+        return $"{ForgeMavenUrl}/net/minecraftforge/forge/{minecraftVersionId}-{forgeVersion}/forge-{minecraftVersionId}-{forgeVersion}-installer.jar";
+    }
+
+    private async Task ExtractForgeInstallerAsync(string installerPath, string extractPath, CancellationToken cancellationToken)
+    {
+        await Task.Run(() =>
+        {
+            using var archive = ZipFile.OpenRead(installerPath);
+            foreach (var entry in archive.Entries)
+            {
+                cancellationToken.ThrowIfCancellationRequested();
+                
+                if (string.IsNullOrEmpty(entry.Name)) continue;
+                
+                var destinationPath = Path.Combine(extractPath, entry.FullName);
+                var destinationDir = Path.GetDirectoryName(destinationPath);
+                if (!string.IsNullOrEmpty(destinationDir))
+                {
+                    Directory.CreateDirectory(destinationDir);
+                }
+                entry.ExtractToFile(destinationPath, overwrite: true);
+            }
+        }, cancellationToken);
+    }
+
+    private ForgeVersionType DetermineForgeVersionType(JObject installProfile)
+    {
+        // 旧版Forge：存在"install"字段
+        if (installProfile.ContainsKey("install"))
+        {
+            return ForgeVersionType.Old;
+        }
+        
+        // 微旧版Forge：processors列表为空
+        if (installProfile.ContainsKey("processors"))
+        {
+            var processors = installProfile["processors"] as JArray;
+            if (processors == null || processors.Count == 0)
+            {
+                return ForgeVersionType.SemiOld;
+            }
+        }
+        
+        return ForgeVersionType.New;
+    }
+
+    private List<Library> ParseInstallProfileLibraries(JObject installProfile)
+    {
+        var libraries = new List<Library>();
+        var librariesArray = installProfile["libraries"] as JArray;
+        
+        if (librariesArray == null) return libraries;
+
+        foreach (var libObj in librariesArray)
+        {
+            var lib = libObj.ToObject<Library>();
+            if (lib != null && !string.IsNullOrEmpty(lib.Name))
+            {
+                libraries.Add(lib);
+            }
+        }
+
+        return libraries;
+    }
+
+    private async Task DownloadInstallProfileLibrariesAsync(
+        List<Library> libraries,
+        string librariesDirectory,
+        Action<double>? progressCallback,
+        CancellationToken cancellationToken)
+    {
+        var downloadTasks = new List<DownloadTask>();
+
+        foreach (var library in libraries)
+        {
+            if (library.Downloads?.Artifact == null) continue;
+            
+            var libraryPath = LibraryManager.GetLibraryPath(library.Name, librariesDirectory);
+            if (File.Exists(libraryPath)) continue;
+
+            downloadTasks.Add(new DownloadTask
+            {
+                Url = library.Downloads.Artifact.Url ?? string.Empty,
+                TargetPath = libraryPath,
+                ExpectedSha1 = library.Downloads.Artifact.Sha1,
+                Description = $"库文件: {library.Name}"
+            });
+        }
+
+        if (downloadTasks.Count == 0)
+        {
+            progressCallback?.Invoke(100);
+            return;
+        }
+
+        await DownloadManager.DownloadFilesAsync(downloadTasks, 4, progressCallback, cancellationToken);
+    }
+
+    private async Task<VersionInfo> ProcessOldForgeAsync(
+        JObject installProfile,
+        string forgeInstallerPath,
+        string librariesDirectory,
+        CancellationToken cancellationToken)
+    {
+        // 从install_profile.json中获取versionInfo
+        var versionInfoObj = installProfile["versionInfo"] as JObject;
+        if (versionInfoObj == null)
+        {
+            throw new ModLoaderInstallException(
+                "旧版Forge的install_profile.json中缺少versionInfo字段",
+                ModLoaderType, "", "", "解析版本信息");
+        }
+
+        var forgeVersionInfo = versionInfoObj.ToObject<VersionInfo>() ?? new VersionInfo();
+
+        // 处理universal包
+        var installObj = installProfile["install"] as JObject;
+        if (installObj != null)
+        {
+            var installPath = installObj["path"]?.Value<string>();
+            var installFilePath = installObj["filePath"]?.Value<string>();
+
+            if (!string.IsNullOrEmpty(installPath) && !string.IsNullOrEmpty(installFilePath))
+            {
+                var universalLibraryPath = LibraryManager.GetLibraryPath(installPath, librariesDirectory);
+                var universalDir = Path.GetDirectoryName(universalLibraryPath);
+                if (!string.IsNullOrEmpty(universalDir))
+                {
+                    Directory.CreateDirectory(universalDir);
+                }
+
+                await Task.Run(() =>
+                {
+                    using var archive = ZipFile.OpenRead(forgeInstallerPath);
+                    var universalEntry = archive.GetEntry(installFilePath);
+                    universalEntry?.ExtractToFile(universalLibraryPath, overwrite: true);
+                }, cancellationToken);
+            }
+        }
+
+        return forgeVersionInfo;
+    }
+
+    private async Task<VersionInfo> ProcessNewForgeAsync(
+        string extractedPath,
+        JObject installProfile,
+        CancellationToken cancellationToken)
+    {
+        // 读取version.json
+        var versionJsonPath = Path.Combine(extractedPath, "version.json");
+        if (!File.Exists(versionJsonPath))
+        {
+            // 检查子目录
+            var subDirs = Directory.GetDirectories(extractedPath);
+            foreach (var subDir in subDirs)
+            {
+                var subDirJsonPath = Path.Combine(subDir, "version.json");
+                if (File.Exists(subDirJsonPath))
+                {
+                    versionJsonPath = subDirJsonPath;
+                    break;
+                }
+            }
+        }
+
+        if (!File.Exists(versionJsonPath))
+        {
+            throw new ModLoaderInstallException(
+                "在Forge安装包中未找到version.json文件",
+                ModLoaderType, "", "", "解析版本信息");
+        }
+
+        var versionJsonContent = await File.ReadAllTextAsync(versionJsonPath, cancellationToken);
+        return JsonConvert.DeserializeObject<VersionInfo>(versionJsonContent) ?? new VersionInfo();
+    }
+
+    private VersionInfo MergeVersionInfo(VersionInfo original, VersionInfo? forge, List<Library> additionalLibraries)
+    {
+        var merged = new VersionInfo
+        {
+            Id = forge?.Id ?? original.Id,
+            Type = original.Type,
+            MainClass = forge?.MainClass ?? original.MainClass,
+            InheritsFrom = original.Id,
+            Arguments = forge?.Arguments ?? original.Arguments,
+            MinecraftArguments = forge?.MinecraftArguments ?? original.MinecraftArguments,
+            Libraries = new List<Library>()
+        };
+
+        // 添加原版库
+        if (original.Libraries != null)
+        {
+            merged.Libraries.AddRange(original.Libraries);
+        }
+
+        // 添加Forge库
+        if (forge?.Libraries != null)
+        {
+            merged.Libraries.AddRange(forge.Libraries);
+        }
+
+        // 添加install_profile中的库
+        merged.Libraries.AddRange(additionalLibraries);
+
+        return merged;
+    }
+
+    private void CleanupTempFiles(string? extractedPath)
+    {
+        try
+        {
+            if (!string.IsNullOrEmpty(extractedPath) && Directory.Exists(extractedPath))
+            {
+                Directory.Delete(extractedPath, true);
+            }
+        }
+        catch (Exception ex)
+        {
+            Logger.LogWarning(ex, "清理临时文件失败");
+        }
+    }
+
+    #endregion
+
+    #region 内部类
+
+    private enum ForgeVersionType
+    {
+        Old,      // 旧版Forge（有install字段）
+        SemiOld,  // 微旧版Forge（processors为空）
+        New       // 新版Forge（需要执行processors）
+    }
+
+    private class ForgePromotions
+    {
+        [JsonProperty("promos")]
+        public Dictionary<string, string>? Promos { get; set; }
+    }
+
+    #endregion
+}
