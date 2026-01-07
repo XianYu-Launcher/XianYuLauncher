@@ -17,18 +17,20 @@
                Canvas.ZIndex="-1" />
         <Grid x:Name="AppTitleBar"
               Canvas.ZIndex="1"
-              Height="{Binding ElementName=NavigationViewControl, Path=CompactPaneLength}"
+              Height="48"
               IsHitTestVisible="True"
               VerticalAlignment="Top">
             <Image Source="/Assets/WindowIcon.ico"
                    HorizontalAlignment="Left"
+                   VerticalAlignment="Center"
                    Width="16"
-                   Height="16" />
+                   Height="16"
+                   Margin="16,0,0,0" />
             <TextBlock x:Name="AppTitleBarText"
                        VerticalAlignment="Center"
                        TextWrapping="NoWrap"
                        Style="{StaticResource CaptionTextBlockStyle}"
-                       Margin="28,0,0,0"/>
+                       Margin="40,0,0,0"/>
         </Grid>
         <NavigationView
             x:Name="NavigationViewControl"
