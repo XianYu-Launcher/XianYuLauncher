@@ -66,6 +66,10 @@ artifacts/
 # ASP.NET Scaffolding
 ScaffoldingReadMe.txt
 
+# other
+.trae/
+.kiro/
+
 # StyleCop
 StyleCopReport.xml
 
