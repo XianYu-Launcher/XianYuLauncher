@@ -39,6 +39,9 @@ public sealed partial class ShellPage : Page
         App.MainWindow.Activated += MainWindow_Activated;
         AppTitleBarText.Text = "XianYu Launcher";
         
+        // 设置标题栏高度为 Tall，统一标题和窗口按钮高度
+        App.MainWindow.AppWindow.TitleBar.PreferredHeightOption = Microsoft.UI.Windowing.TitleBarHeightOption.Tall;
+        
         // 订阅背景变更事件
         _materialService = App.GetService<MaterialService>();
         _materialService.BackgroundChanged += OnBackgroundChanged;
