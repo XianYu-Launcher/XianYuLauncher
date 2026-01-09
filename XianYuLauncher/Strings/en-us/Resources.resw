@@ -681,15 +681,6 @@
   <data name="ResourceDownloadPage_VersionSearchBox.PlaceholderText" xml:space="preserve">
     <value>Search versions...</value>
   </data>
-  <data name="ResourceDownloadPage_ModSearchBox.PlaceholderText" xml:space="preserve">
-    <value>Search mods...</value>
-  </data>
-  <data name="ResourceDownloadPage_ShaderPackSearchBox.PlaceholderText" xml:space="preserve">
-    <value>Search shaders...</value>
-  </data>
-  <data name="ResourceDownloadPage_ResourcePackSearchBox.PlaceholderText" xml:space="preserve">
-    <value>Search resource packs...</value>
-  </data>
   <data name="ResourceDownloadPage_VersionTypeComboBox.PlaceholderText" xml:space="preserve">
     <value>Filter</value>
   </data>
@@ -777,14 +768,8 @@
   <data name="ResourceDownloadPage_WorldgenCategory.Content" xml:space="preserve">
     <value>World Generation</value>
   </data>
-  <data name="ResourceDownloadPage_ShaderPackVersionComboBox.Header" xml:space="preserve">
-    <value>Version</value>
-  </data>
   <data name="ResourceDownloadPage_ShaderPackVersionComboBox.PlaceholderText" xml:space="preserve">
     <value>Version</value>
-  </data>
-  <data name="ResourceDownloadPage_ShaderPackCategoryComboBox.Header" xml:space="preserve">
-    <value>Category</value>
   </data>
   <data name="ResourceDownloadPage_ShaderPackCategoryComboBox.PlaceholderText" xml:space="preserve">
     <value>Categories</value>
@@ -804,14 +789,8 @@
   <data name="ResourceDownloadPage_VanillaLikeCategory.Content" xml:space="preserve">
     <value>Vanilla-like</value>
   </data>
-  <data name="ResourceDownloadPage_ResourcePackVersionComboBox.Header" xml:space="preserve">
-    <value>Version</value>
-  </data>
   <data name="ResourceDownloadPage_ResourcePackVersionComboBox.PlaceholderText" xml:space="preserve">
     <value>Version</value>
-  </data>
-  <data name="ResourceDownloadPage_ResourcePackCategoryComboBox.Header" xml:space="preserve">
-    <value>Category</value>
   </data>
   <data name="ResourceDownloadPage_ResourcePackCategoryComboBox.PlaceholderText" xml:space="preserve">
     <value>Categories</value>
@@ -834,14 +813,8 @@
   <data name="ResourceDownloadPage_DatapackSearchBox.PlaceholderText" xml:space="preserve">
     <value>Search datapacks...</value>
   </data>
-  <data name="ResourceDownloadPage_DatapackVersionComboBox.Header" xml:space="preserve">
-    <value>Version</value>
-  </data>
   <data name="ResourceDownloadPage_DatapackVersionComboBox.PlaceholderText" xml:space="preserve">
     <value>Version</value>
-  </data>
-  <data name="ResourceDownloadPage_DatapackCategoryComboBox.Header" xml:space="preserve">
-    <value>Category</value>
   </data>
   <data name="ResourceDownloadPage_DatapackCategoryComboBox.PlaceholderText" xml:space="preserve">
     <value>Categories</value>
@@ -849,14 +822,8 @@
   <data name="ResourceDownloadPage_ModpackSearchBox.PlaceholderText" xml:space="preserve">
     <value>Search modpacks...</value>
   </data>
-  <data name="ResourceDownloadPage_ModpackVersionComboBox.Header" xml:space="preserve">
-    <value>Version</value>
-  </data>
   <data name="ResourceDownloadPage_ModpackVersionComboBox.PlaceholderText" xml:space="preserve">
     <value>Version</value>
-  </data>
-  <data name="ResourceDownloadPage_ModpackCategoryComboBox.Header" xml:space="preserve">
-    <value>Category</value>
   </data>
   <data name="ResourceDownloadPage_ModpackCategoryComboBox.PlaceholderText" xml:space="preserve">
     <value>Categories</value>
@@ -1218,12 +1185,6 @@ Continue downloading?</value>
   </data>
   <data name="VersionListPage_ExportModpackDialog_ServerOnlyCheckBox.Content" xml:space="preserve">
     <value>Export Server Modpack</value>
-  </data>
-  <data name="VersionListPage_ExportModpackDialog_OfflineModeWarningInfoBar.Title" xml:space="preserve">
-    <value>License Warning</value>
-  </data>
-  <data name="VersionListPage_ExportModpackDialog_OfflineModeWarningInfoBar.Message" xml:space="preserve">
-    <value>Including mods directly in the modpack may violate certain terms. Please do not distribute!</value>
   </data>
   <data name="VersionListPage_LoadingDialog.Title" xml:space="preserve">
     <value>Exporting Modpack</value>
@@ -1800,5 +1761,20 @@ Continue downloading?</value>
   </data>
   <data name="VersionManagerPage_MoveResultDialog.PrimaryButtonText" xml:space="preserve">
     <value>OK</value>
+  </data>
+  <data name="ResourceDownloadPage_ModSearchBox.PlaceholderText" xml:space="preserve">
+    <value>Search mods...</value>
+  </data>
+  <data name="ResourceDownloadPage_ShaderPackSearchBox.PlaceholderText" xml:space="preserve">
+    <value>Search shaders...</value>
+  </data>
+  <data name="ResourceDownloadPage_ResourcePackSearchBox.PlaceholderText" xml:space="preserve">
+    <value>Search resource packs...</value>
+  </data>
+  <data name="VersionListPage_ExportModpackDialog_OfflineModeWarningInfoBar.Title" xml:space="preserve">
+    <value>License Warning</value>
+  </data>
+  <data name="VersionListPage_ExportModpackDialog_OfflineModeWarningInfoBar.Message" xml:space="preserve">
+    <value>Including mods directly in the modpack may violate certain terms. Please do not distribute!</value>
   </data>
 </root>

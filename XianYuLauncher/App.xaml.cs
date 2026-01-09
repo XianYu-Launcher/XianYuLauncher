@@ -159,6 +159,9 @@ public partial class App : Application
             services.AddHttpClient<CurseForgeService>();
             services.AddSingleton<CurseForgeService>();
             
+            // CurseForge Cache Service
+            services.AddSingleton<CurseForgeCacheService>();
+            
             // Microsoft Auth Service
             services.AddHttpClient<MicrosoftAuthService>();
             

@@ -475,6 +475,7 @@
                                     <ColumnDefinition Width="Auto"/>
                                     <ColumnDefinition Width="Auto"/>
                                     <ColumnDefinition Width="Auto"/>
+                                    <ColumnDefinition Width="Auto"/>
                                 </Grid.ColumnDefinitions>
                                 <Grid.RowDefinitions>
                                     <RowDefinition Height="Auto"/>
@@ -487,7 +488,7 @@
                                     Grid.Row="0"
                                     Grid.Column="0"
                                     QueryIcon="Find"
-                                    Margin="0,0,10,0"
+                                    Margin="0,0,8,0"
                                     Text="{Binding ShaderPackSearchQuery, Mode=TwoWay}"
                                     QuerySubmitted="ShaderPackSearchBox_QuerySubmitted"/>
 
@@ -497,10 +498,9 @@
                                     x:Uid="ResourceDownloadPage_ShaderPackVersionComboBox"
                                     Grid.Row="0"
                                     Grid.Column="1"
-                                    Header="版本"
                                     PlaceholderText="版本"
-                                    Margin="0,0,10,0"
-                                    MinWidth="120"
+                                    Margin="0,0,4,0"
+                                    MinWidth="90"
                                     ItemsSource="{Binding AvailableVersions, Mode=OneWay}"
                                     SelectedItem="{Binding SelectedShaderPackVersion, Mode=TwoWay}"
                                     SelectionChanged="ShaderPackVersionComboBox_SelectionChanged">
@@ -512,9 +512,9 @@
                                     x:Uid="ResourceDownloadPage_ShaderPackCategoryComboBox"
                                     Grid.Row="0"
                                     Grid.Column="2"
-                                    Header="类别"
                                     PlaceholderText="所有类别"
-                                    MinWidth="120"
+                                    MinWidth="80"
+                                    Margin="0,0,8,0"
                                     SelectedValuePath="Tag"
                                     SelectedValue="{Binding SelectedShaderPackCategory, Mode=TwoWay}"
                                     SelectionChanged="ShaderPackCategoryComboBox_SelectionChanged">
@@ -526,6 +526,36 @@
                                     <ComboBoxItem x:Uid="ResourceDownloadPage_SemiRealisticCategory" Content="半写实" Tag="semi-realistic" />
                                     <ComboBoxItem x:Uid="ResourceDownloadPage_VanillaLikeCategory" Content="原版风" Tag="vanilla-like" />
                                 </ComboBox>
+
+                                <!-- 平台选择 - 使用 ToggleButtons -->
+                                <StackPanel Grid.Column="3" Orientation="Horizontal" Spacing="0">
+                                    <ToggleButton 
+                                        x:Name="ShaderPackModrinthToggle"
+                                        x:Uid="ResourceDownloadPage_ModrinthToggle"
+                                        IsChecked="{Binding IsModrinthEnabled, Mode=TwoWay}"
+                                        Click="ShaderPackModrinthToggleButton_Click"
+                                        CornerRadius="4,0,0,4"
+                                        Padding="10,6"
+                                        MinWidth="80">
+                                        <StackPanel Orientation="Horizontal" Spacing="4">
+                                            <FontIcon Glyph="&#xE774;" FontSize="12"/>
+                                            <TextBlock Text="Modrinth" FontSize="12"/>
+                                        </StackPanel>
+                                    </ToggleButton>
+                                    <ToggleButton 
+                                        x:Name="ShaderPackCurseForgeToggle"
+                                        x:Uid="ResourceDownloadPage_CurseForgeToggle"
+                                        IsChecked="{Binding IsCurseForgeEnabled, Mode=TwoWay}"
+                                        Click="ShaderPackCurseForgeToggleButton_Click"
+                                        CornerRadius="0,4,4,0"
+                                        Padding="10,6"
+                                        MinWidth="80">
+                                        <StackPanel Orientation="Horizontal" Spacing="4">
+                                            <FontIcon Glyph="&#xE945;" FontSize="12"/>
+                                            <TextBlock Text="CurseForge" FontSize="12"/>
+                                        </StackPanel>
+                                    </ToggleButton>
+                                </StackPanel>
                             </Grid>
 
                             <!-- Error Message -->
@@ -676,6 +706,7 @@
                                     <ColumnDefinition Width="Auto"/>
                                     <ColumnDefinition Width="Auto"/>
                                     <ColumnDefinition Width="Auto"/>
+                                    <ColumnDefinition Width="Auto"/>
                                 </Grid.ColumnDefinitions>
                                 <Grid.RowDefinitions>
                                     <RowDefinition Height="Auto"/>
@@ -688,7 +719,7 @@
                                     Grid.Row="0"
                                     Grid.Column="0"
                                     QueryIcon="Find"
-                                    Margin="0,0,10,0"
+                                    Margin="0,0,8,0"
                                     Text="{Binding ResourcePackSearchQuery, Mode=TwoWay}"
                                     QuerySubmitted="ResourcePackSearchBox_QuerySubmitted"/>
 
@@ -698,10 +729,9 @@
                                     x:Uid="ResourceDownloadPage_ResourcePackVersionComboBox"
                                     Grid.Row="0"
                                     Grid.Column="1"
-                                    Header="版本"
                                     PlaceholderText="版本"
-                                    Margin="0,0,10,0"
-                                    MinWidth="120"
+                                    Margin="0,0,4,0"
+                                    MinWidth="90"
                                     ItemsSource="{Binding AvailableVersions, Mode=OneWay}"
                                     SelectedItem="{Binding SelectedResourcePackVersion, Mode=TwoWay}"
                                     SelectionChanged="ResourcePackVersionComboBox_SelectionChanged">
@@ -713,9 +743,9 @@
                                     x:Uid="ResourceDownloadPage_ResourcePackCategoryComboBox"
                                     Grid.Row="0"
                                     Grid.Column="2"
-                                    Header="类别"
                                     PlaceholderText="所有类别"
-                                    MinWidth="120"
+                                    MinWidth="80"
+                                    Margin="0,0,8,0"
                                     SelectedValuePath="Tag"
                                     SelectedValue="{Binding SelectedResourcePackCategory, Mode=TwoWay}"
                                     SelectionChanged="ResourcePackCategoryComboBox_SelectionChanged">
@@ -731,6 +761,36 @@
                                     <ComboBoxItem x:Uid="ResourceDownloadPage_UtilityCategory" Content="实用" Tag="utility" />
                                     <ComboBoxItem x:Uid="ResourceDownloadPage_VanillaLikeCategory" Content="原版风" Tag="vanilla-like" />
                                 </ComboBox>
+
+                                <!-- 平台选择 - 使用 ToggleButtons -->
+                                <StackPanel Grid.Column="3" Orientation="Horizontal" Spacing="0">
+                                    <ToggleButton 
+                                        x:Name="ResourcePackModrinthToggle"
+                                        x:Uid="ResourceDownloadPage_ModrinthToggle"
+                                        IsChecked="{Binding IsModrinthEnabled, Mode=TwoWay}"
+                                        Click="ResourcePackModrinthToggleButton_Click"
+                                        CornerRadius="4,0,0,4"
+                                        Padding="10,6"
+                                        MinWidth="80">
+                                        <StackPanel Orientation="Horizontal" Spacing="4">
+                                            <FontIcon Glyph="&#xE774;" FontSize="12"/>
+                                            <TextBlock Text="Modrinth" FontSize="12"/>
+                                        </StackPanel>
+                                    </ToggleButton>
+                                    <ToggleButton 
+                                        x:Name="ResourcePackCurseForgeToggle"
+                                        x:Uid="ResourceDownloadPage_CurseForgeToggle"
+                                        IsChecked="{Binding IsCurseForgeEnabled, Mode=TwoWay}"
+                                        Click="ResourcePackCurseForgeToggleButton_Click"
+                                        CornerRadius="0,4,4,0"
+                                        Padding="10,6"
+                                        MinWidth="80">
+                                        <StackPanel Orientation="Horizontal" Spacing="4">
+                                            <FontIcon Glyph="&#xE945;" FontSize="12"/>
+                                            <TextBlock Text="CurseForge" FontSize="12"/>
+                                        </StackPanel>
+                                    </ToggleButton>
+                                </StackPanel>
                             </Grid>
 
                             <!-- Error Message -->
@@ -881,6 +941,7 @@
                                     <ColumnDefinition Width="Auto"/>
                                     <ColumnDefinition Width="Auto"/>
                                     <ColumnDefinition Width="Auto"/>
+                                    <ColumnDefinition Width="Auto"/>
                                 </Grid.ColumnDefinitions>
                                 <Grid.RowDefinitions>
                                     <RowDefinition Height="Auto"/>
@@ -894,7 +955,7 @@
                                     Grid.Column="0"
                                     PlaceholderText="Search datapacks..."
                                     QueryIcon="Find"
-                                    Margin="0,0,10,0"
+                                    Margin="0,0,8,0"
                                     Text="{Binding DatapackSearchQuery, Mode=TwoWay}"
                                     QuerySubmitted="DatapackSearchBox_QuerySubmitted"/>
 
@@ -904,10 +965,9 @@
                                     x:Uid="ResourceDownloadPage_DatapackVersionComboBox"
                                     Grid.Row="0"
                                     Grid.Column="1"
-                                    Header="版本"
                                     PlaceholderText="版本"
-                                    Margin="0,0,10,0"
-                                    MinWidth="120"
+                                    Margin="0,0,4,0"
+                                    MinWidth="90"
                                     ItemsSource="{Binding AvailableVersions, Mode=OneWay}"
                                     SelectedItem="{Binding SelectedDatapackVersion, Mode=TwoWay}"
                                     SelectionChanged="DatapackVersionComboBox_SelectionChanged">
@@ -919,9 +979,9 @@
                                     x:Uid="ResourceDownloadPage_DatapackCategoryComboBox"
                                     Grid.Row="0"
                                     Grid.Column="2"
-                                    Header="类别"
                                     PlaceholderText="所有类别"
-                                    MinWidth="120"
+                                    MinWidth="80"
+                                    Margin="0,0,8,0"
                                     SelectedValuePath="Tag"
                                     SelectedValue="{Binding SelectedDatapackCategory, Mode=TwoWay}"
                                     SelectionChanged="DatapackCategoryComboBox_SelectionChanged">
@@ -946,6 +1006,36 @@
                                     <ComboBoxItem x:Uid="ResourceDownloadPage_UtilityCategory" Content="实用" Tag="utility" />
                                     <ComboBoxItem x:Uid="ResourceDownloadPage_WorldgenCategory" Content="世界生成" Tag="worldgen" />
                                 </ComboBox>
+
+                                <!-- 平台选择 - 使用 ToggleButtons -->
+                                <StackPanel Grid.Column="3" Orientation="Horizontal" Spacing="0">
+                                    <ToggleButton 
+                                        x:Name="DatapackModrinthToggle"
+                                        x:Uid="ResourceDownloadPage_ModrinthToggle"
+                                        IsChecked="{Binding IsModrinthEnabled, Mode=TwoWay}"
+                                        Click="DatapackModrinthToggleButton_Click"
+                                        CornerRadius="4,0,0,4"
+                                        Padding="10,6"
+                                        MinWidth="80">
+                                        <StackPanel Orientation="Horizontal" Spacing="4">
+                                            <FontIcon Glyph="&#xE774;" FontSize="12"/>
+                                            <TextBlock Text="Modrinth" FontSize="12"/>
+                                        </StackPanel>
+                                    </ToggleButton>
+                                    <ToggleButton 
+                                        x:Name="DatapackCurseForgeToggle"
+                                        x:Uid="ResourceDownloadPage_CurseForgeToggle"
+                                        IsChecked="{Binding IsCurseForgeEnabled, Mode=TwoWay}"
+                                        Click="DatapackCurseForgeToggleButton_Click"
+                                        CornerRadius="0,4,4,0"
+                                        Padding="10,6"
+                                        MinWidth="80">
+                                        <StackPanel Orientation="Horizontal" Spacing="4">
+                                            <FontIcon Glyph="&#xE945;" FontSize="12"/>
+                                            <TextBlock Text="CurseForge" FontSize="12"/>
+                                        </StackPanel>
+                                    </ToggleButton>
+                                </StackPanel>
                             </Grid>
 
                             <!-- Error Message -->
@@ -1096,6 +1186,7 @@
                                     <ColumnDefinition Width="Auto"/>
                                     <ColumnDefinition Width="Auto"/>
                                     <ColumnDefinition Width="Auto"/>
+                                    <ColumnDefinition Width="Auto"/>
                                 </Grid.ColumnDefinitions>
                                 <Grid.RowDefinitions>
                                     <RowDefinition Height="Auto"/>
@@ -1109,7 +1200,7 @@
                                     Grid.Column="0"
                                     PlaceholderText="Search modpacks..."
                                     QueryIcon="Find"
-                                    Margin="0,0,10,0"
+                                    Margin="0,0,8,0"
                                     Text="{Binding ModpackSearchQuery, Mode=TwoWay}"
                                     QuerySubmitted="ModpackSearchBox_QuerySubmitted"/>
 
@@ -1119,10 +1210,9 @@
                                     x:Uid="ResourceDownloadPage_ModpackVersionComboBox"
                                     Grid.Row="0"
                                     Grid.Column="1"
-                                    Header="版本"
                                     PlaceholderText="版本"
-                                    Margin="0,0,10,0"
-                                    MinWidth="120"
+                                    Margin="0,0,4,0"
+                                    MinWidth="90"
                                     ItemsSource="{Binding AvailableVersions, Mode=OneWay}"
                                     SelectedItem="{Binding SelectedModpackVersion, Mode=TwoWay}"
                                     SelectionChanged="ModpackVersionComboBox_SelectionChanged">
@@ -1134,9 +1224,9 @@
                                     x:Uid="ResourceDownloadPage_ModpackCategoryComboBox"
                                     Grid.Row="0"
                                     Grid.Column="2"
-                                    Header="类别"
                                     PlaceholderText="所有类别"
-                                    MinWidth="120"
+                                    MinWidth="80"
+                                    Margin="0,0,8,0"
                                     SelectedValuePath="Tag"
                                     SelectedValue="{Binding SelectedModpackCategory, Mode=TwoWay}"
                                     SelectionChanged="ModpackCategoryComboBox_SelectionChanged">
@@ -1152,6 +1242,36 @@
                                     <ComboBoxItem x:Uid="ResourceDownloadPage_QuestsCategory" Content="任务" Tag="quests" />
                                     <ComboBoxItem x:Uid="ResourceDownloadPage_TechnologyCategory" Content="科技" Tag="technology" />
                                 </ComboBox>
+
+                                <!-- 平台选择 - 使用 ToggleButtons -->
+                                <StackPanel Grid.Column="3" Orientation="Horizontal" Spacing="0">
+                                    <ToggleButton 
+                                        x:Name="ModpackModrinthToggle"
+                                        x:Uid="ResourceDownloadPage_ModrinthToggle"
+                                        IsChecked="{Binding IsModrinthEnabled, Mode=TwoWay}"
+                                        Click="ModpackModrinthToggleButton_Click"
+                                        CornerRadius="4,0,0,4"
+                                        Padding="10,6"
+                                        MinWidth="80">
+                                        <StackPanel Orientation="Horizontal" Spacing="4">
+                                            <FontIcon Glyph="&#xE774;" FontSize="12"/>
+                                            <TextBlock Text="Modrinth" FontSize="12"/>
+                                        </StackPanel>
+                                    </ToggleButton>
+                                    <ToggleButton 
+                                        x:Name="ModpackCurseForgeToggle"
+                                        x:Uid="ResourceDownloadPage_CurseForgeToggle"
+                                        IsChecked="{Binding IsCurseForgeEnabled, Mode=TwoWay}"
+                                        Click="ModpackCurseForgeToggleButton_Click"
+                                        CornerRadius="0,4,4,0"
+                                        Padding="10,6"
+                                        MinWidth="80">
+                                        <StackPanel Orientation="Horizontal" Spacing="4">
+                                            <FontIcon Glyph="&#xE945;" FontSize="12"/>
+                                            <TextBlock Text="CurseForge" FontSize="12"/>
+                                        </StackPanel>
+                                    </ToggleButton>
+                                </StackPanel>
                             </Grid>
 
                             <!-- Error Message -->

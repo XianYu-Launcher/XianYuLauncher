@@ -841,7 +841,7 @@ namespace XianYuLauncher.ViewModels
         /// </summary>
         private void ProcessAndDisplayCurseForgeFiles(List<CurseForgeFile> allFiles, bool hideSnapshots)
         {
-            // 先提取所有文件的游戏版本和加载器信息
+            // Debug: 输出第一个文件的详细信息
             var fileInfoList = new List<(CurseForgeFile File, string GameVersion, string Loader)>();
             
             foreach (var file in allFiles)
@@ -856,7 +856,7 @@ namespace XianYuLauncher.ViewModels
                     {
                         var lower = gv.ToLower();
                         // 判断是否为加载器
-                        if (lower == "forge" || lower == "neoforge" || lower == "fabric" || lower == "quilt")
+                        if (lower == "forge" || lower == "neoforge" || lower == "fabric" || lower == "quilt" || lower == "optifine" || lower == "iris")
                         {
                             // 首字母大写
                             loaders.Add(char.ToUpper(gv[0]) + gv.Substring(1).ToLower());
@@ -867,6 +867,12 @@ namespace XianYuLauncher.ViewModels
                             gameVersions.Add(gv);
                         }
                     }
+                }
+                
+                // 如果没有找到加载器，添加一个默认的"通用"加载器
+                if (loaders.Count == 0)
+                {
+                    loaders.Add("通用");
                 }
                 
                 // 为每个游戏版本和加载器组合创建条目

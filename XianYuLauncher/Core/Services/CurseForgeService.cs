@@ -32,6 +32,26 @@ public class CurseForgeService
     /// Mod分类ID
     /// </summary>
     private const int ModsClassId = 6;
+    
+    /// <summary>
+    /// 资源包分类ID
+    /// </summary>
+    private const int ResourcePacksClassId = 12;
+    
+    /// <summary>
+    /// 整合包分类ID
+    /// </summary>
+    private const int ModpacksClassId = 4471;
+    
+    /// <summary>
+    /// 光影分类ID
+    /// </summary>
+    private const int ShadersClassId = 6552;
+    
+    /// <summary>
+    /// 数据包分类ID
+    /// </summary>
+    private const int DatapacksClassId = 6945;
 
     public CurseForgeService(HttpClient httpClient)
     {
@@ -136,6 +156,82 @@ public class CurseForgeService
         catch (Exception ex)
         {
             throw new Exception($"搜索Mod时发生错误: {ex.Message}");
+        }
+    }
+
+    /// <summary>
+    /// 通用搜索方法 - 根据classId搜索不同类型的资源
+    /// </summary>
+    /// <param name="classId">资源类型ID (6=Mods, 12=ResourcePacks, 4471=Modpacks)</param>
+    /// <param name="searchFilter">搜索关键词</param>
+    /// <param name="gameVersion">游戏版本</param>
+    /// <param name="categoryId">分类ID</param>
+    /// <param name="index">起始索引</param>
+    /// <param name="pageSize">每页数量</param>
+    /// <param name="sortField">排序字段</param>
+    /// <param name="sortOrder">排序方向</param>
+    /// <returns>搜索结果</returns>
+    public async Task<CurseForgeSearchResult> SearchResourcesAsync(
+        int classId,
+        string searchFilter = "",
+        string gameVersion = null,
+        int? categoryId = null,
+        int index = 0,
+        int pageSize = 20,
+        int sortField = 6,
+        string sortOrder = "desc")
+    {
+        try
+        {
+            // 构建API URL
+            var url = $"{ApiBaseUrl}/v1/mods/search?gameId={MinecraftGameId}&classId={classId}";
+            
+            if (!string.IsNullOrEmpty(searchFilter))
+            {
+                url += $"&searchFilter={Uri.EscapeDataString(searchFilter)}";
+            }
+            
+            if (!string.IsNullOrEmpty(gameVersion))
+            {
+                url += $"&gameVersion={Uri.EscapeDataString(gameVersion)}";
+            }
+            
+            if (categoryId.HasValue)
+            {
+                url += $"&categoryId={categoryId.Value}";
+            }
+            
+            url += $"&index={index}&pageSize={pageSize}&sortField={sortField}&sortOrder={sortOrder}";
+            
+            System.Diagnostics.Debug.WriteLine($"[CurseForgeService] 搜索资源URL (classId={classId}): {url}");
+            
+            using var request = CreateRequest(HttpMethod.Get, url);
+            var response = await _httpClient.SendAsync(request);
+            
+            var json = await response.Content.ReadAsStringAsync();
+            response.EnsureSuccessStatusCode();
+            
+            return JsonSerializer.Deserialize<CurseForgeSearchResult>(json, new JsonSerializerOptions
+            {
+                PropertyNameCaseInsensitive = true
+            });
+        }
+        catch (HttpRequestException ex)
+        {
+            string errorMsg = $"搜索资源失败 (classId={classId}): {ex.Message}";
+            if (ex.StatusCode.HasValue)
+            {
+                errorMsg += $" (状态码: {ex.StatusCode})";
+            }
+            throw new Exception(errorMsg);
+        }
+        catch (JsonException ex)
+        {
+            throw new Exception($"解析搜索结果失败: {ex.Message}");
+        }
+        catch (Exception ex)
+        {
+            throw new Exception($"搜索资源时发生错误: {ex.Message}");
         }
     }
 

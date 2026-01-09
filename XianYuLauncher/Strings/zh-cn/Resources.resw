@@ -681,15 +681,6 @@
   <data name="ResourceDownloadPage_VersionSearchBox.PlaceholderText" xml:space="preserve">
     <value>搜索版本...</value>
   </data>
-  <data name="ResourceDownloadPage_ModSearchBox.PlaceholderText" xml:space="preserve">
-    <value>搜索Mod...</value>
-  </data>
-  <data name="ResourceDownloadPage_ShaderPackSearchBox.PlaceholderText" xml:space="preserve">
-    <value>搜索光影...</value>
-  </data>
-  <data name="ResourceDownloadPage_ResourcePackSearchBox.PlaceholderText" xml:space="preserve">
-    <value>搜索资源包...</value>
-  </data>
   <data name="ResourceDownloadPage_VersionTypeComboBox.PlaceholderText" xml:space="preserve">
     <value>筛选</value>
   </data>
@@ -777,14 +768,8 @@
   <data name="ResourceDownloadPage_WorldgenCategory.Content" xml:space="preserve">
     <value>世界生成</value>
   </data>
-  <data name="ResourceDownloadPage_ShaderPackVersionComboBox.Header" xml:space="preserve">
-    <value>版本</value>
-  </data>
   <data name="ResourceDownloadPage_ShaderPackVersionComboBox.PlaceholderText" xml:space="preserve">
     <value>版本</value>
-  </data>
-  <data name="ResourceDownloadPage_ShaderPackCategoryComboBox.Header" xml:space="preserve">
-    <value>类别</value>
   </data>
   <data name="ResourceDownloadPage_ShaderPackCategoryComboBox.PlaceholderText" xml:space="preserve">
     <value>类别</value>
@@ -804,14 +789,8 @@
   <data name="ResourceDownloadPage_VanillaLikeCategory.Content" xml:space="preserve">
     <value>原版风</value>
   </data>
-  <data name="ResourceDownloadPage_ResourcePackVersionComboBox.Header" xml:space="preserve">
-    <value>版本</value>
-  </data>
   <data name="ResourceDownloadPage_ResourcePackVersionComboBox.PlaceholderText" xml:space="preserve">
     <value>版本</value>
-  </data>
-  <data name="ResourceDownloadPage_ResourcePackCategoryComboBox.Header" xml:space="preserve">
-    <value>类别</value>
   </data>
   <data name="ResourceDownloadPage_ResourcePackCategoryComboBox.PlaceholderText" xml:space="preserve">
     <value>类别</value>
@@ -834,14 +813,8 @@
   <data name="ResourceDownloadPage_DatapackSearchBox.PlaceholderText" xml:space="preserve">
     <value>搜索数据包...</value>
   </data>
-  <data name="ResourceDownloadPage_DatapackVersionComboBox.Header" xml:space="preserve">
-    <value>版本</value>
-  </data>
   <data name="ResourceDownloadPage_DatapackVersionComboBox.PlaceholderText" xml:space="preserve">
     <value>版本</value>
-  </data>
-  <data name="ResourceDownloadPage_DatapackCategoryComboBox.Header" xml:space="preserve">
-    <value>类别</value>
   </data>
   <data name="ResourceDownloadPage_DatapackCategoryComboBox.PlaceholderText" xml:space="preserve">
     <value>类别</value>
@@ -849,14 +822,8 @@
   <data name="ResourceDownloadPage_ModpackSearchBox.PlaceholderText" xml:space="preserve">
     <value>搜索整合包...</value>
   </data>
-  <data name="ResourceDownloadPage_ModpackVersionComboBox.Header" xml:space="preserve">
-    <value>版本</value>
-  </data>
   <data name="ResourceDownloadPage_ModpackVersionComboBox.PlaceholderText" xml:space="preserve">
     <value>版本</value>
-  </data>
-  <data name="ResourceDownloadPage_ModpackCategoryComboBox.Header" xml:space="preserve">
-    <value>类别</value>
   </data>
   <data name="ResourceDownloadPage_ModpackCategoryComboBox.PlaceholderText" xml:space="preserve">
     <value>类别</value>
@@ -1221,12 +1188,6 @@
   </data>
   <data name="VersionListPage_ExportModpackDialog_ServerOnlyCheckBox.Content" xml:space="preserve">
     <value>导出服务端整合包</value>
-  </data>
-  <data name="VersionListPage_ExportModpackDialog_OfflineModeWarningInfoBar.Title" xml:space="preserve">
-    <value>许可证警告</value>
-  </data>
-  <data name="VersionListPage_ExportModpackDialog_OfflineModeWarningInfoBar.Message" xml:space="preserve">
-    <value>直接将 Mod 放入整合包可能会违反部分条例，请不要进行分发！</value>
   </data>
   <data name="VersionListPage_LoadingDialog.Title" xml:space="preserve">
     <value>正在导出整合包</value>
@@ -1812,5 +1773,20 @@
   </data>
   <data name="Settings_CheckForUpdates.Content" xml:space="preserve">
     <value>检查更新</value>
+  </data>
+  <data name="ResourceDownloadPage_ModSearchBox.PlaceholderText" xml:space="preserve">
+    <value>搜索Mod...</value>
+  </data>
+  <data name="ResourceDownloadPage_ShaderPackSearchBox.PlaceholderText" xml:space="preserve">
+    <value>搜索光影...</value>
+  </data>
+  <data name="ResourceDownloadPage_ResourcePackSearchBox.PlaceholderText" xml:space="preserve">
+    <value>搜索资源包...</value>
+  </data>
+  <data name="VersionListPage_ExportModpackDialog_OfflineModeWarningInfoBar.Title" xml:space="preserve">
+    <value>许可证警告</value>
+  </data>
+  <data name="VersionListPage_ExportModpackDialog_OfflineModeWarningInfoBar.Message" xml:space="preserve">
+    <value>直接将 Mod 放入整合包可能会违反部分条例，请不要进行分发！</value>
   </data>
 </root>

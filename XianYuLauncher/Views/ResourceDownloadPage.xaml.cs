@@ -572,4 +572,140 @@ public sealed partial class ResourceDownloadPage : Page, INavigationAware
             await ViewModel.DownloadDatapackCommand.ExecuteAsync(datapack);
         }
     }
+    
+    /// <summary>
+    /// 光影包 Modrinth 平台切换事件处理程序
+    /// </summary>
+    private async void ShaderPackModrinthToggleButton_Click(object sender, RoutedEventArgs e)
+    {
+        if (sender is Microsoft.UI.Xaml.Controls.Primitives.ToggleButton toggleButton)
+        {
+            ViewModel.IsModrinthEnabled = toggleButton.IsChecked == true;
+            
+            // 只有当光影下载标签页被选中时，才执行搜索
+            if (ResourceTabView.SelectedIndex == 2)
+            {
+                await ViewModel.SearchShaderPacksCommand.ExecuteAsync(null);
+            }
+        }
+    }
+    
+    /// <summary>
+    /// 光影包 CurseForge 平台切换事件处理程序
+    /// </summary>
+    private async void ShaderPackCurseForgeToggleButton_Click(object sender, RoutedEventArgs e)
+    {
+        if (sender is Microsoft.UI.Xaml.Controls.Primitives.ToggleButton toggleButton)
+        {
+            ViewModel.IsCurseForgeEnabled = toggleButton.IsChecked == true;
+            
+            // 只有当光影下载标签页被选中时，才执行搜索
+            if (ResourceTabView.SelectedIndex == 2)
+            {
+                await ViewModel.SearchShaderPacksCommand.ExecuteAsync(null);
+            }
+        }
+    }
+    
+    /// <summary>
+    /// 资源包 Modrinth 平台切换事件处理程序
+    /// </summary>
+    private async void ResourcePackModrinthToggleButton_Click(object sender, RoutedEventArgs e)
+    {
+        if (sender is Microsoft.UI.Xaml.Controls.Primitives.ToggleButton toggleButton)
+        {
+            ViewModel.IsModrinthEnabled = toggleButton.IsChecked == true;
+            
+            // 只有当资源包下载标签页被选中时，才执行搜索
+            if (ResourceTabView.SelectedIndex == 3)
+            {
+                await ViewModel.SearchResourcePacksCommand.ExecuteAsync(null);
+            }
+        }
+    }
+    
+    /// <summary>
+    /// 资源包 CurseForge 平台切换事件处理程序
+    /// </summary>
+    private async void ResourcePackCurseForgeToggleButton_Click(object sender, RoutedEventArgs e)
+    {
+        if (sender is Microsoft.UI.Xaml.Controls.Primitives.ToggleButton toggleButton)
+        {
+            ViewModel.IsCurseForgeEnabled = toggleButton.IsChecked == true;
+            
+            // 只有当资源包下载标签页被选中时，才执行搜索
+            if (ResourceTabView.SelectedIndex == 3)
+            {
+                await ViewModel.SearchResourcePacksCommand.ExecuteAsync(null);
+            }
+        }
+    }
+    
+    /// <summary>
+    /// 数据包 Modrinth 平台切换事件处理程序
+    /// </summary>
+    private async void DatapackModrinthToggleButton_Click(object sender, RoutedEventArgs e)
+    {
+        if (sender is Microsoft.UI.Xaml.Controls.Primitives.ToggleButton toggleButton)
+        {
+            ViewModel.IsModrinthEnabled = toggleButton.IsChecked == true;
+            
+            // 只有当数据包下载标签页被选中时，才执行搜索
+            if (ResourceTabView.SelectedIndex == 4)
+            {
+                await ViewModel.SearchDatapacksCommand.ExecuteAsync(null);
+            }
+        }
+    }
+    
+    /// <summary>
+    /// 数据包 CurseForge 平台切换事件处理程序
+    /// </summary>
+    private async void DatapackCurseForgeToggleButton_Click(object sender, RoutedEventArgs e)
+    {
+        if (sender is Microsoft.UI.Xaml.Controls.Primitives.ToggleButton toggleButton)
+        {
+            ViewModel.IsCurseForgeEnabled = toggleButton.IsChecked == true;
+            
+            // 只有当数据包下载标签页被选中时，才执行搜索
+            if (ResourceTabView.SelectedIndex == 4)
+            {
+                await ViewModel.SearchDatapacksCommand.ExecuteAsync(null);
+            }
+        }
+    }
+    
+    /// <summary>
+    /// 整合包 Modrinth 平台切换事件处理程序
+    /// </summary>
+    private async void ModpackModrinthToggleButton_Click(object sender, RoutedEventArgs e)
+    {
+        if (sender is Microsoft.UI.Xaml.Controls.Primitives.ToggleButton toggleButton)
+        {
+            ViewModel.IsModrinthEnabled = toggleButton.IsChecked == true;
+            
+            // 只有当整合包下载标签页被选中时，才执行搜索
+            if (ResourceTabView.SelectedIndex == 5)
+            {
+                await ViewModel.SearchModpacksCommand.ExecuteAsync(null);
+            }
+        }
+    }
+    
+    /// <summary>
+    /// 整合包 CurseForge 平台切换事件处理程序
+    /// </summary>
+    private async void ModpackCurseForgeToggleButton_Click(object sender, RoutedEventArgs e)
+    {
+        if (sender is Microsoft.UI.Xaml.Controls.Primitives.ToggleButton toggleButton)
+        {
+            ViewModel.IsCurseForgeEnabled = toggleButton.IsChecked == true;
+            
+            // 只有当整合包下载标签页被选中时，才执行搜索
+            if (ResourceTabView.SelectedIndex == 5)
+            {
+                await ViewModel.SearchModpacksCommand.ExecuteAsync(null);
+            }
+        }
+    }
 }
