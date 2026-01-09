@@ -108,6 +108,14 @@ namespace XianYuLauncher.Views
             }
         }
 
+        protected override void OnNavigatedFrom(NavigationEventArgs e)
+        {
+            base.OnNavigatedFrom(e);
+            
+            // 清理ViewModel资源
+            ViewModel.OnNavigatedFrom();
+        }
+
         private void BackButton_Click(object sender, Microsoft.UI.Xaml.RoutedEventArgs e)
         {
             // 返回上一页

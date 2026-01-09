@@ -398,3 +398,12 @@ public class CurseForgeFilesResponse
     [JsonPropertyName("pagination")]
     public CurseForgePagination Pagination { get; set; }
 }
+
+/// <summary>
+/// CurseForge批量获取Mod响应
+/// </summary>
+public class CurseForgeModsResponse
+{
+    [JsonPropertyName("data")]
+    public List<CurseForgeMod> Data { get; set; } = new();
+}

@@ -324,4 +324,361 @@ public class CurseForgeService
             return false;
         }
     }
+
+    /// <summary>
+    /// 批量获取Mod详情
+    /// </summary>
+    /// <param name="modIds">Mod ID列表</param>
+    /// <returns>Mod详情列表</returns>
+    public async Task<List<CurseForgeMod>> GetModsByIdsAsync(List<int> modIds)
+    {
+        if (modIds == null || modIds.Count == 0)
+        {
+            return new List<CurseForgeMod>();
+        }
+
+        try
+        {
+            var url = $"{ApiBaseUrl}/v1/mods";
+            
+            using var request = CreateRequest(HttpMethod.Post, url);
+            var requestBody = new { modIds = modIds };
+            request.Content = new StringContent(
+                JsonSerializer.Serialize(requestBody),
+                System.Text.Encoding.UTF8,
+                "application/json");
+            
+            var response = await _httpClient.SendAsync(request);
+            
+            var json = await response.Content.ReadAsStringAsync();
+            response.EnsureSuccessStatusCode();
+            
+            var result = JsonSerializer.Deserialize<CurseForgeModsResponse>(json, new JsonSerializerOptions
+            {
+                PropertyNameCaseInsensitive = true
+            });
+            
+            return result?.Data ?? new List<CurseForgeMod>();
+        }
+        catch (HttpRequestException ex)
+        {
+            string errorMsg = $"批量获取Mod详情失败: {ex.Message}";
+            if (ex.StatusCode.HasValue)
+            {
+                errorMsg += $" (状态码: {ex.StatusCode})";
+            }
+            System.Diagnostics.Debug.WriteLine($"[CurseForgeService] {errorMsg}");
+            throw new Exception(errorMsg);
+        }
+        catch (JsonException ex)
+        {
+            throw new Exception($"解析Mod详情失败: {ex.Message}");
+        }
+        catch (Exception ex)
+        {
+            throw new Exception($"批量获取Mod详情时发生错误: {ex.Message}");
+        }
+    }
+
+    /// <summary>
+    /// 处理CurseForge依赖下载（递归）
+    /// </summary>
+    /// <param name="dependencies">依赖列表</param>
+    /// <param name="destinationPath">目标路径</param>
+    /// <param name="currentFile">当前文件信息（用于筛选兼容版本）</param>
+    /// <param name="progressCallback">进度回调</param>
+    /// <param name="cancellationToken">取消令牌</param>
+    /// <param name="checkModId">是否检查Mod ID，避免重复下载同一Mod的不同版本</param>
+    /// <returns>成功处理的依赖数量</returns>
+    public async Task<int> ProcessDependenciesAsync(
+        List<CurseForgeDependency> dependencies,
+        string destinationPath,
+        CurseForgeFile currentFile = null,
+        Action<string, double> progressCallback = null,
+        CancellationToken cancellationToken = default,
+        bool checkModId = true)
+    {
+        int processedCount = 0;
+        
+        if (dependencies == null || dependencies.Count == 0)
+        {
+            System.Diagnostics.Debug.WriteLine("[CurseForgeService] 没有依赖需要处理");
+            return processedCount;
+        }
+        
+        // 输出当前文件信息，用于调试
+        if (currentFile != null)
+        {
+            System.Diagnostics.Debug.WriteLine($"[CurseForgeService] 当前文件信息：");
+            System.Diagnostics.Debug.WriteLine($"  - 文件名: {currentFile.FileName}");
+            System.Diagnostics.Debug.WriteLine($"  - Mod ID: {currentFile.ModId}");
+            System.Diagnostics.Debug.WriteLine($"  - 支持的游戏版本: {string.Join(", ", currentFile.GameVersions ?? new List<string>())}");
+        }
+        else
+        {
+            System.Diagnostics.Debug.WriteLine($"[CurseForgeService] 未提供当前文件信息");
+        }
+        
+        System.Diagnostics.Debug.WriteLine($"[CurseForgeService] 开始处理{dependencies.Count}个依赖");
+        
+        // 跟踪已处理的依赖，避免循环依赖
+        var processedDependencies = new HashSet<int>();
+        
+        // 获取现有mod的Mod ID映射
+        Dictionary<int, string> existingModIds = null;
+        if (checkModId)
+        {
+            existingModIds = await GetExistingModIdsAsync(destinationPath, cancellationToken);
+        }
+        
+        for (int i = 0; i < dependencies.Count; i++)
+        {
+            var dependency = dependencies[i];
+            System.Diagnostics.Debug.WriteLine($"[CurseForgeService] 正在处理第{i+1}/{dependencies.Count}个依赖：");
+            System.Diagnostics.Debug.WriteLine($"  - RelationType: {dependency.RelationType}");
+            System.Diagnostics.Debug.WriteLine($"  - ModId: {dependency.ModId}");
+            
+            cancellationToken.ThrowIfCancellationRequested();
+            
+            // 只处理必需依赖 (relationType: 3 = RequiredDependency)
+            if (dependency.RelationType != 3)
+            {
+                System.Diagnostics.Debug.WriteLine($"  - 跳过：不是必需依赖");
+                continue;
+            }
+            
+            if (!processedDependencies.Add(dependency.ModId))
+            {
+                System.Diagnostics.Debug.WriteLine($"  - 跳过：依赖{dependency.ModId}已处理");
+                continue;
+            }
+            
+            try
+            {
+                // 检查Mod ID是否已存在
+                if (existingModIds != null && existingModIds.ContainsKey(dependency.ModId))
+                {
+                    System.Diagnostics.Debug.WriteLine($"  - 跳过：Mod {dependency.ModId} 已存在 ({existingModIds[dependency.ModId]})");
+                    processedCount++;
+                    continue;
+                }
+                
+                // 获取依赖Mod的详情
+                System.Diagnostics.Debug.WriteLine($"  - 正在获取Mod详情：{dependency.ModId}");
+                var depMod = await GetModDetailAsync(dependency.ModId);
+                
+                if (depMod == null)
+                {
+                    System.Diagnostics.Debug.WriteLine($"  - 失败：获取Mod详情返回null");
+                    continue;
+                }
+                
+                System.Diagnostics.Debug.WriteLine($"  - 成功获取Mod详情：{depMod.Name}");
+                
+                // 选择合适的文件版本
+                CurseForgeFile depFile = null;
+                
+                if (currentFile != null && currentFile.GameVersions != null && currentFile.GameVersions.Count > 0)
+                {
+                    // 提取游戏版本（排除加载器名称）
+                    var gameVersions = currentFile.GameVersions
+                        .Where(v => !v.Equals("forge", StringComparison.OrdinalIgnoreCase) &&
+                                   !v.Equals("fabric", StringComparison.OrdinalIgnoreCase) &&
+                                   !v.Equals("quilt", StringComparison.OrdinalIgnoreCase) &&
+                                   !v.Equals("neoforge", StringComparison.OrdinalIgnoreCase))
+                        .ToList();
+                    
+                    // 提取加载器类型
+                    var loaders = currentFile.GameVersions
+                        .Where(v => v.Equals("forge", StringComparison.OrdinalIgnoreCase) ||
+                                   v.Equals("fabric", StringComparison.OrdinalIgnoreCase) ||
+                                   v.Equals("quilt", StringComparison.OrdinalIgnoreCase) ||
+                                   v.Equals("neoforge", StringComparison.OrdinalIgnoreCase))
+                        .ToList();
+                    
+                    System.Diagnostics.Debug.WriteLine($"  - 筛选条件：");
+                    System.Diagnostics.Debug.WriteLine($"    - 游戏版本: {string.Join(", ", gameVersions)}");
+                    System.Diagnostics.Debug.WriteLine($"    - 加载器: {string.Join(", ", loaders)}");
+                    
+                    // 从latestFiles中查找兼容的文件
+                    if (depMod.LatestFiles != null && depMod.LatestFiles.Count > 0)
+                    {
+                        // 优先查找完全匹配的文件
+                        depFile = depMod.LatestFiles
+                            .Where(f => f.GameVersions != null &&
+                                       gameVersions.Any(gv => f.GameVersions.Contains(gv, StringComparer.OrdinalIgnoreCase)) &&
+                                       loaders.Any(l => f.GameVersions.Contains(l, StringComparer.OrdinalIgnoreCase)))
+                            .OrderByDescending(f => f.FileDate)
+                            .FirstOrDefault();
+                        
+                        // 如果没有完全匹配，尝试只匹配游戏版本
+                        if (depFile == null)
+                        {
+                            depFile = depMod.LatestFiles
+                                .Where(f => f.GameVersions != null &&
+                                           gameVersions.Any(gv => f.GameVersions.Contains(gv, StringComparer.OrdinalIgnoreCase)))
+                                .OrderByDescending(f => f.FileDate)
+                                .FirstOrDefault();
+                        }
+                    }
+                }
+                
+                // 如果没有找到兼容文件，使用最新文件
+                if (depFile == null && depMod.LatestFiles != null && depMod.LatestFiles.Count > 0)
+                {
+                    depFile = depMod.LatestFiles.OrderByDescending(f => f.FileDate).First();
+                    System.Diagnostics.Debug.WriteLine($"  - 未找到兼容文件，使用最新文件");
+                }
+                
+                if (depFile == null)
+                {
+                    System.Diagnostics.Debug.WriteLine($"  - 跳过：没有可用文件");
+                    continue;
+                }
+                
+                System.Diagnostics.Debug.WriteLine($"  - 选择文件：{depFile.FileName}");
+                
+                if (string.IsNullOrEmpty(depFile.DownloadUrl))
+                {
+                    System.Diagnostics.Debug.WriteLine($"  - 跳过：文件下载URL为空");
+                    continue;
+                }
+                
+                // 检查是否已存在相同SHA1的文件
+                bool alreadyExists = false;
+                string filePath = Path.Combine(destinationPath, depFile.FileName);
+                System.Diagnostics.Debug.WriteLine($"  - 目标路径：{filePath}");
+                
+                if (File.Exists(filePath))
+                {
+                    System.Diagnostics.Debug.WriteLine($"  - 文件已存在，检查SHA1");
+                    var sha1Hash = depFile.Hashes?.FirstOrDefault(h => h.Algo == 1); // 1 = SHA1
+                    if (sha1Hash != null && !string.IsNullOrEmpty(sha1Hash.Value))
+                    {
+                        string existingSha1 = CalculateSHA1(filePath);
+                        alreadyExists = existingSha1.Equals(sha1Hash.Value, StringComparison.OrdinalIgnoreCase);
+                        
+                        if (alreadyExists)
+                        {
+                            System.Diagnostics.Debug.WriteLine($"  - 跳过：SHA1匹配，文件已存在");
+                            System.Diagnostics.Debug.WriteLine($"    - 期望SHA1: {sha1Hash.Value}");
+                            System.Diagnostics.Debug.WriteLine($"    - 实际SHA1: {existingSha1}");
+                            processedCount++;
+                            continue;
+                        }
+                        else
+                        {
+                            System.Diagnostics.Debug.WriteLine($"  - 需要重新下载：SHA1不匹配");
+                            System.Diagnostics.Debug.WriteLine($"    - 期望SHA1: {sha1Hash.Value}");
+                            System.Diagnostics.Debug.WriteLine($"    - 实际SHA1: {existingSha1}");
+                        }
+                    }
+                    else
+                    {
+                        System.Diagnostics.Debug.WriteLine($"  - 需要重新下载：没有期望的SHA1值");
+                    }
+                }
+                else
+                {
+                    System.Diagnostics.Debug.WriteLine($"  - 文件不存在，准备下载");
+                }
+                
+                // 下载依赖
+                System.Diagnostics.Debug.WriteLine($"  - 开始下载：{depFile.DownloadUrl}");
+                bool downloadSuccess = await DownloadFileAsync(
+                    depFile.DownloadUrl,
+                    filePath,
+                    progressCallback,
+                    cancellationToken);
+                
+                if (downloadSuccess)
+                {
+                    System.Diagnostics.Debug.WriteLine($"  - 下载成功");
+                    
+                    // 处理依赖的依赖（递归）
+                    if (depFile.Dependencies != null && depFile.Dependencies.Count > 0)
+                    {
+                        System.Diagnostics.Debug.WriteLine($"  - 开始处理子依赖（{depFile.Dependencies.Count}个）");
+                        int subDependenciesCount = await ProcessDependenciesAsync(
+                            depFile.Dependencies,
+                            destinationPath,
+                            depFile, // 传递当前依赖的文件信息作为子依赖的参考
+                            progressCallback,
+                            cancellationToken,
+                            checkModId);
+                        System.Diagnostics.Debug.WriteLine($"  - 子依赖处理完成，成功{subDependenciesCount}个");
+                    }
+                    
+                    processedCount++;
+                    System.Diagnostics.Debug.WriteLine($"  - 依赖处理完成，累计成功{processedCount}个");
+                }
+                else
+                {
+                    System.Diagnostics.Debug.WriteLine($"  - 下载失败");
+                }
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"  - 处理依赖时发生异常：{ex.Message}");
+                System.Diagnostics.Debug.WriteLine($"  - 异常堆栈：{ex.StackTrace}");
+            }
+        }
+        
+        System.Diagnostics.Debug.WriteLine($"[CurseForgeService] 依赖处理完成：共{dependencies.Count}个，成功{processedCount}个");
+        return processedCount;
+    }
+    
+    /// <summary>
+    /// 获取现有mod的Mod ID映射
+    /// </summary>
+    /// <param name="destinationPath">目标路径</param>
+    /// <param name="cancellationToken">取消令牌</param>
+    /// <returns>Mod ID到文件路径的映射</returns>
+    private async Task<Dictionary<int, string>> GetExistingModIdsAsync(string destinationPath, CancellationToken cancellationToken = default)
+    {
+        var modIdMap = new Dictionary<int, string>();
+        
+        try
+        {
+            if (!Directory.Exists(destinationPath))
+            {
+                return modIdMap;
+            }
+            
+            var jarFiles = Directory.GetFiles(destinationPath, "*.jar");
+            System.Diagnostics.Debug.WriteLine($"[CurseForgeService] 扫描现有文件：找到{jarFiles.Length}个jar文件");
+            
+            // 注意：CurseForge没有像Modrinth那样在文件中嵌入项目ID
+            // 这里我们只能通过文件名或其他方式来识别，暂时返回空字典
+            // 如果需要更精确的去重，可以考虑维护一个本地元数据文件
+            
+            return modIdMap;
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"[CurseForgeService] 扫描现有文件失败: {ex.Message}");
+            return modIdMap;
+        }
+    }
+    
+    /// <summary>
+    /// 计算文件的SHA1哈希值
+    /// </summary>
+    /// <param name="filePath">文件路径</param>
+    /// <returns>SHA1哈希值（小写十六进制字符串）</returns>
+    private string CalculateSHA1(string filePath)
+    {
+        try
+        {
+            using var sha1 = System.Security.Cryptography.SHA1.Create();
+            using var stream = File.OpenRead(filePath);
+            var hash = sha1.ComputeHash(stream);
+            return BitConverter.ToString(hash).Replace("-", "").ToLowerInvariant();
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"[CurseForgeService] 计算SHA1失败: {ex.Message}");
+            return string.Empty;
+        }
+    }
 }

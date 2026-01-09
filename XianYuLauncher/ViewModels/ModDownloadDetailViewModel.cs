@@ -170,8 +170,70 @@ namespace XianYuLauncher.ViewModels
             }
         }
 
+        /// <summary>
+        /// 加载CurseForge依赖详情
+        /// </summary>
+        public async Task LoadCurseForgeDependencyDetailsAsync(CurseForgeFile curseForgeFile)
+        {
+            DependencyProjects.Clear();
+            
+            if (curseForgeFile?.Dependencies == null || curseForgeFile.Dependencies.Count == 0)
+            {
+                System.Diagnostics.Debug.WriteLine($"[DEBUG] 该CurseForge文件没有依赖项");
+                return;
+            }
+            
+            // 筛选出必填的依赖项 (relationType: 3 = RequiredDependency)
+            var requiredDependencies = curseForgeFile.Dependencies
+                .Where(d => d.RelationType == 3)
+                .ToList();
+            
+            System.Diagnostics.Debug.WriteLine($"[DEBUG] 获取到 {requiredDependencies.Count} 个CurseForge必填前置mod");
+            
+            if (requiredDependencies.Count == 0)
+            {
+                return;
+            }
+            
+            IsLoadingDependencies = true;
+            
+            try
+            {
+                // 批量获取依赖Mod详情
+                var modIds = requiredDependencies.Select(d => d.ModId).ToList();
+                var dependencyMods = await _curseForgeService.GetModsByIdsAsync(modIds);
+                
+                foreach (var mod in dependencyMods)
+                {
+                    var dependencyProject = new DependencyProject
+                    {
+                        ProjectId = $"curseforge-{mod.Id}",
+                        IconUrl = mod.Logo?.Url ?? "ms-appx:///Assets/Placeholder.png",
+                        Title = mod.Name,
+                        Description = mod.Summary
+                    };
+                    
+                    DependencyProjects.Add(dependencyProject);
+                    System.Diagnostics.Debug.WriteLine($"[DEBUG] 成功加载CurseForge前置mod: {mod.Name} (ID: {mod.Id})");
+                }
+                
+                System.Diagnostics.Debug.WriteLine($"[DEBUG] CurseForge前置mod加载完成，共成功加载 {DependencyProjects.Count} 个");
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"[DEBUG] 加载CurseForge依赖详情失败: {ex.Message}");
+            }
+            finally
+            {
+                IsLoadingDependencies = false;
+            }
+        }
+
         // 安装取消令牌源
         private CancellationTokenSource _installCancellationTokenSource;
+        
+        // CurseForge文件加载取消令牌源
+        private CancellationTokenSource _curseForgeLoadCancellationTokenSource;
         
         // 项目类型：mod 或 resourcepack
         [ObservableProperty]
@@ -701,6 +763,12 @@ namespace XianYuLauncher.ViewModels
                     return;
                 }
                 
+                // 取消之前的加载任务
+                _curseForgeLoadCancellationTokenSource?.Cancel();
+                _curseForgeLoadCancellationTokenSource?.Dispose();
+                _curseForgeLoadCancellationTokenSource = new CancellationTokenSource();
+                var cancellationToken = _curseForgeLoadCancellationTokenSource.Token;
+                
                 // 后台继续加载剩余页面
                 _ = Task.Run(async () =>
                 {
@@ -710,9 +778,15 @@ namespace XianYuLauncher.ViewModels
                         int currentIndex = pageSize;
                         bool hasMoreFiles = true;
                         
-                        while (hasMoreFiles)
+                        while (hasMoreFiles && !cancellationToken.IsCancellationRequested)
                         {
                             var filesPage = await _curseForgeService.GetModFilesAsync(curseForgeModId, null, null, currentIndex, pageSize);
+                            
+                            if (cancellationToken.IsCancellationRequested)
+                            {
+                                System.Diagnostics.Debug.WriteLine($"[CurseForge] 后台加载已取消");
+                                break;
+                            }
                             
                             if (filesPage == null || filesPage.Count == 0)
                             {
@@ -724,10 +798,16 @@ namespace XianYuLauncher.ViewModels
                             System.Diagnostics.Debug.WriteLine($"[CurseForge] 后台加载：已加载 {allFiles.Count} 个文件");
                             
                             // 每加载一页就更新显示
-                            App.MainWindow.DispatcherQueue.TryEnqueue(() =>
+                            if (!cancellationToken.IsCancellationRequested)
                             {
-                                ProcessAndDisplayCurseForgeFiles(allFiles, hideSnapshots);
-                            });
+                                App.MainWindow.DispatcherQueue.TryEnqueue(() =>
+                                {
+                                    if (!cancellationToken.IsCancellationRequested)
+                                    {
+                                        ProcessAndDisplayCurseForgeFiles(allFiles, hideSnapshots);
+                                    }
+                                });
+                            }
                             
                             if (filesPage.Count < pageSize)
                             {
@@ -739,13 +819,20 @@ namespace XianYuLauncher.ViewModels
                             }
                         }
                         
-                        System.Diagnostics.Debug.WriteLine($"[CurseForge] 所有文件加载完成，共 {allFiles.Count} 个文件");
+                        if (!cancellationToken.IsCancellationRequested)
+                        {
+                            System.Diagnostics.Debug.WriteLine($"[CurseForge] 所有文件加载完成，共 {allFiles.Count} 个文件");
+                        }
+                    }
+                    catch (OperationCanceledException)
+                    {
+                        System.Diagnostics.Debug.WriteLine($"[CurseForge] 后台加载被取消");
                     }
                     catch (Exception ex)
                     {
                         System.Diagnostics.Debug.WriteLine($"[CurseForge] 后台加载失败: {ex.Message}");
                     }
-                });
+                }, cancellationToken);
             }
         }
         
@@ -908,7 +995,8 @@ namespace XianYuLauncher.ViewModels
                         Loaders = new List<string> { loaderName },
                         VersionType = GetVersionType(file.ReleaseType),
                         GameVersion = gameVersion,
-                        IconUrl = ModIconUrl
+                        IconUrl = ModIconUrl,
+                        OriginalCurseForgeFile = file // 保存原始CurseForge文件信息用于获取依赖
                     };
                     
                     loaderViewModel.ModVersions.Add(modVersionViewModel);
@@ -941,33 +1029,57 @@ namespace XianYuLauncher.ViewModels
                 
                 if (existingLoaders.TryGetValue(loaderName, out var existingLoader))
                 {
-                    // 已存在的加载器：更新文件列表
+                    // 已存在的加载器：增量更新文件列表（避免闪烁）
                     var uniqueFiles = loaderGroup
                         .Select(x => x.File)
                         .Distinct()
                         .OrderByDescending(f => f.FileDate)
                         .ToList();
                     
-                    // 清空并重新添加（避免重复）
-                    // Clear会触发CollectionChanged，从而更新TotalModVersionsCount
-                    existingLoader.ModVersions.Clear();
-                    
-                    foreach (var file in uniqueFiles)
-                    {
-                        var modVersionViewModel = new ModVersionViewModel
+                    // 创建新版本的字典，用于快速查找
+                    var newVersionsDict = uniqueFiles.ToDictionary(
+                        f => f.Id,
+                        f => new ModVersionViewModel
                         {
-                            VersionNumber = file.DisplayName,
-                            ReleaseDate = file.FileDate.ToString("yyyy-MM-dd"),
-                            Changelog = file.DisplayName,
-                            DownloadUrl = file.DownloadUrl,
-                            FileName = file.FileName,
+                            VersionNumber = f.DisplayName,
+                            ReleaseDate = f.FileDate.ToString("yyyy-MM-dd"),
+                            Changelog = f.DisplayName,
+                            DownloadUrl = f.DownloadUrl,
+                            FileName = f.FileName,
                             Loaders = new List<string> { loaderName },
-                            VersionType = GetVersionType(file.ReleaseType),
+                            VersionType = GetVersionType(f.ReleaseType),
                             GameVersion = existingViewModel.GameVersion,
-                            IconUrl = ModIconUrl
-                        };
-                        
-                        existingLoader.ModVersions.Add(modVersionViewModel);
+                            IconUrl = ModIconUrl,
+                            OriginalCurseForgeFile = f
+                        });
+                    
+                    // 创建现有版本的字典
+                    var existingVersionsDict = existingLoader.ModVersions
+                        .Where(v => v.OriginalCurseForgeFile != null)
+                        .ToDictionary(v => v.OriginalCurseForgeFile.Id);
+                    
+                    // 移除不再存在的版本
+                    var toRemove = existingVersionsDict.Keys.Except(newVersionsDict.Keys).ToList();
+                    foreach (var fileId in toRemove)
+                    {
+                        existingLoader.ModVersions.Remove(existingVersionsDict[fileId]);
+                    }
+                    
+                    // 添加新版本
+                    var toAdd = newVersionsDict.Keys.Except(existingVersionsDict.Keys).ToList();
+                    foreach (var fileId in toAdd)
+                    {
+                        existingLoader.ModVersions.Add(newVersionsDict[fileId]);
+                    }
+                    
+                    // 如果数量不匹配，说明有问题，强制重建
+                    if (existingLoader.ModVersions.Count != uniqueFiles.Count)
+                    {
+                        existingLoader.ModVersions.Clear();
+                        foreach (var file in uniqueFiles)
+                        {
+                            existingLoader.ModVersions.Add(newVersionsDict[file.Id]);
+                        }
                     }
                 }
                 else
@@ -996,7 +1108,8 @@ namespace XianYuLauncher.ViewModels
                             Loaders = new List<string> { loaderName },
                             VersionType = GetVersionType(file.ReleaseType),
                             GameVersion = existingViewModel.GameVersion,
-                            IconUrl = ModIconUrl
+                            IconUrl = ModIconUrl,
+                            OriginalCurseForgeFile = file // 保存原始CurseForge文件信息用于获取依赖
                         };
                         
                         loaderViewModel.ModVersions.Add(modVersionViewModel);
@@ -1131,16 +1244,25 @@ namespace XianYuLauncher.ViewModels
             }
             else
             {
-                // 加载依赖详情
-                if (modVersion?.OriginalVersion != null)
+                // 根据来源加载依赖详情
+                if (modVersion?.IsCurseForge == true && modVersion.OriginalCurseForgeFile != null)
                 {
-                    System.Diagnostics.Debug.WriteLine($"[DEBUG] 开始加载依赖详情，OriginalVersion: {modVersion.OriginalVersion.VersionNumber}");
+                    // CurseForge来源
+                    System.Diagnostics.Debug.WriteLine($"[DEBUG] 开始加载CurseForge依赖详情，文件ID: {modVersion.OriginalCurseForgeFile.Id}");
+                    await LoadCurseForgeDependencyDetailsAsync(modVersion.OriginalCurseForgeFile);
+                    System.Diagnostics.Debug.WriteLine($"[DEBUG] CurseForge依赖详情加载完成，共加载 {DependencyProjects.Count} 个前置mod");
+                }
+                else if (modVersion?.OriginalVersion != null)
+                {
+                    // Modrinth来源
+                    System.Diagnostics.Debug.WriteLine($"[DEBUG] 开始加载Modrinth依赖详情，OriginalVersion: {modVersion.OriginalVersion.VersionNumber}");
                     await LoadDependencyDetailsAsync(modVersion.OriginalVersion);
-                    System.Diagnostics.Debug.WriteLine($"[DEBUG] 依赖详情加载完成，共加载 {DependencyProjects.Count} 个前置mod");
+                    System.Diagnostics.Debug.WriteLine($"[DEBUG] Modrinth依赖详情加载完成，共加载 {DependencyProjects.Count} 个前置mod");
                 }
                 else
                 {
-                    System.Diagnostics.Debug.WriteLine($"[DEBUG] modVersion或OriginalVersion为null，跳过依赖加载");
+                    System.Diagnostics.Debug.WriteLine($"[DEBUG] modVersion没有原始版本信息，跳过依赖加载");
+                    DependencyProjects.Clear();
                 }
                 IsDownloadDialogOpen = true;
                 System.Diagnostics.Debug.WriteLine($"[DEBUG] 下载弹窗已打开，依赖项目数量: {DependencyProjects.Count}");
@@ -1838,7 +1960,7 @@ namespace XianYuLauncher.ViewModels
                     
                     if (downloadDependencies)
                     {
-                        // 如果当前Mod版本有依赖，先下载依赖
+                        // Modrinth依赖处理
                         if (modVersion.OriginalVersion?.Dependencies != null && modVersion.OriginalVersion.Dependencies.Count > 0)
                         {
                             // 筛选出必填的依赖项
@@ -1855,6 +1977,31 @@ namespace XianYuLauncher.ViewModels
                                     requiredDependencies,
                                     Path.GetDirectoryName(savePath),
                                     modVersion.OriginalVersion, // 传递当前Mod的版本信息用于筛选兼容依赖
+                                    (fileName, progress) =>
+                                    {
+                                        DownloadStatus = $"正在下载前置Mod: {fileName}";
+                                        DownloadProgress = progress;
+                                        DownloadProgressText = $"{progress:F1}%";
+                                    });
+                            }
+                        }
+                        // CurseForge依赖处理
+                        else if (modVersion.OriginalCurseForgeFile?.Dependencies != null && modVersion.OriginalCurseForgeFile.Dependencies.Count > 0)
+                        {
+                            // 筛选出必填的依赖项 (relationType: 3 = RequiredDependency)
+                            var requiredDependencies = modVersion.OriginalCurseForgeFile.Dependencies
+                                .Where(d => d.RelationType == 3)
+                                .ToList();
+                            
+                            if (requiredDependencies.Count > 0)
+                            {
+                                DownloadStatus = "正在下载前置Mod...";
+                                
+                                // 使用CurseForgeService处理依赖下载，传递当前文件信息
+                                await _curseForgeService.ProcessDependenciesAsync(
+                                    requiredDependencies,
+                                    Path.GetDirectoryName(savePath),
+                                    modVersion.OriginalCurseForgeFile, // 传递当前文件信息用于筛选兼容依赖
                                     (fileName, progress) =>
                                     {
                                         DownloadStatus = $"正在下载前置Mod: {fileName}";
@@ -2239,6 +2386,37 @@ namespace XianYuLauncher.ViewModels
                 CopyDirectory(subDir, destSubDir);
             }
         }
+
+        /// <summary>
+        /// 页面导航离开时调用，清理资源
+        /// </summary>
+        public void OnNavigatedFrom()
+        {
+            // 取消CurseForge后台加载任务
+            if (_curseForgeLoadCancellationTokenSource != null)
+            {
+                _curseForgeLoadCancellationTokenSource.Cancel();
+                _curseForgeLoadCancellationTokenSource.Dispose();
+                _curseForgeLoadCancellationTokenSource = null;
+                System.Diagnostics.Debug.WriteLine($"[CurseForge] 页面离开，已取消后台加载任务");
+            }
+
+            // 取消下载任务
+            if (_downloadCancellationTokenSource != null)
+            {
+                _downloadCancellationTokenSource.Cancel();
+                _downloadCancellationTokenSource.Dispose();
+                _downloadCancellationTokenSource = null;
+            }
+
+            // 取消安装任务
+            if (_installCancellationTokenSource != null)
+            {
+                _installCancellationTokenSource.Cancel();
+                _installCancellationTokenSource.Dispose();
+                _installCancellationTokenSource = null;
+            }
+        }
     }
 
     // 已安装游戏版本ViewModel
@@ -2296,6 +2474,12 @@ namespace XianYuLauncher.ViewModels
         
         // Modrinth原始版本信息，用于获取依赖项
         public ModrinthVersion OriginalVersion { get; set; }
+        
+        // CurseForge原始文件信息，用于获取依赖项
+        public CurseForgeFile OriginalCurseForgeFile { get; set; }
+        
+        // 是否来自CurseForge
+        public bool IsCurseForge => OriginalCurseForgeFile != null;
     }
 
     // 加载器视图模型
