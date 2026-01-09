@@ -1074,5 +1074,23 @@ public sealed partial class VersionListPage : Page
             InstallProgressText.Text = _modDownloadViewModel.InstallProgressText;
         }
     }
+    
+    /// <summary>
+    /// 离线模式复选框选中事件
+    /// </summary>
+    private void OfflineModeCheckBox_Checked(object sender, RoutedEventArgs e)
+    {
+        // 显示警告 InfoBar
+        OfflineModeWarningInfoBar.Visibility = Visibility.Visible;
+    }
+    
+    /// <summary>
+    /// 离线模式复选框取消选中事件
+    /// </summary>
+    private void OfflineModeCheckBox_Unchecked(object sender, RoutedEventArgs e)
+    {
+        // 隐藏警告 InfoBar
+        OfflineModeWarningInfoBar.Visibility = Visibility.Collapsed;
+    }
     #endregion
 }

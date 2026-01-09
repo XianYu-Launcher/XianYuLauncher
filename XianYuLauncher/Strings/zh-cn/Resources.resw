@@ -1222,6 +1222,12 @@
   <data name="VersionListPage_ExportModpackDialog_ServerOnlyCheckBox.Content" xml:space="preserve">
     <value>导出服务端整合包</value>
   </data>
+  <data name="VersionListPage_ExportModpackDialog_OfflineModeWarningInfoBar.Title" xml:space="preserve">
+    <value>许可证警告</value>
+  </data>
+  <data name="VersionListPage_ExportModpackDialog_OfflineModeWarningInfoBar.Message" xml:space="preserve">
+    <value>直接将 Mod 放入整合包可能会违反部分条例，请不要进行分发！</value>
+  </data>
   <data name="VersionListPage_LoadingDialog.Title" xml:space="preserve">
     <value>正在导出整合包</value>
   </data>

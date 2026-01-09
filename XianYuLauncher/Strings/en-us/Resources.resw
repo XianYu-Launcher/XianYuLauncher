@@ -1219,6 +1219,12 @@ Continue downloading?</value>
   <data name="VersionListPage_ExportModpackDialog_ServerOnlyCheckBox.Content" xml:space="preserve">
     <value>Export Server Modpack</value>
   </data>
+  <data name="VersionListPage_ExportModpackDialog_OfflineModeWarningInfoBar.Title" xml:space="preserve">
+    <value>License Warning</value>
+  </data>
+  <data name="VersionListPage_ExportModpackDialog_OfflineModeWarningInfoBar.Message" xml:space="preserve">
+    <value>Including mods directly in the modpack may violate certain terms. Please do not distribute!</value>
+  </data>
   <data name="VersionListPage_LoadingDialog.Title" xml:space="preserve">
     <value>Exporting Modpack</value>
   </data>

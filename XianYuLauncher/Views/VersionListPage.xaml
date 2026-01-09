@@ -529,11 +529,14 @@
                         <!-- 新添加的复选框选项，水平居中排列 -->
                         <StackPanel Orientation="Horizontal" Spacing="32" Margin="0,8,0,0" HorizontalAlignment="Center">
                             <CheckBox 
+                                x:Name="OfflineModeCheckBox"
                                 x:Uid="VersionListPage_ExportModpackDialog_OfflineModeCheckBox"
                                 Content="非联网模式" 
                                 IsChecked="{Binding IsOfflineMode, Mode=TwoWay}" 
                                 FontSize="14" 
-                                HorizontalAlignment="Center" />
+                                HorizontalAlignment="Center"
+                                Checked="OfflineModeCheckBox_Checked"
+                                Unchecked="OfflineModeCheckBox_Unchecked" />
                             <CheckBox 
                                 x:Uid="VersionListPage_ExportModpackDialog_ServerOnlyCheckBox"
                                 Content="导出服务端整合包" 
@@ -542,6 +545,19 @@
                                 HorizontalAlignment="Center" />
                         </StackPanel>
                     </StackPanel>
+                    
+                    <!-- 离线模式警告 InfoBar -->
+                    <InfoBar
+                        x:Name="OfflineModeWarningInfoBar"
+                        x:Uid="VersionListPage_ExportModpackDialog_OfflineModeWarningInfoBar"
+                        Title="许可证警告"
+                        Message="直接将 Mod 放入整合包可能会违反部分条例，请不要进行分发！"
+                        Severity="Warning"
+                        IsOpen="True"
+                        IsClosable="False"
+                        Visibility="Collapsed"
+                        Margin="0,12,0,0">
+                    </InfoBar>
                 </StackPanel>
             </ScrollViewer>
         </ContentDialog>
