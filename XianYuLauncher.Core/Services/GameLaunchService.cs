@@ -48,6 +48,119 @@ public class GameLaunchService : IGameLaunchService
     {
         _authlibCallback = callback;
     }
+    
+    /// <summary>
+    /// 生成启动命令（不实际启动游戏）
+    /// </summary>
+    public async Task<string> GenerateLaunchCommandAsync(
+        string versionName,
+        MinecraftProfile profile,
+        CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            // 1. 验证输入
+            if (string.IsNullOrEmpty(versionName))
+            {
+                throw new ArgumentException("版本名称不能为空", nameof(versionName));
+            }
+            
+            if (profile == null)
+            {
+                throw new ArgumentNullException(nameof(profile), "角色信息不能为空");
+            }
+            
+            // 2. 获取路径
+            string minecraftPath = _fileService.GetMinecraftDataPath();
+            string versionsDir = Path.Combine(minecraftPath, "versions");
+            string versionDir = Path.Combine(versionsDir, versionName);
+            string jarPath = Path.Combine(versionDir, $"{versionName}.jar");
+            string jsonPath = Path.Combine(versionDir, $"{versionName}.json");
+            string librariesPath = Path.Combine(minecraftPath, "libraries");
+            string assetsPath = Path.Combine(minecraftPath, "assets");
+            
+            // 3. 检查版本隔离设置
+            bool? versionIsolationValue = await _localSettingsService.ReadSettingAsync<bool?>(EnableVersionIsolationKey);
+            bool enableVersionIsolation = versionIsolationValue ?? true;
+            string gameDir = enableVersionIsolation 
+                ? Path.Combine(minecraftPath, "versions", versionName) 
+                : minecraftPath;
+            
+            // 4. 检查必要文件
+            if (!File.Exists(jarPath))
+            {
+                throw new FileNotFoundException($"游戏JAR文件不存在: {jarPath}");
+            }
+            
+            if (!File.Exists(jsonPath))
+            {
+                throw new FileNotFoundException($"游戏JSON文件不存在: {jsonPath}");
+            }
+            
+            // 5. 读取版本信息
+            string versionJson = await File.ReadAllTextAsync(jsonPath, cancellationToken);
+            var versionInfo = JsonConvert.DeserializeObject<VersionInfo>(versionJson);
+            
+            if (versionInfo == null)
+            {
+                throw new InvalidOperationException("解析版本信息失败");
+            }
+            
+            if (string.IsNullOrEmpty(versionInfo.MainClass))
+            {
+                throw new InvalidOperationException("无法获取主类信息");
+            }
+            
+            // 6. 加载版本配置
+            var config = await _versionConfigService.LoadConfigAsync(versionName);
+            _windowWidth = config.WindowWidth;
+            _windowHeight = config.WindowHeight;
+            
+            // 7. 选择 Java 运行时
+            int requiredJavaVersion = versionInfo?.JavaVersion?.MajorVersion ?? 8;
+            
+            string? javaPath;
+            if (!config.UseGlobalJavaSetting && !string.IsNullOrEmpty(config.JavaPath))
+            {
+                javaPath = config.JavaPath;
+            }
+            else
+            {
+                javaPath = await _javaRuntimeService.SelectBestJavaAsync(requiredJavaVersion, config.JavaPath);
+            }
+            
+            if (string.IsNullOrEmpty(javaPath))
+            {
+                throw new InvalidOperationException("未找到Java运行时环境，请先安装Java");
+            }
+            
+            // 8. 构建启动参数
+            var launchArgs = await BuildLaunchArgumentsAsync(
+                versionInfo, profile, config, versionName, versionDir, gameDir,
+                jarPath, librariesPath, assetsPath, javaPath, minecraftPath);
+            
+            // 9. 生成完整命令
+            string javaExecutable = javaPath;
+            if (javaPath.EndsWith("java.exe", StringComparison.OrdinalIgnoreCase))
+            {
+                string javawPath = javaPath.Substring(0, javaPath.Length - 8) + "javaw.exe";
+                if (File.Exists(javawPath))
+                {
+                    javaExecutable = javawPath;
+                }
+            }
+            
+            string processedArgs = string.Join(" ", launchArgs.Select(a => 
+                (a.Contains('"') || !a.Contains(' ')) ? a : $"\"{a}\""));
+            
+            return $"\"{javaExecutable}\" {processedArgs}";
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"[GameLaunchService] 生成启动命令失败: {ex.Message}");
+            throw;
+        }
+    }
 
     /// <summary>
     /// 启动游戏

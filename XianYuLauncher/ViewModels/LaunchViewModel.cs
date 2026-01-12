@@ -1570,25 +1570,126 @@ public partial class LaunchViewModel : ObservableRecipient
         
         try
         {
-            // 调用共享的参数构建逻辑
-            var result = await BuildLaunchArgumentsInternalAsync(versionName, profile);
-            if (result == null)
+            // 使用 GameLaunchService 生成启动命令
+            string fullCommand = await _gameLaunchService.GenerateLaunchCommandAsync(versionName, profile);
+            
+            // 解析命令，提取 Java 路径和参数
+            // 命令格式: "C:\path\to\javaw.exe" arg1 arg2 ...
+            int firstQuoteEnd = fullCommand.IndexOf('"', 1);
+            if (firstQuoteEnd > 0)
             {
-                return null;
+                string javaPath = fullCommand.Substring(1, firstQuoteEnd - 1);
+                string arguments = fullCommand.Substring(firstQuoteEnd + 2); // +2 跳过 '" '
+                
+                // 获取版本目录
+                var minecraftPath = _fileService.GetMinecraftDataPath();
+                string versionDir = Path.Combine(minecraftPath, "versions", versionName);
+                
+                return (javaPath, arguments, versionDir);
             }
             
-            var (args, javaPath, versionDir) = result.Value;
-            
-            // 将参数列表转换为字符串
-            string processedArgs = string.Join(" ", args.Select(a =>
-                (a.Contains('"') || !a.Contains(' ')) ? a : $"\"{a}\""));
-            
-            return (javaPath, processedArgs, versionDir);
+            return null;
         }
         catch (Exception ex)
         {
             System.Diagnostics.Debug.WriteLine($"生成启动命令失败: {ex.Message}");
             return null;
+        }
+    }
+    
+    /// <summary>
+    /// 生成并导出启动参数命令
+    /// </summary>
+    [RelayCommand]
+    private async Task GenerateLaunchCommandAsync()
+    {
+        if (string.IsNullOrEmpty(SelectedVersion))
+        {
+            await ShowMessageAsync("请先选择一个游戏版本", "提示");
+            return;
+        }
+        
+        if (SelectedProfile == null)
+        {
+            await ShowMessageAsync("请先选择一个角色", "提示");
+            return;
+        }
+        
+        try
+        {
+            LaunchStatus = "正在生成启动参数...";
+            
+            // 使用 RegionValidator 检查地区限制
+            var regionValidation = _regionValidator.ValidateLoginMethod(SelectedProfile);
+            if (!regionValidation.IsValid)
+            {
+                await ShowMessageAsync(
+                    regionValidation.Errors.FirstOrDefault() ?? "当前地区无法使用此登录方式",
+                    "地区限制");
+                return;
+            }
+            
+            // 生成启动命令
+            var result = await GenerateLaunchCommandStringAsync(SelectedVersion, SelectedProfile);
+            
+            if (result == null)
+            {
+                await ShowMessageAsync("生成启动参数失败", "错误");
+                LaunchStatus = "生成启动参数失败";
+                return;
+            }
+            
+            var (javaPath, arguments, versionDir) = result.Value;
+            
+            // 构建完整的启动命令
+            string fullCommand = $"\"{javaPath}\" {arguments}";
+            
+            // 生成 .bat 文件内容
+            StringBuilder batContent = new StringBuilder();
+            batContent.AppendLine("chcp 65001>nul");
+            batContent.AppendLine("@echo off");
+            batContent.AppendLine($"title 启动 - {SelectedVersion}");
+            batContent.AppendLine("echo 游戏正在启动，请稍候。");
+            batContent.AppendLine($"cd /D \"{versionDir}\"");
+            batContent.AppendLine();
+            batContent.AppendLine();
+            batContent.AppendLine(fullCommand);
+            batContent.AppendLine("echo 游戏已退出。");
+            batContent.AppendLine("pause");
+            
+            // 保存到桌面
+            string desktopPath = Environment.GetFolderPath(Environment.SpecialFolder.Desktop);
+            string timestamp = DateTime.Now.ToString("yyyyMMdd_HHmmss");
+            string fileName = $"启动_{SelectedVersion}_{timestamp}.bat";
+            string filePath = Path.Combine(desktopPath, fileName);
+            
+            await File.WriteAllTextAsync(filePath, batContent.ToString(), System.Text.Encoding.UTF8);
+            
+            LaunchStatus = $"启动参数已导出到桌面: {fileName}";
+            
+            // 显示成功消息
+            var dialog = new ContentDialog
+            {
+                Title = "导出成功",
+                Content = $"启动参数已成功导出到桌面:\n{fileName}\n\n您可以双击该文件来启动游戏。",
+                PrimaryButtonText = "打开文件位置",
+                CloseButtonText = "确定",
+                XamlRoot = App.MainWindow.Content.XamlRoot
+            };
+            
+            dialog.PrimaryButtonClick += async (sender, args) =>
+            {
+                // 打开文件所在文件夹并选中文件
+                System.Diagnostics.Process.Start("explorer.exe", $"/select,\"{filePath}\"");
+            };
+            
+            await dialog.ShowAsync();
+        }
+        catch (Exception ex)
+        {
+            LaunchStatus = $"生成启动参数失败: {ex.Message}";
+            await ShowMessageAsync($"生成启动参数失败:\n{ex.Message}", "错误");
+            System.Diagnostics.Debug.WriteLine($"生成启动参数失败: {ex.Message}\n{ex.StackTrace}");
         }
     }
     

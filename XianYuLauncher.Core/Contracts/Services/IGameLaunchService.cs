@@ -36,4 +36,16 @@ public interface IGameLaunchService
     /// </summary>
     /// <param name="callback">回调实现</param>
     void SetAuthlibInjectorCallback(IAuthlibInjectorCallback callback);
+    
+    /// <summary>
+    /// 生成启动命令（不实际启动游戏）
+    /// </summary>
+    /// <param name="versionName">版本名称</param>
+    /// <param name="profile">角色信息</param>
+    /// <param name="cancellationToken">取消令牌</param>
+    /// <returns>完整的启动命令字符串</returns>
+    Task<string> GenerateLaunchCommandAsync(
+        string versionName,
+        MinecraftProfile profile,
+        CancellationToken cancellationToken = default);
 }

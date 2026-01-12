@@ -317,7 +317,67 @@ public class ForgeInstaller : ModLoaderInstallerBase
 
     private string GetForgeInstallerUrl(string minecraftVersionId, string forgeVersion)
     {
-        return $"{ForgeMavenUrl}/net/minecraftforge/forge/{minecraftVersionId}-{forgeVersion}/forge-{minecraftVersionId}-{forgeVersion}-installer.jar";
+        // 根据 MC 版本构建正确的 artifact 字符串
+        string artifact = BuildForgeArtifact(minecraftVersionId, forgeVersion);
+        return $"{ForgeMavenUrl}/net/minecraftforge/forge/{artifact}/forge-{artifact}-installer.jar";
+    }
+    
+    /// <summary>
+    /// 根据 MC 版本构建 Forge artifact 字符串
+    /// 旧版 Forge (1.7-1.8.9) 有特殊的命名规则
+    /// </summary>
+    private string BuildForgeArtifact(string minecraftVersion, string forgeVersion)
+    {
+        // 解析 MC 版本号：major.minor.build
+        var versionParts = minecraftVersion.Split('.');
+        if (versionParts.Length < 2)
+        {
+            // 无法解析，使用默认格式
+            return $"{minecraftVersion}-{forgeVersion}";
+        }
+        
+        int major = 0;
+        int minor = 0;
+        int? build = null;
+        
+        // 解析 major 版本号
+        if (!int.TryParse(versionParts[0], out major))
+        {
+            // 无法解析，使用默认格式
+            return $"{minecraftVersion}-{forgeVersion}";
+        }
+        
+        // 解析 minor 版本号
+        if (!int.TryParse(versionParts[1], out minor))
+        {
+            // 无法解析，使用默认格式
+            return $"{minecraftVersion}-{forgeVersion}";
+        }
+        
+        // 解析 build 版本号（如果存在）
+        if (versionParts.Length >= 3 && int.TryParse(versionParts[2], out int buildValue))
+        {
+            build = buildValue;
+        }
+        
+        // 特殊规则仅适用于 1.7.x 和 1.8.x 版本（major 必须为 1）
+        if (major == 1)
+        {
+            // 规则1：如果 minor=8 且 build=8 或为空，使用 {mc}-{forge}
+            if (minor == 8 && (build == 8 || build == null))
+            {
+                return $"{minecraftVersion}-{forgeVersion}";
+            }
+            
+            // 规则2：如果 minor=7 或 8（但不满足规则1），使用 {mc}-{forge}-{mc}
+            if (minor == 7 || minor == 8)
+            {
+                return $"{minecraftVersion}-{forgeVersion}-{minecraftVersion}";
+            }
+        }
+        
+        // 规则3：其他情况（包括新版本命名格式如 25.1, 26.1），使用 {mc}-{forge}
+        return $"{minecraftVersion}-{forgeVersion}";
     }
 
     private async Task ExtractForgeInstallerAsync(string installerPath, string extractPath, CancellationToken cancellationToken)
