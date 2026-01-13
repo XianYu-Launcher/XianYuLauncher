@@ -178,6 +178,15 @@ public partial class App : Application
             // CurseForge Cache Service
             services.AddSingleton<CurseForgeCacheService>();
             
+            // Translation Service (MCIM)
+            services.AddHttpClient<ITranslationService, TranslationService>();
+            services.AddSingleton<ITranslationService, TranslationService>(sp =>
+            {
+                var httpClientFactory = sp.GetRequiredService<IHttpClientFactory>();
+                var httpClient = httpClientFactory.CreateClient(nameof(TranslationService));
+                return new TranslationService(httpClient);
+            });
+            
             // Microsoft Auth Service
             services.AddHttpClient<MicrosoftAuthService>();
             

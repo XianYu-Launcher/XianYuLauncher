@@ -65,6 +65,10 @@ public class LanguageSelectorService : ILanguageSelectorService
             ApplicationLanguages.PrimaryLanguageOverride = Language;
             // 在 WinUI 3 中，ResourceContext 没有 Reset 方法，需要重新创建
             _resourceContext = _resourceManager.CreateResourceContext();
+            
+            // 通知 TranslationService 语言已更改（解决跨程序集文化信息不同步问题）
+            XianYuLauncher.Core.Services.TranslationService.SetCurrentLanguage(Language);
+            
             await Task.CompletedTask;
         }
         catch (CultureNotFoundException)
@@ -75,6 +79,10 @@ public class LanguageSelectorService : ILanguageSelectorService
             ApplicationLanguages.PrimaryLanguageOverride = "zh-CN";
             // 在 WinUI 3 中，ResourceContext 没有 Reset 方法，需要重新创建
             _resourceContext = _resourceManager.CreateResourceContext();
+            
+            // 通知 TranslationService 语言已更改
+            XianYuLauncher.Core.Services.TranslationService.SetCurrentLanguage("zh-CN");
+            
             await Task.CompletedTask;
         }
     }

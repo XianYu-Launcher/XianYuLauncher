@@ -121,6 +121,34 @@ public class ModrinthSearchResult
         /// </summary>
         [JsonPropertyName("description")]
         public string Description { get; set; }
+        
+        /// <summary>
+        /// 翻译后的描述（来自MCIM翻译API）
+        /// </summary>
+        [JsonIgnore]
+        public string TranslatedDescription { get; set; }
+        
+        /// <summary>
+        /// 显示的描述（优先使用翻译，如果没有则使用原始描述）
+        /// 只有当前语言为中文时才返回翻译
+        /// </summary>
+        [JsonIgnore]
+        public string DisplayDescription
+        {
+            get
+            {
+                // 使用 TranslationService 的静态语言检查，避免跨程序集文化信息不同步
+                bool isChinese = XianYuLauncher.Core.Services.TranslationService.GetCurrentLanguage().StartsWith("zh", StringComparison.OrdinalIgnoreCase);
+                
+                // 只有中文时才返回翻译，否则返回原始描述
+                if (isChinese && !string.IsNullOrEmpty(TranslatedDescription))
+                {
+                    return TranslatedDescription;
+                }
+                
+                return Description;
+            }
+        }
 
         /// <summary>
         /// 分类列表

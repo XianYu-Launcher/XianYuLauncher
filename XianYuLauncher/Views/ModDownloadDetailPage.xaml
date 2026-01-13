@@ -113,7 +113,7 @@
                                             <StackPanel Orientation="Vertical" Spacing="4" VerticalAlignment="Center" Width="300">
                                                 <TextBlock Text="{Binding Title}" FontSize="14" FontWeight="SemiBold" TextTrimming="CharacterEllipsis" 
                                                            Width="300" HorizontalAlignment="Left" />
-                                                <TextBlock Text="{Binding Description}" FontSize="12" Foreground="{ThemeResource TextFillColorSecondary}" 
+                                                <TextBlock Text="{Binding DisplayDescription}" FontSize="12" Foreground="{ThemeResource TextFillColorSecondary}" 
                                                            TextTrimming="CharacterEllipsis" MaxLines="2" 
                                                            Width="300" HorizontalAlignment="Left" 
                                                            TextWrapping="WrapWholeWords" />
@@ -272,7 +272,7 @@
                 <!-- Mod描述 -->
         <StackPanel Spacing="8">
             <TextBlock x:Uid="ModDownloadDetailPage_DescriptionTitle" Text="描述" FontSize="18" FontWeight="Bold" />
-                    <TextBlock Text="{x:Bind ViewModel.ModDescription, Mode=OneWay}" FontSize="14" TextWrapping="WrapWholeWords" />
+                    <TextBlock Text="{x:Bind ViewModel.DisplayModDescription, Mode=OneWay}" FontSize="14" TextWrapping="WrapWholeWords" />
                 </StackPanel>
 
                 <!-- 支持的加载器/标签 -->

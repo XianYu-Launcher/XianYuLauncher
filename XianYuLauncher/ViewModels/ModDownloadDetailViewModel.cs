@@ -25,6 +25,7 @@ namespace XianYuLauncher.ViewModels
         private readonly CurseForgeService _curseForgeService;
         private readonly IMinecraftVersionService _minecraftVersionService;
         private readonly IFileService _fileService;
+        private readonly ITranslationService _translationService;
 
         [ObservableProperty]
         private string _modId;
@@ -49,6 +50,32 @@ namespace XianYuLauncher.ViewModels
 
         [ObservableProperty]
         private string _modDescription = string.Empty;
+        
+        [ObservableProperty]
+        private string _modDescriptionOriginal = string.Empty;
+        
+        [ObservableProperty]
+        private string _modDescriptionTranslated = string.Empty;
+        
+        /// <summary>
+        /// 显示的Mod描述（根据当前语言返回翻译或原始描述）
+        /// </summary>
+        public string DisplayModDescription
+        {
+            get
+            {
+                // 使用 TranslationService 的静态语言检查，避免跨程序集文化信息不同步
+                bool isChinese = XianYuLauncher.Core.Services.TranslationService.GetCurrentLanguage().StartsWith("zh", StringComparison.OrdinalIgnoreCase);
+                
+                // 只有中文时才返回翻译，否则返回原始描述
+                if (isChinese && !string.IsNullOrEmpty(ModDescriptionTranslated))
+                {
+                    return ModDescriptionTranslated;
+                }
+                
+                return ModDescriptionOriginal;
+            }
+        }
 
         [ObservableProperty]
         private string _modIconUrl = "ms-appx:///Assets/Placeholder.png";
@@ -171,6 +198,29 @@ namespace XianYuLauncher.ViewModels
                     }
                 }
                 
+                // 翻译所有依赖项的描述（如果当前语言是中文）
+                if (_translationService.ShouldUseTranslation() && DependencyProjects.Count > 0)
+                {
+                    var translationTasks = DependencyProjects.Select(async dep =>
+                    {
+                        try
+                        {
+                            var translation = await _translationService.GetModrinthTranslationAsync(dep.ProjectId);
+                            if (translation != null && !string.IsNullOrEmpty(translation.Translated))
+                            {
+                                dep.TranslatedDescription = translation.Translated;
+                                System.Diagnostics.Debug.WriteLine($"[翻译] 依赖项 {dep.ProjectId} 翻译成功");
+                            }
+                        }
+                        catch (Exception ex)
+                        {
+                            System.Diagnostics.Debug.WriteLine($"[翻译] 翻译依赖项 {dep.ProjectId} 失败: {ex.Message}");
+                        }
+                    });
+                    
+                    await Task.WhenAll(translationTasks);
+                }
+                
                 System.Diagnostics.Debug.WriteLine($"[DEBUG] 前置mod加载完成，共成功加载 {DependencyProjects.Count} 个");
             }
             finally
@@ -224,6 +274,33 @@ namespace XianYuLauncher.ViewModels
                     
                     DependencyProjects.Add(dependencyProject);
                     System.Diagnostics.Debug.WriteLine($"[DEBUG] 成功加载CurseForge前置mod: {mod.Name} (ID: {mod.Id})");
+                }
+                
+                // 翻译所有依赖项的描述（如果当前语言是中文）
+                if (_translationService.ShouldUseTranslation() && DependencyProjects.Count > 0)
+                {
+                    var translationTasks = DependencyProjects.Select(async dep =>
+                    {
+                        try
+                        {
+                            // 提取CurseForge Mod ID
+                            if (int.TryParse(dep.ProjectId.Replace("curseforge-", ""), out int modId))
+                            {
+                                var translation = await _translationService.GetCurseForgeTranslationAsync(modId);
+                                if (translation != null && !string.IsNullOrEmpty(translation.Translated))
+                                {
+                                    dep.TranslatedDescription = translation.Translated;
+                                    System.Diagnostics.Debug.WriteLine($"[翻译] CurseForge依赖项 {modId} 翻译成功");
+                                }
+                            }
+                        }
+                        catch (Exception ex)
+                        {
+                            System.Diagnostics.Debug.WriteLine($"[翻译] 翻译CurseForge依赖项 {dep.ProjectId} 失败: {ex.Message}");
+                        }
+                    });
+                    
+                    await Task.WhenAll(translationTasks);
                 }
                 
                 System.Diagnostics.Debug.WriteLine($"[DEBUG] CurseForge前置mod加载完成，共成功加载 {DependencyProjects.Count} 个");
@@ -350,13 +427,15 @@ namespace XianYuLauncher.ViewModels
         public ModDownloadDetailViewModel(
             ModrinthService modrinthService, 
             CurseForgeService curseForgeService,
-            IMinecraftVersionService minecraftVersionService)
+            IMinecraftVersionService minecraftVersionService,
+            ITranslationService translationService)
         {
             _modrinthService = modrinthService;
             _curseForgeService = curseForgeService;
             _minecraftVersionService = minecraftVersionService;
             _fileService = App.GetService<IFileService>();
             _localSettingsService = App.GetService<ILocalSettingsService>();
+            _translationService = translationService;
         }
         
         private readonly ILocalSettingsService _localSettingsService;
@@ -471,7 +550,30 @@ namespace XianYuLauncher.ViewModels
                 
                 // 更新ViewModel属性
                 ModName = projectDetail.Title;
-                ModDescription = projectDetail.Description;
+                ModDescriptionOriginal = projectDetail.Description;
+                ModDescriptionTranslated = string.Empty; // 先清空翻译
+                
+                // 翻译描述（如果当前语言是中文）
+                if (_translationService.ShouldUseTranslation())
+                {
+                    try
+                    {
+                        var translation = await _translationService.GetModrinthTranslationAsync(modId);
+                        if (translation != null && !string.IsNullOrEmpty(translation.Translated))
+                        {
+                            ModDescriptionTranslated = translation.Translated;
+                            System.Diagnostics.Debug.WriteLine($"[翻译] Modrinth项目 {modId} 描述已翻译");
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        System.Diagnostics.Debug.WriteLine($"[翻译] 翻译Modrinth项目 {modId} 失败: {ex.Message}");
+                    }
+                }
+                
+                // 通知DisplayModDescription属性更新
+                OnPropertyChanged(nameof(DisplayModDescription));
+                
                 ModDownloads = projectDetail.Downloads;
                 ModIconUrl = projectDetail.IconUrl?.ToString() ?? "ms-appx:///Assets/Placeholder.png";
                 ModLicense = projectDetail.License?.Name ?? "未知许可证";
@@ -717,7 +819,30 @@ namespace XianYuLauncher.ViewModels
             
             // 更新ViewModel属性
             ModName = modDetail.Name;
-            ModDescription = modDetail.Summary;
+            ModDescriptionOriginal = modDetail.Summary;
+            ModDescriptionTranslated = string.Empty; // 先清空翻译
+            
+            // 翻译描述（如果当前语言是中文）
+            if (_translationService.ShouldUseTranslation())
+            {
+                try
+                {
+                    var translation = await _translationService.GetCurseForgeTranslationAsync(curseForgeModId);
+                    if (translation != null && !string.IsNullOrEmpty(translation.Translated))
+                    {
+                        ModDescriptionTranslated = translation.Translated;
+                        System.Diagnostics.Debug.WriteLine($"[翻译] CurseForge项目 {curseForgeModId} 描述已翻译");
+                    }
+                }
+                catch (Exception ex)
+                {
+                    System.Diagnostics.Debug.WriteLine($"[翻译] 翻译CurseForge项目 {curseForgeModId} 失败: {ex.Message}");
+                }
+            }
+            
+            // 通知DisplayModDescription属性更新
+            OnPropertyChanged(nameof(DisplayModDescription));
+            
             ModDownloads = (int)Math.Min(modDetail.DownloadCount, int.MaxValue);
             ModIconUrl = modDetail.Logo?.Url ?? "ms-appx:///Assets/Placeholder.png";
             ModLicense = "CurseForge"; // CurseForge没有直接的许可证字段
@@ -1308,6 +1433,28 @@ namespace XianYuLauncher.ViewModels
             public string IconUrl { get; set; }
             public string Title { get; set; }
             public string Description { get; set; }
+            public string TranslatedDescription { get; set; }
+            
+            /// <summary>
+            /// 显示的描述（优先使用翻译，如果没有则使用原始描述）
+            /// 只有当前语言为中文时才返回翻译
+            /// </summary>
+            public string DisplayDescription
+            {
+                get
+                {
+                    // 使用 TranslationService 的静态语言检查，避免跨程序集文化信息不同步
+                    bool isChinese = XianYuLauncher.Core.Services.TranslationService.GetCurrentLanguage().StartsWith("zh", StringComparison.OrdinalIgnoreCase);
+                    
+                    // 只有中文时才返回翻译，否则返回原始描述
+                    if (isChinese && !string.IsNullOrEmpty(TranslatedDescription))
+                    {
+                        return TranslatedDescription;
+                    }
+                    
+                    return Description;
+                }
+            }
         }
         
         // 依赖相关属性

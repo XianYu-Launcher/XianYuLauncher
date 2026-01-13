@@ -407,7 +407,7 @@
                                                                FontSize="16" FontWeight="SemiBold"/>
 
                                                     <!-- Mod Description -->
-                                                    <TextBlock Grid.Column="1" Grid.Row="1" Text="{Binding Description, Mode=OneWay}"
+                                                    <TextBlock Grid.Column="1" Grid.Row="1" Text="{Binding DisplayDescription, Mode=OneWay}"
                                                                Style="{ThemeResource BodyTextBlockStyle}" Opacity="0.8" TextWrapping="WrapWholeWords"
                                                                MaxLines="2" VerticalAlignment="Center"/>
 
@@ -632,7 +632,7 @@
                                                                FontSize="16" FontWeight="SemiBold"/>
 
                                                     <!-- 光影描述 -->
-                                                    <TextBlock Grid.Column="1" Grid.Row="1" Text="{Binding Description, Mode=OneWay}"
+                                                    <TextBlock Grid.Column="1" Grid.Row="1" Text="{Binding DisplayDescription, Mode=OneWay}"
                                                                Style="{ThemeResource BodyTextBlockStyle}" Opacity="0.8" TextWrapping="WrapWholeWords"
                                                                MaxLines="2" VerticalAlignment="Center"/>
 
@@ -857,7 +857,7 @@
                                                                FontSize="16" FontWeight="SemiBold"/>
 
                                                     <!-- 资源包描述 -->
-                                                    <TextBlock Grid.Column="1" Grid.Row="1" Text="{Binding Description, Mode=OneWay}"
+                                                    <TextBlock Grid.Column="1" Grid.Row="1" Text="{Binding DisplayDescription, Mode=OneWay}"
                                                                Style="{ThemeResource BodyTextBlockStyle}" Opacity="0.8" TextWrapping="WrapWholeWords"
                                                                MaxLines="2" VerticalAlignment="Center"/>
 
@@ -1083,7 +1083,7 @@
                                                                FontSize="16" FontWeight="SemiBold"/>
 
                                                     <!-- 数据包描述 -->
-                                                    <TextBlock Grid.Column="1" Grid.Row="1" Text="{Binding Description, Mode=OneWay}"
+                                                    <TextBlock Grid.Column="1" Grid.Row="1" Text="{Binding DisplayDescription, Mode=OneWay}"
                                                                Style="{ThemeResource BodyTextBlockStyle}" Opacity="0.8" TextWrapping="WrapWholeWords"
                                                                MaxLines="2" VerticalAlignment="Center"/>
 
@@ -1309,7 +1309,7 @@
                                                                FontSize="16" FontWeight="SemiBold"/>
 
                                                     <!-- 整合包描述 -->
-                                                    <TextBlock Grid.Column="1" Grid.Row="1" Text="{Binding Description, Mode=OneWay}"
+                                                    <TextBlock Grid.Column="1" Grid.Row="1" Text="{Binding DisplayDescription, Mode=OneWay}"
                                                                Style="{ThemeResource BodyTextBlockStyle}" Opacity="0.8" TextWrapping="WrapWholeWords"
                                                                MaxLines="2" VerticalAlignment="Center"/>
 
@@ -1537,7 +1537,7 @@
                                                                FontSize="16" FontWeight="SemiBold"/>
 
                                                     <!-- 世界描述 -->
-                                                    <TextBlock Grid.Column="1" Grid.Row="1" Text="{Binding Description, Mode=OneWay}"
+                                                    <TextBlock Grid.Column="1" Grid.Row="1" Text="{Binding DisplayDescription, Mode=OneWay}"
                                                                Style="{ThemeResource BodyTextBlockStyle}" Opacity="0.8" TextWrapping="WrapWholeWords"
                                                                MaxLines="2" VerticalAlignment="Center"/>
 

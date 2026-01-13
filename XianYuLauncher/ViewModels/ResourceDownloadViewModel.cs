@@ -26,6 +26,7 @@ public partial class ResourceDownloadViewModel : ObservableRecipient
     private readonly IFileService _fileService;
     private readonly ModrinthCacheService _modrinthCacheService;
     private readonly CurseForgeCacheService _curseForgeCacheService;
+    private readonly ITranslationService _translationService;
 
     // 版本下载相关属性和命令
     [ObservableProperty]
@@ -398,7 +399,8 @@ public partial class ResourceDownloadViewModel : ObservableRecipient
         ILocalSettingsService localSettingsService,
         IFileService fileService,
         ModrinthCacheService modrinthCacheService,
-        CurseForgeCacheService curseForgeCacheService)
+        CurseForgeCacheService curseForgeCacheService,
+        ITranslationService translationService)
     {
         _minecraftVersionService = minecraftVersionService;
         _navigationService = navigationService;
@@ -409,6 +411,7 @@ public partial class ResourceDownloadViewModel : ObservableRecipient
         _fileService = fileService;
         _modrinthCacheService = modrinthCacheService;
         _curseForgeCacheService = curseForgeCacheService;
+        _translationService = translationService;
         
         // 加载保存的版本类型筛选
         LoadVersionTypeFilter();
@@ -1146,6 +1149,9 @@ public partial class ResourceDownloadViewModel : ObservableRecipient
 
             // 交替合并两个平台的结果
             var allMods = InterleaveLists(modrinthMods, curseForgeMods);
+            
+            // 翻译描述（如果当前语言是中文）
+            await TranslateProjectDescriptionsAsync(allMods);
 
             // 更新Mod列表
             Mods.Clear();
@@ -1188,6 +1194,54 @@ public partial class ResourceDownloadViewModel : ObservableRecipient
         }
         
         return result;
+    }
+    
+    /// <summary>
+    /// 为项目列表添加翻译（如果当前语言是中文）
+    /// </summary>
+    private async Task TranslateProjectDescriptionsAsync(List<ModrinthProject> projects)
+    {
+        // 检查是否应该使用翻译
+        if (!_translationService.ShouldUseTranslation())
+        {
+            return;
+        }
+        
+        // 并行翻译所有项目描述
+        var translationTasks = projects.Select(async project =>
+        {
+            try
+            {
+                McimTranslationResponse translation = null;
+                
+                // 根据项目ID判断是Modrinth还是CurseForge
+                if (project.ProjectId.StartsWith("curseforge-"))
+                {
+                    // CurseForge项目
+                    if (int.TryParse(project.ProjectId.Replace("curseforge-", ""), out int modId))
+                    {
+                        translation = await _translationService.GetCurseForgeTranslationAsync(modId);
+                    }
+                }
+                else
+                {
+                    // Modrinth项目
+                    translation = await _translationService.GetModrinthTranslationAsync(project.ProjectId);
+                }
+                
+                // 如果获取到翻译，更新项目的翻译描述
+                if (translation != null && !string.IsNullOrEmpty(translation.Translated))
+                {
+                    project.TranslatedDescription = translation.Translated;
+                }
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"[翻译] 翻译项目 {project.ProjectId} 失败: {ex.Message}");
+            }
+        });
+        
+        await Task.WhenAll(translationTasks);
     }
     
     /// <summary>
@@ -1372,6 +1426,9 @@ public partial class ResourceDownloadViewModel : ObservableRecipient
 
             // 交替合并两个平台的结果
             var newMods = InterleaveLists(modrinthMods, curseForgeMods);
+            
+            // 翻译描述（如果当前语言是中文）
+            await TranslateProjectDescriptionsAsync(newMods);
 
             // 追加到现有列表
             foreach (var mod in newMods)
@@ -1556,6 +1613,9 @@ public partial class ResourceDownloadViewModel : ObservableRecipient
 
             // 交替合并两个平台的结果
             var allResourcePacks = InterleaveLists(modrinthResourcePacks, curseForgeResourcePacks);
+            
+            // 翻译描述（如果当前语言是中文）
+            await TranslateProjectDescriptionsAsync(allResourcePacks);
 
             // 更新资源包列表
             ResourcePacks.Clear();
@@ -1646,6 +1706,9 @@ public partial class ResourceDownloadViewModel : ObservableRecipient
                     System.Diagnostics.Debug.WriteLine($"[CurseForge] 加载更多资源包失败: {ex.Message}");
                 }
             }
+
+            // 翻译描述（如果当前语言是中文）
+            await TranslateProjectDescriptionsAsync(newResourcePacks);
 
             foreach (var resourcePack in newResourcePacks)
             {
@@ -1801,6 +1864,9 @@ public partial class ResourceDownloadViewModel : ObservableRecipient
 
             // 交替合并两个平台的结果
             var allShaderPacks = InterleaveLists(modrinthShaderPacks, curseForgeShaderPacks);
+            
+            // 翻译描述（如果当前语言是中文）
+            await TranslateProjectDescriptionsAsync(allShaderPacks);
 
             // 更新光影列表
             ShaderPacks.Clear();
@@ -1892,6 +1958,9 @@ public partial class ResourceDownloadViewModel : ObservableRecipient
                     System.Diagnostics.Debug.WriteLine($"[CurseForge] 加载更多光影失败: {ex.Message}");
                 }
             }
+
+            // 翻译描述（如果当前语言是中文）
+            await TranslateProjectDescriptionsAsync(newShaderPacks);
 
             foreach (var shaderPack in newShaderPacks)
             {
@@ -2047,6 +2116,9 @@ public partial class ResourceDownloadViewModel : ObservableRecipient
 
             // 交替合并两个平台的结果
             var allModpacks = InterleaveLists(modrinthModpacks, curseForgeModpacks);
+            
+            // 翻译描述（如果当前语言是中文）
+            await TranslateProjectDescriptionsAsync(allModpacks);
 
             // 更新整合包列表
             Modpacks.Clear();
@@ -2140,6 +2212,9 @@ public partial class ResourceDownloadViewModel : ObservableRecipient
                     System.Diagnostics.Debug.WriteLine($"[CurseForge] 加载更多整合包失败: {ex.Message}");
                 }
             }
+
+            // 翻译描述（如果当前语言是中文）
+            await TranslateProjectDescriptionsAsync(newModpacks);
 
             // 追加到现有列表
             foreach (var modpack in newModpacks)
@@ -2296,6 +2371,9 @@ public partial class ResourceDownloadViewModel : ObservableRecipient
 
             // 交替合并两个平台的结果
             var allDatapacks = InterleaveLists(modrinthDatapacks, curseForgeDatapacks);
+            
+            // 翻译描述（如果当前语言是中文）
+            await TranslateProjectDescriptionsAsync(allDatapacks);
 
             // 更新数据包列表
             Datapacks.Clear();
@@ -2386,6 +2464,9 @@ public partial class ResourceDownloadViewModel : ObservableRecipient
                     System.Diagnostics.Debug.WriteLine($"[CurseForge] 加载更多数据包失败: {ex.Message}");
                 }
             }
+
+            // 翻译描述（如果当前语言是中文）
+            await TranslateProjectDescriptionsAsync(newDatapacks);
 
             foreach (var datapack in newDatapacks)
             {
@@ -2487,6 +2568,9 @@ public partial class ResourceDownloadViewModel : ObservableRecipient
                 }
             }
 
+            // 翻译描述（如果当前语言是中文）
+            await TranslateProjectDescriptionsAsync(curseForgeWorlds);
+
             // 更新世界列表
             Worlds.Clear();
             foreach (var world in curseForgeWorlds)
@@ -2549,6 +2633,9 @@ public partial class ResourceDownloadViewModel : ObservableRecipient
                     System.Diagnostics.Debug.WriteLine($"[CurseForge] 加载更多世界失败: {ex.Message}");
                 }
             }
+
+            // 翻译描述（如果当前语言是中文）
+            await TranslateProjectDescriptionsAsync(newWorlds);
 
             foreach (var world in newWorlds)
             {
