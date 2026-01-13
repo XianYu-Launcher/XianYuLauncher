@@ -4,7 +4,6 @@
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
     xmlns:local="using:XianYuLauncher.Views"
     xmlns:viewModels="using:XianYuLauncher.ViewModels"
-    xmlns:controls="using:CommunityToolkit.WinUI.UI.Controls"
     xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
     mc:Ignorable="d">
@@ -65,49 +64,39 @@
             </ScrollViewer>
         </Grid>
         
-        <!-- AI错误分析区域 -->
+        <!-- 错误分析区域 -->
         <Grid Grid.Row="3" Margin="16,16,16,16">
             <Grid.RowDefinitions>
                 <RowDefinition Height="Auto" />
                 <RowDefinition Height="Auto" />
             </Grid.RowDefinitions>
             
-            <!-- 标题栏带AI图标 -->
+            <!-- 标题栏 -->
             <StackPanel Orientation="Horizontal" Spacing="8" Margin="0,0,0,12">
-                <FontIcon Glyph="&#xE945;" FontSize="18" Foreground="{ThemeResource AccentTextFillColorPrimaryBrush}" />
-                <TextBlock x:Uid="ErrorAnalysis_AnalysisTitle" Text="AI错误分析" FontSize="16" FontWeight="SemiBold" VerticalAlignment="Center" />
+                <FontIcon Glyph="&#xE946;" FontSize="18" Foreground="{ThemeResource AccentTextFillColorPrimaryBrush}" />
+                <TextBlock x:Uid="ErrorAnalysis_AnalysisTitle" Text="崩溃分析" FontSize="16" FontWeight="SemiBold" VerticalAlignment="Center" />
             </StackPanel>
             
-            <!-- AI分析卡片 - 使用半透明亚克力效果 -->
+            <!-- 分析结果卡片 - 使用 Mica 背景 -->
             <Border Grid.Row="1" 
                     CornerRadius="8"
                     BorderThickness="1"
-                    BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}">
-                <Border.Background>
-                    <AcrylicBrush TintColor="{ThemeResource SolidBackgroundFillColorBase}" 
-                                  TintOpacity="0.8" 
-                                  FallbackColor="{ThemeResource SolidBackgroundFillColorBase}" />
-                </Border.Background>
+                    BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+                    Background="{ThemeResource LayerFillColorDefaultBrush}">
                 
-                <Grid Padding="16">
-                    <Grid.RowDefinitions>
-                        <RowDefinition Height="*" />
-                    </Grid.RowDefinitions>
-                    
+                <Grid Padding="20">
                     <ScrollViewer 
                               VerticalScrollBarVisibility="Auto" 
                               HorizontalScrollBarVisibility="Disabled" 
-                              MaxHeight="280"
+                              MaxHeight="300"
                               x:Name="AiScrollViewer">
-                        <controls:MarkdownTextBlock 
+                        <TextBlock 
                                Text="{x:Bind ViewModel.AiAnalysisResult, Mode=OneWay}" 
                                TextWrapping="Wrap" 
                                FontSize="14"
+                               LineHeight="24"
                                Foreground="{ThemeResource TextFillColorPrimaryBrush}" 
-                               Background="Transparent" 
                                x:Name="AiTextBlock" 
-                               LinkClicked="OnMarkdownLinkClicked" 
-                               HorizontalAlignment="Stretch" 
                                IsTextSelectionEnabled="True" />
                     </ScrollViewer>
                 </Grid>

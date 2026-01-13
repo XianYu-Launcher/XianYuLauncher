@@ -100,7 +100,7 @@ public class CrashAnalyzer : ICrashAnalyzer
         else
         {
             // 默认分析的流式输出
-            yield return "## 问题分析\n\n";
+            yield return "【问题分析】\n\n";
             await Task.Delay(60);
             
             var defaultAnalysis = $"游戏异常退出（退出代码: {exitCode}）。未能识别具体的崩溃原因。\n\n";
@@ -109,7 +109,7 @@ public class CrashAnalyzer : ICrashAnalyzer
                 yield return chunk;
             }
             
-            yield return "## 解决建议\n\n";
+            yield return "【解决建议】\n\n";
             await Task.Delay(60);
             
             var suggestions = new[]

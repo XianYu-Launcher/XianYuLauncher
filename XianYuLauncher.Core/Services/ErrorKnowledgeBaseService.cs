@@ -144,7 +144,7 @@ public class ErrorKnowledgeBaseService
     public async IAsyncEnumerable<string> StreamAnalysisAsync(ErrorRule rule, int delayMs = 30)
     {
         // 输出分析内容
-        yield return "## 问题分析\n\n";
+        yield return "【问题分析】\n\n";
         await Task.Delay(delayMs * 2);
         
         await foreach (var chunk in StreamTextAsync(rule.Analysis, delayMs))
@@ -156,7 +156,7 @@ public class ErrorKnowledgeBaseService
         await Task.Delay(delayMs * 3);
         
         // 输出建议
-        yield return "## 解决建议\n\n";
+        yield return "【解决建议】\n\n";
         await Task.Delay(delayMs * 2);
         
         for (int i = 0; i < rule.Suggestions.Count; i++)

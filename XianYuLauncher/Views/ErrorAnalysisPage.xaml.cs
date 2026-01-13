@@ -19,12 +19,12 @@ namespace XianYuLauncher.Views
             ViewModel = App.GetService<ErrorAnalysisViewModel>();
             this.InitializeComponent();
             
-            // 订阅ViewModel的PropertyChanged事件，实现AI分析结果自动滚动
+            // 订阅ViewModel的PropertyChanged事件，实现分析结果自动滚动
             ViewModel.PropertyChanged += ViewModel_PropertyChanged;
         }
         
         /// <summary>
-        /// 监听ViewModel的PropertyChanged事件，实现AI分析结果自动滚动
+        /// 监听ViewModel的PropertyChanged事件，实现分析结果自动滚动
         /// </summary>
         private void ViewModel_PropertyChanged(object sender, System.ComponentModel.PropertyChangedEventArgs e)
         {
@@ -62,7 +62,7 @@ namespace XianYuLauncher.Views
             if (e.Parameter is Tuple<string, List<string>, List<string>> logData)
             {
                 ViewModel.SetLogData(logData.Item1, logData.Item2, logData.Item3);
-                // 设置游戏崩溃状态为true，触发AI分析
+                // 设置游戏崩溃状态为true，触发分析
                 ViewModel.SetGameCrashStatus(true);
             }
             else
@@ -108,23 +108,6 @@ namespace XianYuLauncher.Views
                         _isScrollPending = false;
                     });
                 });
-            }
-        }
-        
-        /// <summary>
-        /// 处理Markdown文本中的链接点击事件
-        /// </summary>
-        private void OnMarkdownLinkClicked(object sender, CommunityToolkit.WinUI.UI.Controls.LinkClickedEventArgs e)
-        {
-            try
-            {
-                // 打开链接
-                var uri = new Uri(e.Link);
-                _ = Windows.System.Launcher.LaunchUriAsync(uri);
-            }
-            catch (Exception ex)
-            {
-                System.Diagnostics.Debug.WriteLine($"无法打开链接: {ex.Message}");
             }
         }
     }

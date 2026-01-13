@@ -155,8 +155,8 @@ public partial class LaunchViewModel : ObservableRecipient
     /// <param name="gameError">游戏错误日志副本</param>
     private async Task ShowErrorAnalysisDialog(int exitCode, string launchCommand, List<string> gameOutput, List<string> gameError)
     {
-        // 分析崩溃原因
-        string errorAnalysis = AnalyzeCrash(gameOutput, gameError);
+        // 分析崩溃原因（异步执行，不阻塞）
+        string errorAnalysis = await AnalyzeCrash(gameOutput, gameError);
         
         // 合并日志，移除输出日志字段
         List<string> allLogs = new List<string>();
@@ -174,47 +174,43 @@ public partial class LaunchViewModel : ObservableRecipient
         // 创建完整的日志文本
         string fullLog = string.Join(Environment.NewLine, allLogs);
         
-        // 在UI线程上显示弹窗
-        App.MainWindow.DispatcherQueue.TryEnqueue(async () =>
+        // 创建错误分析弹窗（已经在 UI 线程上，不需要再次 TryEnqueue）
+        var dialog = new ContentDialog
         {
-            // 创建错误分析弹窗
-            var dialog = new ContentDialog
+            Title = "游戏错误分析",
+            Content = new ScrollViewer
             {
-                Title = "游戏错误分析",
-                Content = new ScrollViewer
+                Content = new TextBlock
                 {
-                    Content = new TextBlock
-                    {
-                        Text = fullLog,
-                        FontFamily = new Microsoft.UI.Xaml.Media.FontFamily("Consolas"),
-                        FontSize = 12,
-                        TextWrapping = Microsoft.UI.Xaml.TextWrapping.Wrap,
-                        Margin = new Microsoft.UI.Xaml.Thickness(12)
-                    },
-                    MaxHeight = 400,
-                    VerticalScrollBarVisibility = Microsoft.UI.Xaml.Controls.ScrollBarVisibility.Auto,
-                    HorizontalScrollBarVisibility = Microsoft.UI.Xaml.Controls.ScrollBarVisibility.Auto
+                    Text = fullLog,
+                    FontFamily = new Microsoft.UI.Xaml.Media.FontFamily("Consolas"),
+                    FontSize = 12,
+                    TextWrapping = Microsoft.UI.Xaml.TextWrapping.Wrap,
+                    Margin = new Microsoft.UI.Xaml.Thickness(12)
                 },
-                PrimaryButtonText = "确定",
-                SecondaryButtonText = "详细错误日志",
-                XamlRoot = App.MainWindow.Content.XamlRoot
-            };
-            
-            // 处理按钮点击事件
-            dialog.PrimaryButtonClick += (sender, args) =>
-            {
-                // 确定按钮，关闭弹窗
-            };
-            
-            dialog.SecondaryButtonClick += (sender, args) =>
-            {
-                // 详细错误日志按钮，导航到错误分析系统页面
-                var navigationService = App.GetService<INavigationService>();
-                navigationService.NavigateTo(typeof(ErrorAnalysisViewModel).FullName!, Tuple.Create(launchCommand, gameOutput, gameError));
-            };
-            
-            await dialog.ShowAsync();
-        });
+                MaxHeight = 400,
+                VerticalScrollBarVisibility = Microsoft.UI.Xaml.Controls.ScrollBarVisibility.Auto,
+                HorizontalScrollBarVisibility = Microsoft.UI.Xaml.Controls.ScrollBarVisibility.Auto
+            },
+            PrimaryButtonText = "确定",
+            SecondaryButtonText = "详细错误日志",
+            XamlRoot = App.MainWindow.Content.XamlRoot
+        };
+        
+        // 处理按钮点击事件
+        dialog.PrimaryButtonClick += (sender, args) =>
+        {
+            // 确定按钮，关闭弹窗
+        };
+        
+        dialog.SecondaryButtonClick += (sender, args) =>
+        {
+            // 详细错误日志按钮，导航到错误分析系统页面
+            var navigationService = App.GetService<INavigationService>();
+            navigationService.NavigateTo(typeof(ErrorAnalysisViewModel).FullName!, Tuple.Create(launchCommand, gameOutput, gameError));
+        };
+        
+        await dialog.ShowAsync();
     }
     
     /// <summary>
@@ -223,10 +219,10 @@ public partial class LaunchViewModel : ObservableRecipient
     /// <param name="gameOutput">游戏输出日志</param>
     /// <param name="gameError">游戏错误日志</param>
     /// <returns>崩溃分析结果</returns>
-    private string AnalyzeCrash(List<string> gameOutput, List<string> gameError)
+    private async Task<string> AnalyzeCrash(List<string> gameOutput, List<string> gameError)
     {
         // 使用 CrashAnalyzer 服务进行分析
-        var result = _crashAnalyzer.AnalyzeCrashAsync(0, gameOutput, gameError).GetAwaiter().GetResult();
+        var result = await _crashAnalyzer.AnalyzeCrashAsync(0, gameOutput, gameError);
         return result.Analysis;
     }
     
