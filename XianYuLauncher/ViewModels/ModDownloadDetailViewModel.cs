@@ -28,6 +28,15 @@ namespace XianYuLauncher.ViewModels
 
         [ObservableProperty]
         private string _modId;
+        
+        [ObservableProperty]
+        private string _modSlug = string.Empty;
+        
+        [ObservableProperty]
+        private string _platformName = string.Empty;
+        
+        [ObservableProperty]
+        private string _platformUrl = string.Empty;
 
         [ObservableProperty]
         private string _modName = string.Empty;
@@ -469,6 +478,10 @@ namespace XianYuLauncher.ViewModels
                 // 优先使用从列表页传递过来的作者信息，如果没有则使用API返回的
                 ModAuthor = "ModDownloadDetailPage_AuthorText".GetLocalized() + (_passedModInfo?.Author ?? projectDetail.Author);
                 
+                // 设置平台信息
+                ModSlug = projectDetail.Slug;
+                PlatformName = "Modrinth";
+                
                 // 设置项目类型，根据来源类型进行覆盖
                 if (_sourceType == "mod")
                 {
@@ -482,6 +495,9 @@ namespace XianYuLauncher.ViewModels
                 {
                     ProjectType = projectDetail.ProjectType;
                 }
+                
+                // 生成平台 URL
+                PlatformUrl = GenerateModrinthUrl(ProjectType, projectDetail.Slug);
                 
                 // 更新支持的加载器/标签
                 SupportedLoaders.Clear();
@@ -707,8 +723,15 @@ namespace XianYuLauncher.ViewModels
             ModLicense = "CurseForge"; // CurseForge没有直接的许可证字段
             ModAuthor = "ModDownloadDetailPage_AuthorText".GetLocalized() + (modDetail.Authors?.FirstOrDefault()?.Name ?? "Unknown");
             
+            // 设置平台信息
+            ModSlug = modDetail.Slug;
+            PlatformName = "CurseForge";
+            
             // 设置项目类型
             ProjectType = _sourceType ?? "mod";
+            
+            // 生成平台 URL
+            PlatformUrl = GenerateCurseForgeUrl(ProjectType, modDetail.Slug);
             
             // 更新支持的加载器
             SupportedLoaders.Clear();
@@ -2894,6 +2917,61 @@ namespace XianYuLauncher.ViewModels
                 _installCancellationTokenSource.Cancel();
                 _installCancellationTokenSource.Dispose();
                 _installCancellationTokenSource = null;
+            }
+        }
+        
+        /// <summary>
+        /// 生成 Modrinth 平台 URL
+        /// </summary>
+        private string GenerateModrinthUrl(string projectType, string slug)
+        {
+            // Modrinth URL 格式: https://modrinth.com/{资源类型}/{slug}
+            // shaderpack 需要改为 shader，其它类型不加 s
+            string typeSegment = projectType switch
+            {
+                "shaderpack" => "shader",
+                _ => projectType
+            };
+            
+            return $"https://modrinth.com/{typeSegment}/{slug}";
+        }
+        
+        /// <summary>
+        /// 生成 CurseForge 平台 URL
+        /// </summary>
+        private string GenerateCurseForgeUrl(string projectType, string slug)
+        {
+            // CurseForge URL 格式: https://www.curseforge.com/minecraft/{类型段}/{slug}
+            string typeSegment = projectType switch
+            {
+                "mod" => "mc-mods",
+                "resourcepack" => "texture-packs",
+                "datapack" => "data-packs",
+                "world" => "worlds",
+                "shader" or "shaderpack" => "shaders",
+                "modpack" => "modpacks",
+                _ => "mc-mods"
+            };
+            
+            return $"https://www.curseforge.com/minecraft/{typeSegment}/{slug}";
+        }
+        
+        /// <summary>
+        /// 打开平台 URL 命令
+        /// </summary>
+        [RelayCommand]
+        private async Task OpenPlatformUrlAsync()
+        {
+            if (!string.IsNullOrEmpty(PlatformUrl))
+            {
+                try
+                {
+                    await Windows.System.Launcher.LaunchUriAsync(new Uri(PlatformUrl));
+                }
+                catch (Exception ex)
+                {
+                    System.Diagnostics.Debug.WriteLine($"[ERROR] 打开平台 URL 失败: {ex.Message}");
+                }
             }
         }
     }

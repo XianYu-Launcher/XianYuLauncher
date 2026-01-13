@@ -295,6 +295,22 @@
                             </ItemsControl.ItemsPanel>
                         </ItemsControl>
                     </ScrollViewer>
+                    
+                    <!-- 功能栏 -->
+                    <StackPanel Orientation="Horizontal" Spacing="8" Margin="0,4,0,0">
+                        <!-- 跳转到平台按钮 -->
+                        <Button Command="{x:Bind ViewModel.OpenPlatformUrlCommand}"
+                                Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
+                                BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+                                BorderThickness="1"
+                                CornerRadius="6"
+                                Padding="12,8">
+                            <StackPanel Orientation="Horizontal" Spacing="8">
+                                <FontIcon Glyph="&#xE8A7;" FontSize="16" />
+                                <TextBlock Text="{x:Bind ViewModel.PlatformName, Mode=OneWay}" FontSize="14" VerticalAlignment="Center" />
+                            </StackPanel>
+                        </Button>
+                    </StackPanel>
                 </StackPanel>
 
                 <!-- 游戏版本和资源包/Mod版本下载列表 -->
