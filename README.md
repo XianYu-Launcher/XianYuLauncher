@@ -14,7 +14,7 @@ A modern, feature-rich Minecraft Java Edition launcher with a polished user inte
 - **Sleek, Modern UI**: Built with WinUI 3 for a native Windows experience
 - **Version Management**: Easy installation and switching between Minecraft versions
 - **ModLoader Support**: Full support for Forge, Fabric, NeoForge, Quilt, Optifine, and Cleanroom (experimental)
-- **Account Management**: Microsoft, offline, and third-party authentication support
+- **Account Management**: Microsoft account integration, offline support (China-only)
 - **Real-time Logs**: Monitor game output with live log viewing
 - **Crash Analysis**: Intelligent error detection and diagnostic tools
 - **Resource Downloads**: Browse and install mods, resource packs, and shaders from Modrinth
