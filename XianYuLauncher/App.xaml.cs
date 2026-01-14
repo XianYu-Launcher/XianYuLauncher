@@ -214,7 +214,7 @@ public partial class App : Application
             services.AddTransient<SettingsPage>();
             // services.AddTransient<下载ViewModel>();
             // services.AddTransient<下载Page>();
-            services.AddTransient<LaunchViewModel>();
+            services.AddSingleton<LaunchViewModel>();  // 改为Singleton以保持游戏运行状态
             services.AddTransient<LaunchPage>();
             services.AddTransient<ModLoaderSelectorViewModel>();
             services.AddTransient<ModLoaderSelectorPage>();

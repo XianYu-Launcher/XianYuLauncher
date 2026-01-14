@@ -573,6 +573,9 @@
   <data name="LaunchPage_SuccessTitle.Title" xml:space="preserve">
     <value>游戏启动成功</value>
   </data>
+  <data name="LaunchPage_ViewLogsButton.ToolTipService.ToolTip" xml:space="preserve">
+    <value>查看日志</value>
+  </data>
   <data name="Settings_About.Text" xml:space="preserve">
     <value>关于此应用</value>
   </data>

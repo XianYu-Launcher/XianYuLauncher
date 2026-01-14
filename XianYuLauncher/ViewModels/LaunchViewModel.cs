@@ -572,6 +572,34 @@ public partial class LaunchViewModel : ObservableRecipient
     private bool _isLaunchSuccessInfoBarOpen = false;
     
     /// <summary>
+    /// 游戏是否正在运行（持久化状态）
+    /// </summary>
+    [ObservableProperty]
+    private bool _isGameRunning = false;
+    
+    /// <summary>
+    /// "查看日志"按钮是否可见（基于实时日志设置）
+    /// </summary>
+    [ObservableProperty]
+    private bool _isViewLogsButtonVisible = false;
+    
+    /// <summary>
+    /// InfoBar是否应该显示（准备阶段或游戏运行中）
+    /// </summary>
+    [ObservableProperty]
+    private bool _isInfoBarOpen = false;
+    
+    /// <summary>
+    /// 更新InfoBar显示状态
+    /// </summary>
+    private void UpdateInfoBarOpenState()
+    {
+        bool newState = IsLaunchSuccessInfoBarOpen || IsGameRunning;
+        System.Diagnostics.Debug.WriteLine($"[LaunchViewModel] UpdateInfoBarOpenState: IsLaunchSuccessInfoBarOpen={IsLaunchSuccessInfoBarOpen}, IsGameRunning={IsGameRunning}, newState={newState}");
+        IsInfoBarOpen = newState;
+    }
+    
+    /// <summary>
     /// Minecraft 最新新闻标题
     /// </summary>
     [ObservableProperty]
@@ -735,6 +763,9 @@ public partial class LaunchViewModel : ObservableRecipient
     private async void OnGameProcessExited(object? sender, ProcessExitedEventArgs e)
     {
         LaunchStatus += $"\n游戏进程已退出，退出代码: {e.ExitCode}";
+        
+        // 更新游戏运行状态（这会自动关闭InfoBar）
+        IsGameRunning = false;
         
         // 检查是否异常退出（排除用户主动终止的情况）
         if (e.ExitCode != 0 && !e.IsUserTerminated)
@@ -989,6 +1020,15 @@ public partial class LaunchViewModel : ObservableRecipient
     {
         // 这里将在UI层实现导航逻辑
     }
+    
+    /// <summary>
+    /// 查看实时日志命令
+    /// </summary>
+    [RelayCommand]
+    private void ViewLogs()
+    {
+        _navigationService.NavigateTo(typeof(ErrorAnalysisViewModel).FullName!);
+    }
 
     [RelayCommand]
     private async Task LoadInstalledVersionsAsync()
@@ -1074,13 +1114,20 @@ public partial class LaunchViewModel : ObservableRecipient
     }
     
     /// <summary>
-    /// 当 InfoBar 关闭时的处理
+    /// 当游戏运行状态变化时的处理
     /// </summary>
-    partial void OnIsLaunchSuccessInfoBarOpenChanged(bool value)
+    partial void OnIsGameRunningChanged(bool value)
     {
-        // 当 InfoBar 被关闭时
+        System.Diagnostics.Debug.WriteLine($"[LaunchViewModel] IsGameRunning changed to: {value}");
+        
+        // 更新InfoBar显示状态
+        UpdateInfoBarOpenState();
+        
+        // 当游戏运行状态变为 false（游戏被关闭）
         if (!value)
         {
+            System.Diagnostics.Debug.WriteLine($"[LaunchViewModel] Game stopped, _isPreparingGame={_isPreparingGame}, _currentGameProcess={_currentGameProcess != null}");
+            
             // 如果正在准备/下载中，取消下载
             if (_isPreparingGame && _downloadCancellationTokenSource != null)
             {
@@ -1110,6 +1157,17 @@ public partial class LaunchViewModel : ObservableRecipient
                 }
             }
         }
+    }
+    
+    /// <summary>
+    /// 当临时InfoBar状态变化时的处理
+    /// </summary>
+    partial void OnIsLaunchSuccessInfoBarOpenChanged(bool value)
+    {
+        System.Diagnostics.Debug.WriteLine($"[LaunchViewModel] IsLaunchSuccessInfoBarOpen changed to: {value}");
+        
+        // 更新InfoBar显示状态
+        UpdateInfoBarOpenState();
     }
 
     /// <summary>
@@ -1295,9 +1353,15 @@ public partial class LaunchViewModel : ObservableRecipient
                 _currentGameProcess = result.GameProcess;
                 _launchCommand = result.LaunchCommand ?? string.Empty;
                 
-                // 显示启动成功 InfoBar
-                LaunchSuccessMessage = $"{SelectedVersion} {"LaunchPage_GameStartedSuccessfullyText".GetLocalized()}";
-                IsLaunchSuccessInfoBarOpen = true;
+                System.Diagnostics.Debug.WriteLine($"[LaunchViewModel] Game launched successfully");
+                
+                // 关闭准备阶段的InfoBar，切换到游戏运行状态
+                IsLaunchSuccessInfoBarOpen = false;
+                System.Diagnostics.Debug.WriteLine($"[LaunchViewModel] Set IsLaunchSuccessInfoBarOpen = false");
+                
+                IsGameRunning = true;
+                System.Diagnostics.Debug.WriteLine($"[LaunchViewModel] Set IsGameRunning = true");
+                System.Diagnostics.Debug.WriteLine($"[LaunchViewModel] IsInfoBarOpen should now be: {IsInfoBarOpen}");
                 
                 // 检查是否启用了实时日志
                 bool isRealTimeLogsEnabled = false;
@@ -1310,6 +1374,15 @@ public partial class LaunchViewModel : ObservableRecipient
                     var settingsViewModel = App.GetService<SettingsViewModel>();
                     isRealTimeLogsEnabled = settingsViewModel.EnableRealTimeLogs;
                 }
+                
+                System.Diagnostics.Debug.WriteLine($"[LaunchViewModel] Real-time logs enabled: {isRealTimeLogsEnabled}");
+                
+                // 更新"查看日志"按钮可见性
+                IsViewLogsButtonVisible = isRealTimeLogsEnabled;
+                
+                // 更新启动成功消息
+                LaunchSuccessMessage = $"{SelectedVersion} {"LaunchPage_GameStartedSuccessfullyText".GetLocalized()}";
+                System.Diagnostics.Debug.WriteLine($"[LaunchViewModel] LaunchSuccessMessage set to: {LaunchSuccessMessage}");
                 
                 if (isRealTimeLogsEnabled)
                 {

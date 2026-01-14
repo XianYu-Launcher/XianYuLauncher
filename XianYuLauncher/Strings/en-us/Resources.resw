@@ -573,6 +573,9 @@
   <data name="LaunchPage_SuccessTitle.Title" xml:space="preserve">
     <value>Game Launch Success</value>
   </data>
+  <data name="LaunchPage_ViewLogsButton.ToolTipService.ToolTip" xml:space="preserve">
+    <value>View Logs</value>
+  </data>
   <data name="Settings_About.Text" xml:space="preserve">
     <value>About this application</value>
   </data>

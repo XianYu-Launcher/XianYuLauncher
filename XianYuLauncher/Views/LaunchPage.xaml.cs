@@ -58,11 +58,18 @@ public sealed partial class LaunchPage : Page
     {
         base.OnNavigatedTo(e);
         
+        System.Diagnostics.Debug.WriteLine($"[LaunchPage] OnNavigatedTo called");
+        System.Diagnostics.Debug.WriteLine($"[LaunchPage] IsGameRunning={ViewModel.IsGameRunning}");
+        System.Diagnostics.Debug.WriteLine($"[LaunchPage] IsLaunchSuccessInfoBarOpen={ViewModel.IsLaunchSuccessInfoBarOpen}");
+        System.Diagnostics.Debug.WriteLine($"[LaunchPage] IsInfoBarOpen={ViewModel.IsInfoBarOpen}");
+        
         // 根据彩蛋标志控制控件可见性
         if (App.ShowEasterEgg)
         {
             StatusTextBlock.Visibility = Microsoft.UI.Xaml.Visibility.Visible;
         }
+        
+        // InfoBar状态会自动根据 IsGameRunning 恢复，无需手动设置
         
         // 每次导航到该页面时都加载头像
         // 对于正版玩家，会先显示缓存头像，然后后台静默刷新
@@ -240,6 +247,30 @@ public sealed partial class LaunchPage : Page
     private void RecommendedMod_PointerPressed(object sender, Microsoft.UI.Xaml.Input.PointerRoutedEventArgs e)
     {
         ViewModel.OpenRecommendedModCommand.Execute(null);
+    }
+    
+    /// <summary>
+    /// InfoBar关闭事件处理
+    /// </summary>
+    private void LaunchSuccessInfoBar_Closed(InfoBar sender, InfoBarClosedEventArgs args)
+    {
+        System.Diagnostics.Debug.WriteLine($"[LaunchPage] InfoBar closed event triggered");
+        System.Diagnostics.Debug.WriteLine($"[LaunchPage] IsGameRunning={ViewModel.IsGameRunning}");
+        System.Diagnostics.Debug.WriteLine($"[LaunchPage] IsLaunchSuccessInfoBarOpen={ViewModel.IsLaunchSuccessInfoBarOpen}");
+        
+        // 用户手动关闭InfoBar
+        if (ViewModel.IsGameRunning)
+        {
+            System.Diagnostics.Debug.WriteLine($"[LaunchPage] Closing InfoBar while game is running, will terminate game");
+            // 如果游戏正在运行，关闭InfoBar意味着终止游戏
+            ViewModel.IsGameRunning = false;
+        }
+        else if (ViewModel.IsLaunchSuccessInfoBarOpen)
+        {
+            System.Diagnostics.Debug.WriteLine($"[LaunchPage] Closing InfoBar during preparation, will cancel download");
+            // 如果是准备阶段，关闭InfoBar意味着取消下载
+            ViewModel.IsLaunchSuccessInfoBarOpen = false;
+        }
     }
 
     /// <summary>
