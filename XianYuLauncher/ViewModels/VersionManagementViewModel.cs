@@ -1104,6 +1104,30 @@ public partial class VersionManagementViewModel : ObservableRecipient, INavigati
             {
                 // 设置文件不存在，创建默认设置文件
                 await SaveSettingsAsync();
+                
+                // 重新读取刚创建的配置文件并更新UI
+                if (File.Exists(settingsFilePath))
+                {
+                    string jsonContent = await File.ReadAllTextAsync(settingsFilePath);
+                    var settings = JsonSerializer.Deserialize<VersionSettings>(jsonContent);
+                    
+                    if (settings != null)
+                    {
+                        // 更新ViewModel属性
+                        AutoMemoryAllocation = settings.AutoMemoryAllocation;
+                        InitialHeapMemory = settings.InitialHeapMemory;
+                        MaximumHeapMemory = settings.MaximumHeapMemory;
+                        UseGlobalJavaSetting = settings.UseGlobalJavaSetting;
+                        JavaPath = settings.JavaPath;
+                        WindowWidth = settings.WindowWidth;
+                        WindowHeight = settings.WindowHeight;
+                        
+                        // 更新当前加载器信息
+                        UpdateCurrentLoaderInfo(settings);
+                        
+                        System.Diagnostics.Debug.WriteLine($"[VersionManagementViewModel] 创建配置文件后更新UI: ModLoaderType={settings.ModLoaderType}, DisplayName={CurrentLoaderDisplayName}");
+                    }
+                }
             }
             
             // 初始化可用加载器列表
@@ -1664,43 +1688,33 @@ public partial class VersionManagementViewModel : ObservableRecipient, INavigati
                 // 文件不存在，创建新配置
                 settings = new VersionSettings();
                 
-                // 设置默认的ModLoader信息
-                string versionName = SelectedVersion.Name;
-                if (versionName.Contains("fabric-"))
+                // 优先使用VersionInfoService读取第三方启动器配置（PCL2、HMCL、MultiMC等）
+                var versionInfoService = App.GetService<IVersionInfoService>();
+                if (versionInfoService != null)
                 {
-                    var parts = versionName.Split('-');
-                    if (parts.Length >= 3)
+                    var versionConfig = versionInfoService.GetVersionConfigFromDirectory(SelectedVersion.Path);
+                    if (versionConfig != null)
                     {
-                        settings.ModLoaderType = "fabric";
-                        settings.MinecraftVersion = parts[1];
-                        settings.ModLoaderVersion = parts[2];
+                        // 从第三方配置文件成功读取
+                        settings.ModLoaderType = versionConfig.ModLoaderType ?? "vanilla";
+                        settings.MinecraftVersion = versionConfig.MinecraftVersion ?? SelectedVersion.Name;
+                        settings.ModLoaderVersion = versionConfig.ModLoaderVersion ?? string.Empty;
+                        settings.CreatedAt = versionConfig.CreatedAt;
+                        
+                        System.Diagnostics.Debug.WriteLine($"[VersionManagementViewModel] 从第三方配置读取到: ModLoaderType={settings.ModLoaderType}, MinecraftVersion={settings.MinecraftVersion}");
                     }
-                }
-                else if (versionName.Contains("neoforge-"))
-                {
-                    var parts = versionName.Split('-');
-                    if (parts.Length >= 3)
+                    else
                     {
-                        settings.ModLoaderType = "neoforge";
-                        settings.MinecraftVersion = parts[1];
-                        settings.ModLoaderVersion = parts[2];
-                    }
-                }
-                else if (versionName.Contains("forge-"))
-                {
-                    var parts = versionName.Split('-');
-                    if (parts.Length >= 3)
-                    {
-                        settings.ModLoaderType = "forge";
-                        settings.MinecraftVersion = parts[1];
-                        settings.ModLoaderVersion = parts[2];
+                        // 无法从第三方配置读取，回退到版本名称解析
+                        System.Diagnostics.Debug.WriteLine($"[VersionManagementViewModel] 无法从第三方配置读取，使用版本名称解析");
+                        ParseVersionNameToSettings(settings, SelectedVersion.Name);
                     }
                 }
                 else
                 {
-                    // 原版Minecraft版本
-                    settings.ModLoaderType = "vanilla";
-                    settings.MinecraftVersion = versionName;
+                    // VersionInfoService不可用，回退到版本名称解析
+                    System.Diagnostics.Debug.WriteLine($"[VersionManagementViewModel] VersionInfoService不可用，使用版本名称解析");
+                    ParseVersionNameToSettings(settings, SelectedVersion.Name);
                 }
                 
                 settings.CreatedAt = DateTime.Now;
@@ -1732,6 +1746,127 @@ public partial class VersionManagementViewModel : ObservableRecipient, INavigati
         catch (Exception ex)
         {
             StatusMessage = $"保存设置失败：{ex.Message}";
+        }
+    }
+    
+    /// <summary>
+    /// 从版本名称解析ModLoader信息到设置对象
+    /// </summary>
+    private void ParseVersionNameToSettings(VersionSettings settings, string versionName)
+    {
+        // 使用不区分大小写的比较
+        string lowerVersionName = versionName.ToLowerInvariant();
+        
+        if (lowerVersionName.Contains("fabric"))
+        {
+            settings.ModLoaderType = "fabric";
+            // 尝试提取版本号
+            var parts = versionName.Split(new[] { '-', ' ' }, StringSplitOptions.RemoveEmptyEntries);
+            if (parts.Length >= 2)
+            {
+                settings.MinecraftVersion = parts[0]; // 第一部分通常是MC版本
+                // 查找Fabric版本号
+                for (int i = 1; i < parts.Length; i++)
+                {
+                    if (parts[i].ToLowerInvariant().Contains("fabric") && i + 1 < parts.Length)
+                    {
+                        settings.ModLoaderVersion = parts[i + 1];
+                        break;
+                    }
+                }
+            }
+        }
+        else if (lowerVersionName.Contains("neoforge"))
+        {
+            settings.ModLoaderType = "neoforge";
+            var parts = versionName.Split(new[] { '-', ' ' }, StringSplitOptions.RemoveEmptyEntries);
+            if (parts.Length >= 2)
+            {
+                settings.MinecraftVersion = parts[0];
+                for (int i = 1; i < parts.Length; i++)
+                {
+                    if (parts[i].ToLowerInvariant().Contains("neoforge") && i + 1 < parts.Length)
+                    {
+                        settings.ModLoaderVersion = parts[i + 1];
+                        break;
+                    }
+                }
+            }
+        }
+        else if (lowerVersionName.Contains("forge"))
+        {
+            settings.ModLoaderType = "forge";
+            var parts = versionName.Split(new[] { '-', ' ' }, StringSplitOptions.RemoveEmptyEntries);
+            if (parts.Length >= 2)
+            {
+                settings.MinecraftVersion = parts[0];
+                for (int i = 1; i < parts.Length; i++)
+                {
+                    if (parts[i].ToLowerInvariant().Contains("forge") && i + 1 < parts.Length)
+                    {
+                        settings.ModLoaderVersion = parts[i + 1];
+                        break;
+                    }
+                }
+            }
+        }
+        else if (lowerVersionName.Contains("quilt"))
+        {
+            settings.ModLoaderType = "quilt";
+            var parts = versionName.Split(new[] { '-', ' ' }, StringSplitOptions.RemoveEmptyEntries);
+            if (parts.Length >= 2)
+            {
+                settings.MinecraftVersion = parts[0];
+                for (int i = 1; i < parts.Length; i++)
+                {
+                    if (parts[i].ToLowerInvariant().Contains("quilt") && i + 1 < parts.Length)
+                    {
+                        settings.ModLoaderVersion = parts[i + 1];
+                        break;
+                    }
+                }
+            }
+        }
+        else if (lowerVersionName.Contains("cleanroom"))
+        {
+            settings.ModLoaderType = "cleanroom";
+            var parts = versionName.Split(new[] { '-', ' ' }, StringSplitOptions.RemoveEmptyEntries);
+            if (parts.Length >= 2)
+            {
+                settings.MinecraftVersion = parts[0];
+                for (int i = 1; i < parts.Length; i++)
+                {
+                    if (parts[i].ToLowerInvariant().Contains("cleanroom") && i + 1 < parts.Length)
+                    {
+                        settings.ModLoaderVersion = parts[i + 1];
+                        break;
+                    }
+                }
+            }
+        }
+        else if (lowerVersionName.Contains("optifine"))
+        {
+            settings.ModLoaderType = "optifine";
+            var parts = versionName.Split(new[] { '-', ' ' }, StringSplitOptions.RemoveEmptyEntries);
+            if (parts.Length >= 2)
+            {
+                settings.MinecraftVersion = parts[0];
+                // OptiFine版本信息存储在ModLoaderVersion中
+                for (int i = 1; i < parts.Length; i++)
+                {
+                    if (parts[i].ToLowerInvariant().Contains("optifine") && i + 1 < parts.Length)
+                    {
+                        settings.ModLoaderVersion = parts[i + 1];
+                        break;
+                    }
+                }
+            }
+        }
+        else
+        {
+            // 原版Minecraft版本
+            settings.ModLoaderType = "vanilla";
+            settings.MinecraftVersion = versionName;
         }
     }
     
