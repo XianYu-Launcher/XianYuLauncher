@@ -7,6 +7,7 @@ using Windows.ApplicationModel.DataTransfer;
 using Windows.Storage;
 using XianYuLauncher.ViewModels;
 using XianYuLauncher.Helpers;
+using XianYuLauncher.Models.VersionManagement;
 using Microsoft.Graphics.Canvas.UI.Xaml;
 using Microsoft.Graphics.Canvas;
 using System.IO.Compression;
@@ -303,7 +304,7 @@ public sealed partial class VersionManagementPage : Page
             bool isOn = toggleSwitch.IsOn;
             
             // 直接从父级Grid获取DataContext
-            if (VisualTreeHelper.GetParent(toggleSwitch) is FrameworkElement parentElement && parentElement.DataContext is ViewModels.ModInfo modInfo)
+            if (VisualTreeHelper.GetParent(toggleSwitch) is FrameworkElement parentElement && parentElement.DataContext is Models.VersionManagement.ModInfo modInfo)
             {
                 // 直接调用ViewModel的方法来处理开关状态变化，传递当前IsOn值
                 await ViewModel.ToggleModEnabledAsync(modInfo, isOn);

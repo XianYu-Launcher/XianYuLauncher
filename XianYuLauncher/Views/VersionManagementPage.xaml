@@ -5,6 +5,7 @@
     xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
     xmlns:viewModels="using:XianYuLauncher.ViewModels"
+    xmlns:models="using:XianYuLauncher.Models.VersionManagement"
     xmlns:local="using:XianYuLauncher.Views"
     xmlns:helpers="using:XianYuLauncher.Helpers"
     xmlns:canvas="using:Microsoft.Graphics.Canvas.UI.Xaml"
@@ -453,7 +454,7 @@
                                     <StackLayout Spacing="8" />
                                 </ItemsRepeater.Layout>
                                 <ItemsRepeater.ItemTemplate>
-                                    <DataTemplate x:DataType="viewModels:LoaderItemViewModel">
+                                    <DataTemplate x:DataType="models:LoaderItemViewModel">
                                         <Expander 
                                             IsExpanded="{x:Bind IsExpanded, Mode=TwoWay}" 
                                             HorizontalAlignment="Stretch"
@@ -650,7 +651,7 @@
                                 </Style>
                             </ListView.ItemContainerStyle>
                                 <ListView.ItemTemplate>
-                                    <DataTemplate x:DataType="viewModels:ModInfo">
+                                    <DataTemplate x:DataType="models:ModInfo">
                                         <Grid MinHeight="70" 
                                               Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
                                               CornerRadius="8" 
@@ -882,7 +883,7 @@
                                 </Style>
                             </ListView.ItemContainerStyle>
                                 <ListView.ItemTemplate>
-                                    <DataTemplate x:DataType="viewModels:ShaderInfo">
+                                    <DataTemplate x:DataType="models:ShaderInfo">
                                         <Grid MinHeight="70" Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
                                               CornerRadius="8" Padding="16,12,16,12" BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
                                               BorderThickness="1">
@@ -1062,7 +1063,7 @@
                                 </Style>
                             </ListView.ItemContainerStyle>
                                 <ListView.ItemTemplate>
-                                    <DataTemplate x:DataType="viewModels:ResourcePackInfo">
+                                    <DataTemplate x:DataType="models:ResourcePackInfo">
                                         <Grid x:Name="ResourcePackItemGrid" MinHeight="70" Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
                                               CornerRadius="8" Padding="16,12,16,12" BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
                                               BorderThickness="1"
@@ -1313,7 +1314,7 @@
                                     </Style>
                                 </ListView.ItemContainerStyle>
                                 <ListView.ItemTemplate>
-                                    <DataTemplate x:DataType="viewModels:ScreenshotInfo">
+                                    <DataTemplate x:DataType="models:ScreenshotInfo">
                                         <Grid Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
                                               CornerRadius="8" 
                                               Padding="16" 
@@ -1480,7 +1481,7 @@
                                 </Style>
                             </ListView.ItemContainerStyle>
                                 <ListView.ItemTemplate>
-                                    <DataTemplate x:DataType="viewModels:MapInfo">
+                                    <DataTemplate x:DataType="models:MapInfo">
                                         <Grid Height="60" Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
                                               CornerRadius="8" Padding="16" BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
                                               BorderThickness="1">
