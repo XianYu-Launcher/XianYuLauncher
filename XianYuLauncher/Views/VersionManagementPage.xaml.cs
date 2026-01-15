@@ -112,6 +112,32 @@ public sealed partial class VersionManagementPage : Page
                     // 显示转移结果弹窗
                     await MoveResultDialog.ShowAsync();
                 }
+                else if (e.PropertyName == nameof(ViewModel.IsMapDetailDialogOpen))
+                {
+                    if (ViewModel.IsMapDetailDialogOpen)
+                    {
+                        // 关闭所有可能打开的弹窗
+                        MoveModsDialog.Hide();
+                        ResultDialog.Hide();
+                        MoveResultDialog.Hide();
+                        DownloadProgressDialog.Hide();
+                        ExtensionInstallDialog.Hide();
+                        
+                        // 等待足够长的时间，确保所有弹窗完全关闭
+                        await Task.Delay(100);
+                        
+                        // 显示地图详情对话框
+                        await MapDetailDialog.ShowAsync();
+                        
+                        // 对话框关闭后，重置状态
+                        ViewModel.IsMapDetailDialogOpen = false;
+                    }
+                    else
+                    {
+                        // 关闭地图详情对话框
+                        MapDetailDialog.Hide();
+                    }
+                }
                 else if (e.PropertyName == nameof(ViewModel.SelectedVersion))
                 {
                     // 更新页面标题
@@ -744,6 +770,21 @@ public sealed partial class VersionManagementPage : Page
         }
         
         System.Diagnostics.Debug.WriteLine($"[预览] Draw 完成, 绘制了 {index} 个纹理");
+    }
+    
+    #endregion
+    
+    #region 地图管理相关事件
+    
+    /// <summary>
+    /// 地图列表项点击事件
+    /// </summary>
+    private void MapListView_ItemClick(object sender, ItemClickEventArgs e)
+    {
+        if (e.ClickedItem is MapInfo map)
+        {
+            ViewModel.ShowMapDetailCommand.Execute(map);
+        }
     }
     
     #endregion

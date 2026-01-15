@@ -381,6 +381,51 @@ public partial class ShaderInfo : ObservableObject
         private string _icon;
         
         /// <summary>
+        /// 地图大小（格式化字符串，如 "125 MB"）
+        /// </summary>
+        public string Size { get; set; }
+        
+        /// <summary>
+        /// 地图大小（字节）
+        /// </summary>
+        public long SizeInBytes { get; set; }
+        
+        /// <summary>
+        /// 创建时间
+        /// </summary>
+        public DateTime CreationTime { get; set; }
+        
+        /// <summary>
+        /// 格式化的创建时间
+        /// </summary>
+        public string FormattedCreationTime => CreationTime.ToString("yyyy-MM-dd HH:mm:ss");
+        
+        /// <summary>
+        /// 最后修改时间（用作最后游玩时间）
+        /// </summary>
+        public DateTime LastPlayedTime { get; set; }
+        
+        /// <summary>
+        /// 格式化的最后游玩时间
+        /// </summary>
+        public string FormattedLastPlayedTime => LastPlayedTime.ToString("yyyy-MM-dd HH:mm:ss");
+        
+        /// <summary>
+        /// 游戏模式（暂时默认值，未来可通过NBT读取）
+        /// </summary>
+        public string GameMode { get; set; } = "未知";
+        
+        /// <summary>
+        /// 难度（暂时默认值，未来可通过NBT读取）
+        /// </summary>
+        public string Difficulty { get; set; } = "未知";
+        
+        /// <summary>
+        /// 种子（暂时默认值，未来可通过NBT读取）
+        /// </summary>
+        public string Seed { get; set; } = "未知";
+        
+        /// <summary>
         /// 构造函数
         /// </summary>
         /// <param name="filePath">文件路径</param>
@@ -398,6 +443,65 @@ public partial class ShaderInfo : ObservableObject
                 displayName = displayName.Substring(0, displayName.Length - ".disabled".Length);
             }
             Name = displayName;
+            
+            // 获取文件夹信息
+            try
+            {
+                var dirInfo = new DirectoryInfo(filePath);
+                if (dirInfo.Exists)
+                {
+                    // 计算文件夹大小
+                    SizeInBytes = CalculateDirectorySize(dirInfo);
+                    Size = FormatFileSize(SizeInBytes);
+                    
+                    // 获取创建时间和最后修改时间
+                    CreationTime = dirInfo.CreationTime;
+                    LastPlayedTime = dirInfo.LastWriteTime;
+                }
+            }
+            catch
+            {
+                Size = "未知";
+                SizeInBytes = 0;
+                CreationTime = DateTime.MinValue;
+                LastPlayedTime = DateTime.MinValue;
+            }
+        }
+        
+        /// <summary>
+        /// 计算文件夹大小
+        /// </summary>
+        private static long CalculateDirectorySize(DirectoryInfo directory)
+        {
+            long size = 0;
+            try
+            {
+                // 计算所有文件大小
+                foreach (var file in directory.GetFiles("*", SearchOption.AllDirectories))
+                {
+                    size += file.Length;
+                }
+            }
+            catch
+            {
+                // 忽略权限错误
+            }
+            return size;
+        }
+        
+        /// <summary>
+        /// 格式化文件大小
+        /// </summary>
+        private static string FormatFileSize(long bytes)
+        {
+            if (bytes < 1024)
+                return $"{bytes} B";
+            else if (bytes < 1024 * 1024)
+                return $"{bytes / 1024.0:F1} KB";
+            else if (bytes < 1024 * 1024 * 1024)
+                return $"{bytes / (1024.0 * 1024.0):F1} MB";
+            else
+                return $"{bytes / (1024.0 * 1024.0 * 1024.0):F2} GB";
         }
     }
     
@@ -821,6 +925,28 @@ public partial class VersionManagementViewModel : ObservableRecipient, INavigati
     {
         IsResultDialogVisible = false;
     }
+    
+    #region 地图详情对话框相关属性
+    
+    /// <summary>
+    /// 是否显示地图详情对话框
+    /// </summary>
+    [ObservableProperty]
+    private bool _isMapDetailDialogOpen = false;
+    
+    /// <summary>
+    /// 当前选中的地图（用于详情对话框）
+    /// </summary>
+    [ObservableProperty]
+    private MapInfo? _selectedMapForDetail;
+    
+    /// <summary>
+    /// 地图重命名输入框的值
+    /// </summary>
+    [ObservableProperty]
+    private string _mapRenameInput = string.Empty;
+    
+    #endregion
     
     /// <summary>
     /// 是否自动分配内存
@@ -4642,6 +4768,168 @@ public partial class VersionManagementViewModel : ObservableRecipient, INavigati
         {
             StatusMessage = $"删除地图失败：{ex.Message}";
         }
+    }
+    
+    /// <summary>
+    /// 显示地图详情命令
+    /// </summary>
+    [RelayCommand]
+    private void ShowMapDetail(MapInfo map)
+    {
+        if (map == null)
+        {
+            return;
+        }
+        
+        SelectedMapForDetail = map;
+        MapRenameInput = map.Name;
+        IsMapDetailDialogOpen = true;
+    }
+    
+    /// <summary>
+    /// 打开地图文件夹命令（从详情对话框调用）
+    /// </summary>
+    [RelayCommand]
+    private async Task OpenMapFolderAsync()
+    {
+        if (SelectedMapForDetail == null)
+        {
+            return;
+        }
+        
+        try
+        {
+            await Launcher.LaunchFolderPathAsync(SelectedMapForDetail.FilePath);
+        }
+        catch (Exception ex)
+        {
+            StatusMessage = $"打开文件夹失败：{ex.Message}";
+        }
+    }
+    
+    /// <summary>
+    /// 重命名地图命令
+    /// </summary>
+    [RelayCommand]
+    private async Task RenameMapAsync()
+    {
+        if (SelectedMapForDetail == null || string.IsNullOrWhiteSpace(MapRenameInput))
+        {
+            return;
+        }
+        
+        try
+        {
+            var oldPath = SelectedMapForDetail.FilePath;
+            var parentPath = Path.GetDirectoryName(oldPath);
+            var newPath = Path.Combine(parentPath!, MapRenameInput);
+            
+            // 检查新名称是否已存在
+            if (Directory.Exists(newPath) && !string.Equals(oldPath, newPath, StringComparison.OrdinalIgnoreCase))
+            {
+                var dialog = new ContentDialog
+                {
+                    Title = "重命名失败",
+                    Content = "该名称已存在，请使用其他名称。",
+                    CloseButtonText = "确定",
+                    XamlRoot = App.MainWindow.Content.XamlRoot
+                };
+                await dialog.ShowAsync();
+                return;
+            }
+            
+            // 重命名文件夹
+            if (!string.Equals(oldPath, newPath, StringComparison.OrdinalIgnoreCase))
+            {
+                Directory.Move(oldPath, newPath);
+                
+                // 更新地图信息
+                SelectedMapForDetail.FilePath = newPath;
+                SelectedMapForDetail.FileName = Path.GetFileName(newPath);
+                SelectedMapForDetail.Name = MapRenameInput;
+                
+                StatusMessage = $"已重命名地图: {MapRenameInput}";
+                
+                // 关闭对话框
+                IsMapDetailDialogOpen = false;
+                
+                // 刷新地图列表
+                await LoadMapsAsync();
+            }
+        }
+        catch (Exception ex)
+        {
+            StatusMessage = $"重命名地图失败：{ex.Message}";
+        }
+    }
+    
+    /// <summary>
+    /// 导出地图为ZIP命令
+    /// </summary>
+    [RelayCommand]
+    private async Task ExportMapAsync()
+    {
+        if (SelectedMapForDetail == null)
+        {
+            return;
+        }
+        
+        try
+        {
+            // 创建文件保存对话框
+            var savePicker = new Windows.Storage.Pickers.FileSavePicker();
+            savePicker.SuggestedStartLocation = Windows.Storage.Pickers.PickerLocationId.DocumentsLibrary;
+            savePicker.FileTypeChoices.Add("ZIP 压缩文件", new List<string>() { ".zip" });
+            savePicker.SuggestedFileName = $"{SelectedMapForDetail.Name}";
+            
+            // 获取当前窗口句柄
+            var window = App.MainWindow;
+            var hwnd = WinRT.Interop.WindowNative.GetWindowHandle(window);
+            WinRT.Interop.InitializeWithWindow.Initialize(savePicker, hwnd);
+            
+            var file = await savePicker.PickSaveFileAsync();
+            if (file != null)
+            {
+                // 显示进度提示
+                StatusMessage = $"正在导出地图: {SelectedMapForDetail.Name}...";
+                
+                // 在后台线程执行压缩操作
+                await Task.Run(() =>
+                {
+                    ZipFile.CreateFromDirectory(SelectedMapForDetail.FilePath, file.Path, CompressionLevel.Optimal, false);
+                });
+                
+                StatusMessage = $"地图已导出到: {file.Path}";
+                
+                // 关闭对话框
+                IsMapDetailDialogOpen = false;
+            }
+        }
+        catch (Exception ex)
+        {
+            StatusMessage = $"导出地图失败：{ex.Message}";
+        }
+    }
+    
+    /// <summary>
+    /// 从详情对话框删除地图命令
+    /// </summary>
+    [RelayCommand]
+    private async Task DeleteMapFromDetailAsync()
+    {
+        if (SelectedMapForDetail == null)
+        {
+            return;
+        }
+        
+        // 关闭详情对话框
+        IsMapDetailDialogOpen = false;
+        
+        // 等待对话框完全关闭
+        await Task.Delay(200);
+        
+        // 调用删除命令
+        await DeleteMapAsync(SelectedMapForDetail);
     }
 
     #endregion
