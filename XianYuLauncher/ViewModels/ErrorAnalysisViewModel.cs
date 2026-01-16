@@ -76,7 +76,7 @@ namespace XianYuLauncher.ViewModels
             }
         }
 
-        // AI分析相关属性
+        // 崩溃分析相关属性
         private string _aiAnalysisResult = string.Empty;
         public string AiAnalysisResult
         {
@@ -204,15 +204,15 @@ namespace XianYuLauncher.ViewModels
         private const int LogUpdateIntervalMs = 100; // 日志更新间隔，单位毫秒
         private bool _isUpdateScheduled = false;
         
-        // 用于存储当前AI分析的取消令牌
+        // 用于存储当前崩溃分析的取消令牌
         private System.Threading.CancellationTokenSource _aiAnalysisCts = null;
 
         // 设置日志数据
     public void SetLogData(string launchCommand, List<string> gameOutput, List<string> gameError)
     {
-        System.Diagnostics.Debug.WriteLine($"AI分析: 设置日志数据，输出日志行数: {gameOutput.Count}，错误日志行数: {gameError.Count}");
+        System.Diagnostics.Debug.WriteLine($"崩溃分析: 设置日志数据，输出日志行数: {gameOutput.Count}，错误日志行数: {gameError.Count}");
         
-        // 重置AI分析结果
+        // 重置崩溃分析结果
         IsAiAnalyzing = false;
         IsAiAnalysisAvailable = false;
         
@@ -256,14 +256,14 @@ namespace XianYuLauncher.ViewModels
     /// <param name="isCrashed">是否崩溃</param>
     public void SetGameCrashStatus(bool isCrashed)
     {
-        System.Diagnostics.Debug.WriteLine($"AI分析: 设置游戏崩溃状态: {isCrashed}");
+        System.Diagnostics.Debug.WriteLine($"崩溃分析: 设置游戏崩溃状态: {isCrashed}");
         _isGameCrashed = isCrashed;
         IsAiAnalysisAvailable = isCrashed;
         
-        // 如果游戏崩溃，自动触发AI分析
+        // 如果游戏崩溃，自动触发崩溃分析
         if (isCrashed)
         {
-            System.Diagnostics.Debug.WriteLine("AI分析: 游戏崩溃，自动触发AI分析");
+            System.Diagnostics.Debug.WriteLine("崩溃分析: 游戏崩溃，自动触发崩溃分析");
             Task.Run(async () => await AnalyzeWithAiAsync());
         }
         else
@@ -385,7 +385,7 @@ namespace XianYuLauncher.ViewModels
     {
         System.Diagnostics.Debug.WriteLine("ErrorAnalysisViewModel: 仅清空日志数据，保留启动命令");
         
-        // 重置AI分析结果
+        // 重置崩溃分析结果
         IsAiAnalyzing = false;
         IsAiAnalysisAvailable = false;
         AiAnalysisResult = GetLocalizedString("ErrorAnalysis_NoErrorInfo.Text");
@@ -818,7 +818,7 @@ namespace XianYuLauncher.ViewModels
             LogLines.Clear();
             LogLines.Add("日志已清空");
             
-            // 同时重置AI分析结果为默认文字
+            // 同时重置崩溃分析结果为默认文字
             AiAnalysisResult = GetLocalizedString("ErrorAnalysis_NoErrorInfo.Text");
             IsAiAnalysisAvailable = false;
         }

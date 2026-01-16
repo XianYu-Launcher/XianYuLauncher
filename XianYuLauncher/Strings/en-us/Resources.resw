@@ -1343,13 +1343,13 @@ Continue downloading?</value>
     <value>Real-time Log Details</value>
   </data>
   <data name="ErrorAnalysis_AnalysisTitle.Text" xml:space="preserve">
-    <value>AI Error Analysis</value>
+    <value>Crash Analysis</value>
   </data>
   <data name="ErrorAnalysis_NoErrorInfo.Text" xml:space="preserve">
     <value>No analysis content because Minecraft hasn't crashed yet...</value>
   </data>
   <data name="ErrorAnalysis_Analyzing.Text" xml:space="preserve">
-    <value>AI is analyzing the crash reason...</value>
+    <value>Analyzing the crash reason...</value>
   </data>
   <data name="联机Page_DownloadingTerracottaTitle" xml:space="preserve">
     <value>Downloading Terracotta Plugin</value>
@@ -1358,16 +1358,16 @@ Continue downloading?</value>
     <value>Downloading and installing Terracotta plugin, please wait...</value>
   </data>
   <data name="ErrorAnalysis_AnalysisComplete.Text" xml:space="preserve">
-    <value>AI analysis completed.</value>
+    <value>Analysis completed.</value>
   </data>
   <data name="ErrorAnalysis_AnalysisCanceled.Text" xml:space="preserve">
-    <value>AI analysis canceled.</value>
+    <value>Analysis canceled.</value>
   </data>
   <data name="ErrorAnalysis_RequestFailed.Text" xml:space="preserve">
-    <value>AI analysis request failed: {0}</value>
+    <value>Analysis request failed: {0}</value>
   </data>
   <data name="ErrorAnalysis_AnalysisFailed.Text" xml:space="preserve">
-    <value>AI analysis failed: {0}</value>
+    <value>Analysis failed: {0}</value>
   </data>
   <data name="VersionManagerPage_SelectAllText" xml:space="preserve">
     <value>Select All</value>
