@@ -156,15 +156,43 @@ public partial class MultiplayerViewModel : ObservableRecipient, INavigationAwar
             // 检查陶瓦插件是否成功获取
             if (!string.IsNullOrEmpty(terracottaPath) && File.Exists(terracottaPath))
             {
-                // 使用系统临时目录
-                string tempDir = Path.GetTempPath();
+                // 获取真实的物理路径（非虚拟化路径）
+                string terracottaDir = Path.GetDirectoryName(terracottaPath);
+                
+                // 在MSIX环境下，需要转换为真实物理路径
+                string realTerracottaDir = terracottaDir;
+                string realTempDir;
+                
+                if (!terracottaDir.Contains("Packages"))
+                {
+                    // 这是虚拟化路径，需要转换为真实路径
+                    string packagePath = Windows.Storage.ApplicationData.Current.LocalFolder.Path;
+                    // packagePath 类似: C:\Users\...\Packages\...\LocalState
+                    string packagesRoot = packagePath.Substring(0, packagePath.LastIndexOf("LocalState"));
+                    realTerracottaDir = Path.Combine(packagesRoot, "LocalCache", "Local", "XianYuLauncher", "terracotta");
+                    realTempDir = Path.Combine(packagesRoot, "LocalCache", "Local", "XianYuLauncher", "temp");
+                }
+                else
+                {
+                    // 已经是真实路径
+                    realTempDir = Path.Combine(Path.GetDirectoryName(realTerracottaDir), "temp");
+                }
+                
+                // 确保目录存在
+                Directory.CreateDirectory(realTempDir);
+                
+                System.Diagnostics.Debug.WriteLine($"[Multiplayer] 虚拟Terracotta目录: {terracottaDir}");
+                System.Diagnostics.Debug.WriteLine($"[Multiplayer] 真实Terracotta目录: {realTerracottaDir}");
+                System.Diagnostics.Debug.WriteLine($"[Multiplayer] 真实临时文件目录: {realTempDir}");
                 
                 // 生成时间戳
                 string timestamp = DateTime.Now.ToString("yyyyMMddHHmmssfff");
                 
-                // 生成文件名，Port使用纯字母
+                // 生成文件名
                 string tempFileName = $"terracotta-{timestamp}-Port.json";
-                string tempFilePath = Path.Combine(tempDir, tempFileName);
+                string tempFilePath = Path.Combine(realTempDir, tempFileName);
+                
+                System.Diagnostics.Debug.WriteLine($"[Multiplayer] 临时文件完整路径: {tempFilePath}");
                 
                 // 创建空的json文件
                 File.WriteAllText(tempFilePath, "{}");
@@ -173,34 +201,162 @@ public partial class MultiplayerViewModel : ObservableRecipient, INavigationAwar
                 _tempFilePath = tempFilePath;
                 
                 // 启动联机服务，添加--hmcl参数
+                // 使用真实物理路径启动
+                string realExePath = Path.Combine(realTerracottaDir, Path.GetFileName(terracottaPath));
+                
                 var processStartInfo = new ProcessStartInfo
                 {
-                    FileName = terracottaPath,
-                    Arguments = $"--hmcl \"{tempFilePath}\"",
+                    FileName = "cmd.exe",
+                    Arguments = $"/c cd /d \"{realTerracottaDir}\" && \"{Path.GetFileName(terracottaPath)}\" --hmcl \"{tempFilePath}\"",
                     UseShellExecute = false,
-                    RedirectStandardInput = true
+                    CreateNoWindow = true,
+                    RedirectStandardOutput = true,
+                    RedirectStandardError = true,
+                    WorkingDirectory = realTerracottaDir
                 };
+                
+                System.Diagnostics.Debug.WriteLine($"[Multiplayer] 准备启动 Terracotta (通过CMD)");
+                System.Diagnostics.Debug.WriteLine($"[Multiplayer] 真实可执行文件: {realExePath}");
+                System.Diagnostics.Debug.WriteLine($"[Multiplayer] 真实工作目录: {realTerracottaDir}");
+                System.Diagnostics.Debug.WriteLine($"[Multiplayer] CMD命令: {processStartInfo.Arguments}");
+                System.Diagnostics.Debug.WriteLine($"[Multiplayer] 真实临时文件路径: {tempFilePath}");
                 
                 // 启动进程并保存引用
                 _terracottaProcess = Process.Start(processStartInfo);
                 
-                // 等待短暂时间，让terracotta进程有时间写入端口信息
-                await Task.Delay(1000);
-                
-                // 读取临时文件，获取端口号
-                if (File.Exists(tempFilePath))
+                if (_terracottaProcess == null)
                 {
-                    string jsonContent = File.ReadAllText(tempFilePath);
-                    // 解析json，获取port字段
-                    using (JsonDocument doc = JsonDocument.Parse(jsonContent))
+                    System.Diagnostics.Debug.WriteLine($"[Multiplayer] 错误：Process.Start 返回 null");
+                    isSuccess = false;
+                    errorMessage = "无法启动 Terracotta 进程";
+                    progressDialog.Hide();
+                    goto ShowResult;
+                }
+                
+                // 读取输出
+                _terracottaProcess.OutputDataReceived += (sender, e) =>
+                {
+                    if (!string.IsNullOrEmpty(e.Data))
                     {
-                        JsonElement root = doc.RootElement;
-                        if (root.TryGetProperty("port", out JsonElement portElement))
+                        System.Diagnostics.Debug.WriteLine($"[Terracotta CMD Output] {e.Data}");
+                    }
+                };
+                _terracottaProcess.ErrorDataReceived += (sender, e) =>
+                {
+                    if (!string.IsNullOrEmpty(e.Data))
+                    {
+                        System.Diagnostics.Debug.WriteLine($"[Terracotta CMD Error] {e.Data}");
+                    }
+                };
+                _terracottaProcess.BeginOutputReadLine();
+                _terracottaProcess.BeginErrorReadLine();
+                
+                System.Diagnostics.Debug.WriteLine($"[Multiplayer] CMD 进程已启动，PID: {_terracottaProcess?.Id}");
+                
+                // 注意：_terracottaProcess 是 CMD 进程，不是 Terracotta 进程
+                // CMD 会启动 Terracotta 后立即退出，这是正常的
+                // 我们只需要等待文件被写入即可
+                
+                // 等待并多次尝试读取端口信息
+                int maxRetries = 20; // 增加到20次
+                for (int i = 0; i < maxRetries; i++)
+                {
+                    await Task.Delay(500); // 每次等待500ms
+                    
+                    // 尝试读取临时文件
+                    if (File.Exists(tempFilePath))
+                    {
+                        try
                         {
-                            port = portElement.ToString();
-                            _terracottaPort = port; // 保存端口号
+                            string jsonContent = File.ReadAllText(tempFilePath);
+                            System.Diagnostics.Debug.WriteLine($"[Multiplayer] 尝试 {i + 1}/{maxRetries}，文件内容: {jsonContent}");
+                            
+                            // 检查文件是否为空或只有空对象
+                            if (string.IsNullOrWhiteSpace(jsonContent) || jsonContent.Trim() == "{}")
+                            {
+                                System.Diagnostics.Debug.WriteLine($"[Multiplayer] 文件内容为空，继续等待...");
+                                
+                                // 在第 5 次尝试时，检查进程是否真的在运行
+                                if (i == 4 && _terracottaProcess != null)
+                                {
+                                    System.Diagnostics.Debug.WriteLine($"[Multiplayer] 进程状态检查：");
+                                    System.Diagnostics.Debug.WriteLine($"  - HasExited: {_terracottaProcess.HasExited}");
+                                    System.Diagnostics.Debug.WriteLine($"  - Responding: {_terracottaProcess.Responding}");
+                                    try
+                                    {
+                                        System.Diagnostics.Debug.WriteLine($"  - WorkingSet64: {_terracottaProcess.WorkingSet64} bytes");
+                                        System.Diagnostics.Debug.WriteLine($"  - Threads: {_terracottaProcess.Threads.Count}");
+                                    }
+                                    catch (Exception ex)
+                                    {
+                                        System.Diagnostics.Debug.WriteLine($"  - 无法获取进程详细信息: {ex.Message}");
+                                    }
+                                }
+                                
+                                continue;
+                            }
+                            
+                            // 解析json，获取port字段
+                            using (JsonDocument doc = JsonDocument.Parse(jsonContent))
+                            {
+                                JsonElement root = doc.RootElement;
+                                if (root.TryGetProperty("port", out JsonElement portElement))
+                                {
+                                    port = portElement.ToString();
+                                    _terracottaPort = port; // 保存端口号
+                                    System.Diagnostics.Debug.WriteLine($"[Multiplayer] 成功获取端口号: {port}");
+                                    
+                                    // 找到真正的 Terracotta 进程并保存引用
+                                    try
+                                    {
+                                        var terracottaProcesses = Process.GetProcessesByName("terracotta-0.4.1-windows-x86_64");
+                                        if (terracottaProcesses.Length > 0)
+                                        {
+                                            _terracottaProcess = terracottaProcesses[0];
+                                            System.Diagnostics.Debug.WriteLine($"[Multiplayer] 找到 Terracotta 进程，PID: {_terracottaProcess.Id}");
+                                        }
+                                    }
+                                    catch (Exception ex)
+                                    {
+                                        System.Diagnostics.Debug.WriteLine($"[Multiplayer] 查找 Terracotta 进程失败: {ex.Message}");
+                                    }
+                                    
+                                    break; // 成功获取端口，退出循环
+                                }
+                                else
+                                {
+                                    System.Diagnostics.Debug.WriteLine($"[Multiplayer] JSON 中没有 port 字段");
+                                }
+                            }
+                        }
+                        catch (Exception ex)
+                        {
+                            System.Diagnostics.Debug.WriteLine($"[Multiplayer] 读取/解析文件失败: {ex.Message}");
                         }
                     }
+                    else
+                    {
+                        System.Diagnostics.Debug.WriteLine($"[Multiplayer] 尝试 {i + 1}/{maxRetries}，临时文件不存在");
+                    }
+                }
+                
+                // 检查是否成功获取端口
+                if (string.IsNullOrEmpty(port))
+                {
+                    System.Diagnostics.Debug.WriteLine($"[Multiplayer] 超时：未能获取端口号");
+                    isSuccess = false;
+                    errorMessage = "无法获取 Terracotta 端口信息，请检查：\n1. 防火墙是否阻止了程序\n2. 杀毒软件是否拦截了程序\n3. 是否有足够的磁盘空间";
+                    
+                    // 终止进程
+                    if (_terracottaProcess != null && !_terracottaProcess.HasExited)
+                    {
+                        _terracottaProcess.Kill();
+                        _terracottaProcess.Dispose();
+                        _terracottaProcess = null;
+                    }
+                    
+                    progressDialog.Hide();
+                    goto ShowResult;
                 }
             }
             else
@@ -217,6 +373,7 @@ public partial class MultiplayerViewModel : ObservableRecipient, INavigationAwar
             progressDialog.Hide();
         }
 
+        ShowResult: // 标签，用于 goto 跳转
         // 根据启动结果显示不同的弹窗
         if (isSuccess)
         {
@@ -572,15 +729,29 @@ public partial class MultiplayerViewModel : ObservableRecipient, INavigationAwar
                 // 检查陶瓦插件是否成功获取
                 if (!string.IsNullOrEmpty(terracottaPath) && File.Exists(terracottaPath))
                 {
-                    // 使用系统临时目录
-                    string tempDir = Path.GetTempPath();
+                    // 获取真实的物理路径（与HostGame相同的逻辑）
+                    string terracottaDir = Path.GetDirectoryName(terracottaPath);
+                    string realTerracottaDir = terracottaDir;
+                    string realTempDir;
+                    
+                    if (!terracottaDir.Contains("Packages"))
+                    {
+                        string packagePath = Windows.Storage.ApplicationData.Current.LocalFolder.Path;
+                        string packagesRoot = packagePath.Substring(0, packagePath.LastIndexOf("LocalState"));
+                        realTerracottaDir = Path.Combine(packagesRoot, "LocalCache", "Local", "XianYuLauncher", "terracotta");
+                        realTempDir = Path.Combine(packagesRoot, "LocalCache", "Local", "XianYuLauncher", "temp");
+                    }
+                    else
+                    {
+                        realTempDir = Path.Combine(Path.GetDirectoryName(realTerracottaDir), "temp");
+                    }
+                    
+                    Directory.CreateDirectory(realTempDir);
                     
                     // 生成时间戳
                     string timestamp = DateTime.Now.ToString("yyyyMMddHHmmssfff");
-                    
-                    // 生成文件名，Port使用纯字母
                     string tempFileName = $"terracotta-{timestamp}-Port.json";
-                    string tempFilePath = Path.Combine(tempDir, tempFileName);
+                    string tempFilePath = Path.Combine(realTempDir, tempFileName);
                     
                     // 创建空的json文件
                     File.WriteAllText(tempFilePath, "{}");
@@ -588,19 +759,22 @@ public partial class MultiplayerViewModel : ObservableRecipient, INavigationAwar
                     // 保存临时文件路径，用于进程终止后清理
                     _tempFilePath = tempFilePath;
                     
-                    // 启动联机服务，添加--hmcl参数
+                    // 启动联机服务，添加--hmcl参数（使用CMD启动，与HostGame相同）
                     var processStartInfo = new ProcessStartInfo
                     {
-                        FileName = terracottaPath,
-                        Arguments = $"--hmcl \"{tempFilePath}\" --client --id \"{roomId}\"",
+                        FileName = "cmd.exe",
+                        Arguments = $"/c cd /d \"{realTerracottaDir}\" && \"{Path.GetFileName(terracottaPath)}\" --hmcl \"{tempFilePath}\" --client --id \"{roomId}\"",
                         UseShellExecute = false,
-                        RedirectStandardInput = true
+                        CreateNoWindow = true,
+                        RedirectStandardOutput = true,
+                        RedirectStandardError = true,
+                        WorkingDirectory = realTerracottaDir
                     };
                     
                     // 启动进程并保存引用
                     _terracottaProcess = Process.Start(processStartInfo);
                     
-                    // 等待短暂时间，让terracotta进程有时间写入端口信息
+                    // 等待并读取端口信息
                     await Task.Delay(1000);
                     
                     // 读取临时文件，获取端口号
