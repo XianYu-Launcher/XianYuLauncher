@@ -146,7 +146,7 @@ namespace XianYuLauncher.Views
                         this.DispatcherQueue.TryEnqueue(() =>
                         {
                             // 使用ChangeView方法实现自动滚动到底部
-                            AiScrollViewer.ChangeView(null, double.MaxValue, null);
+                            KnowledgeBaseScrollViewer.ChangeView(null, double.MaxValue, null);
                             _isScrollPending = false;
                         });
                     });

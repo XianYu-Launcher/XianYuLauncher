@@ -333,7 +333,11 @@ public class GameLaunchService : IGameLaunchService
                         progressCallback?.Invoke(progress);
                         statusCallback?.Invoke($"正在准备游戏文件... {progress:F0}%");
                     },
-                    null);
+                    currentHash =>
+                    {
+                        // 传递当前下载的资源文件 hash 信息
+                        statusCallback?.Invoke($"正在准备游戏文件... {currentHash}");
+                    });
                 _logger.LogInformation("版本依赖检查完成");
             }
             catch (OperationCanceledException)

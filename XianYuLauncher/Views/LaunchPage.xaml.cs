@@ -71,6 +71,12 @@ public sealed partial class LaunchPage : Page
         
         // InfoBar状态会自动根据 IsGameRunning 恢复，无需手动设置
         
+        // 刷新版本列表（异步执行，不阻塞UI）
+        _ = ViewModel.LoadInstalledVersionsCommand.ExecuteAsync(null);
+        
+        // 刷新角色列表
+        ViewModel.LoadProfiles();
+        
         // 每次导航到该页面时都加载头像
         // 对于正版玩家，会先显示缓存头像，然后后台静默刷新
         LoadAvatar();

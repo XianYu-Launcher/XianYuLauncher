@@ -942,7 +942,7 @@ public partial class LaunchViewModel : ObservableRecipient
     /// <summary>
     /// 加载角色列表
     /// </summary>
-    private void LoadProfiles()
+    public void LoadProfiles()
     {
         try
         {
@@ -1305,6 +1305,11 @@ public partial class LaunchViewModel : ObservableRecipient
             
             // 调用 GameLaunchService 启动游戏
             _logger.LogInformation("调用 GameLaunchService.LaunchGameAsync...");
+            
+            // 用于存储当前下载的 hash 信息
+            string currentDownloadHash = string.Empty;
+            double currentProgress = 0;
+            
             var result = await _gameLaunchService.LaunchGameAsync(
                 SelectedVersion,
                 SelectedProfile,
@@ -1316,14 +1321,48 @@ public partial class LaunchViewModel : ObservableRecipient
                         throw new OperationCanceledException("用户取消了下载");
                     }
                     
+                    currentProgress = progress;
                     DownloadProgress = progress;
                     LaunchStatus = string.Format("{0} {1:F0}%", "LaunchPage_PreparingGameFilesProgressText".GetLocalized(), progress);
                     CurrentDownloadItem = string.Format("{0} {1:F0}%", "LaunchPage_PreparingGameFilesProgressText".GetLocalized(), progress);
-                    LaunchSuccessMessage = string.Format("{0} {1:F0}%", $"{SelectedVersion} {"LaunchPage_PreparingGameFilesProgressText".GetLocalized()}", progress);
+                    
+                    // 更新 InfoBar 消息：显示百分比和当前下载的 hash
+                    if (!string.IsNullOrEmpty(currentDownloadHash))
+                    {
+                        LaunchSuccessMessage = string.Format("{0} {1} {2:F0}% 正在下载:\n{3}", 
+                            SelectedVersion, 
+                            "LaunchPage_PreparingGameFilesProgressText".GetLocalized(), 
+                            progress,
+                            currentDownloadHash);
+                    }
+                    else
+                    {
+                        LaunchSuccessMessage = string.Format("{0} {1} {2:F0}%", 
+                            SelectedVersion, 
+                            "LaunchPage_PreparingGameFilesProgressText".GetLocalized(), 
+                            progress);
+                    }
                 },
                 status =>
                 {
-                    LaunchStatus = status;
+                    // 判断是否是 hash 信息（包含长字符串且不包含百分号）
+                    if (status.Contains("正在准备游戏文件...") && !status.Contains("%"))
+                    {
+                        // 提取 hash 信息（去掉前缀）
+                        currentDownloadHash = status.Replace("正在准备游戏文件... ", "").Trim();
+                        
+                        // 更新 InfoBar 消息：显示百分比和当前下载的 hash
+                        LaunchSuccessMessage = string.Format("{0} {1} {2:F0}% 正在下载:\n{3}", 
+                            SelectedVersion, 
+                            "LaunchPage_PreparingGameFilesProgressText".GetLocalized(), 
+                            currentProgress,
+                            currentDownloadHash);
+                    }
+                    else
+                    {
+                        // 这是普通状态信息，更新上方的状态文本
+                        LaunchStatus = status;
+                    }
                 },
                 _downloadCancellationTokenSource.Token);
             
