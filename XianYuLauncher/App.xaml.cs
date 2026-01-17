@@ -158,11 +158,27 @@ public partial class App : Application
             
             // Fabric Service
             services.AddHttpClient<FabricService>();
-            services.AddSingleton<FabricService>();
+            services.AddSingleton<FabricService>(sp =>
+            {
+                var httpClientFactory = sp.GetRequiredService<IHttpClientFactory>();
+                var httpClient = httpClientFactory.CreateClient(nameof(FabricService));
+                var downloadSourceFactory = sp.GetRequiredService<DownloadSourceFactory>();
+                var localSettingsService = sp.GetRequiredService<ILocalSettingsService>();
+                var fallbackDownloadManager = sp.GetRequiredService<FallbackDownloadManager>();
+                return new FabricService(httpClient, downloadSourceFactory, localSettingsService, fallbackDownloadManager);
+            });
             
             // Quilt Service
             services.AddHttpClient<QuiltService>();
-            services.AddSingleton<QuiltService>();
+            services.AddSingleton<QuiltService>(sp =>
+            {
+                var httpClientFactory = sp.GetRequiredService<IHttpClientFactory>();
+                var httpClient = httpClientFactory.CreateClient(nameof(QuiltService));
+                var downloadSourceFactory = sp.GetRequiredService<DownloadSourceFactory>();
+                var localSettingsService = sp.GetRequiredService<ILocalSettingsService>();
+                var fallbackDownloadManager = sp.GetRequiredService<FallbackDownloadManager>();
+                return new QuiltService(httpClient, downloadSourceFactory, localSettingsService, fallbackDownloadManager);
+            });
             
             // Modrinth Service
             services.AddHttpClient<ModrinthService>();
@@ -185,7 +201,8 @@ public partial class App : Application
                 var httpClientFactory = sp.GetRequiredService<IHttpClientFactory>();
                 var httpClient = httpClientFactory.CreateClient(nameof(CurseForgeService));
                 var downloadSourceFactory = sp.GetRequiredService<DownloadSourceFactory>();
-                return new CurseForgeService(httpClient, downloadSourceFactory);
+                var fallbackDownloadManager = sp.GetRequiredService<FallbackDownloadManager>();
+                return new CurseForgeService(httpClient, downloadSourceFactory, fallbackDownloadManager);
             });
             
             // CurseForge Cache Service
@@ -205,11 +222,27 @@ public partial class App : Application
             
             // NeoForge Service
             services.AddHttpClient<NeoForgeService>();
-            services.AddSingleton<NeoForgeService>();
+            services.AddSingleton<NeoForgeService>(sp =>
+            {
+                var httpClientFactory = sp.GetRequiredService<IHttpClientFactory>();
+                var httpClient = httpClientFactory.CreateClient(nameof(NeoForgeService));
+                var downloadSourceFactory = sp.GetRequiredService<DownloadSourceFactory>();
+                var localSettingsService = sp.GetRequiredService<ILocalSettingsService>();
+                var fallbackDownloadManager = sp.GetRequiredService<FallbackDownloadManager>();
+                return new NeoForgeService(httpClient, downloadSourceFactory, localSettingsService, fallbackDownloadManager);
+            });
             
             // Forge Service
             services.AddHttpClient<ForgeService>();
-            services.AddSingleton<ForgeService>();
+            services.AddSingleton<ForgeService>(sp =>
+            {
+                var httpClientFactory = sp.GetRequiredService<IHttpClientFactory>();
+                var httpClient = httpClientFactory.CreateClient(nameof(ForgeService));
+                var downloadSourceFactory = sp.GetRequiredService<DownloadSourceFactory>();
+                var localSettingsService = sp.GetRequiredService<ILocalSettingsService>();
+                var fallbackDownloadManager = sp.GetRequiredService<FallbackDownloadManager>();
+                return new ForgeService(httpClient, downloadSourceFactory, localSettingsService, fallbackDownloadManager);
+            });
             
             // Cleanroom Service
             services.AddHttpClient<CleanroomService>();

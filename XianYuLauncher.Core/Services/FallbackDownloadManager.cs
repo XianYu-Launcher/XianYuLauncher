@@ -226,6 +226,129 @@ public class FallbackDownloadManager
         return FallbackStringResult.Failed(string.Join("; ", errors), attemptedSources);
     }
 
+    /// <summary>
+    /// 发送 HTTP GET 请求，支持自动回退到备用源
+    /// </summary>
+    /// <param name="originalUrl">原始请求URL</param>
+    /// <param name="resourceType">资源类型（用于URL转换）</param>
+    /// <param name="configureRequest">配置请求的回调（可选，用于设置 Headers 等）</param>
+    /// <param name="cancellationToken">取消令牌</param>
+    /// <returns>HTTP 响应结果</returns>
+    public async Task<FallbackHttpResult> SendGetWithFallbackAsync(
+        string originalUrl,
+        string resourceType,
+        Action<HttpRequestMessage, IDownloadSource>? configureRequest = null,
+        CancellationToken cancellationToken = default)
+    {
+        var attemptedSources = new List<string>();
+        var errors = new List<string>();
+
+        var primarySource = _sourceFactory.GetDefaultSource();
+        var sourcesToTry = GetSourceOrder(primarySource.Key);
+
+        foreach (var sourceKey in sourcesToTry)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+
+            var source = _sourceFactory.GetSource(sourceKey);
+            attemptedSources.Add(sourceKey);
+
+            var transformedUrl = TransformUrl(originalUrl, source, resourceType);
+            _logger?.LogDebug("尝试源 {Source}: {Url}", sourceKey, transformedUrl);
+
+            try
+            {
+                using var request = new HttpRequestMessage(HttpMethod.Get, transformedUrl);
+                configureRequest?.Invoke(request, source);
+
+                var response = await _httpClient.SendAsync(request, cancellationToken);
+
+                // 成功或不应该回退的状态码
+                if (response.IsSuccessStatusCode || !ShouldFallbackOnStatusCode(response.StatusCode))
+                {
+                    return FallbackHttpResult.Succeeded(response, sourceKey, attemptedSources);
+                }
+
+                // 失败，记录错误并尝试下一个源
+                errors.Add($"[{sourceKey}] HTTP {(int)response.StatusCode}");
+                response.Dispose();
+
+                if (!AutoFallbackEnabled) break;
+            }
+            catch (Exception ex) when (ShouldFallbackOnException(ex))
+            {
+                errors.Add($"[{sourceKey}] {ex.Message}");
+                if (!AutoFallbackEnabled) break;
+            }
+            catch (Exception ex)
+            {
+                errors.Add($"[{sourceKey}] {ex.Message}");
+                break; // 不可回退的错误
+            }
+        }
+
+        return FallbackHttpResult.Failed(string.Join("; ", errors), attemptedSources);
+    }
+
+    /// <summary>
+    /// 发送 HTTP POST 请求，支持自动回退到备用源
+    /// </summary>
+    public async Task<FallbackHttpResult> SendPostWithFallbackAsync(
+        string originalUrl,
+        string resourceType,
+        Func<HttpContent> contentFactory,
+        Action<HttpRequestMessage, IDownloadSource>? configureRequest = null,
+        CancellationToken cancellationToken = default)
+    {
+        var attemptedSources = new List<string>();
+        var errors = new List<string>();
+
+        var primarySource = _sourceFactory.GetDefaultSource();
+        var sourcesToTry = GetSourceOrder(primarySource.Key);
+
+        foreach (var sourceKey in sourcesToTry)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+
+            var source = _sourceFactory.GetSource(sourceKey);
+            attemptedSources.Add(sourceKey);
+
+            var transformedUrl = TransformUrl(originalUrl, source, resourceType);
+            _logger?.LogDebug("POST 尝试源 {Source}: {Url}", sourceKey, transformedUrl);
+
+            try
+            {
+                using var request = new HttpRequestMessage(HttpMethod.Post, transformedUrl);
+                request.Content = contentFactory(); // 每次重新创建 content
+                configureRequest?.Invoke(request, source);
+
+                var response = await _httpClient.SendAsync(request, cancellationToken);
+
+                if (response.IsSuccessStatusCode || !ShouldFallbackOnStatusCode(response.StatusCode))
+                {
+                    return FallbackHttpResult.Succeeded(response, sourceKey, attemptedSources);
+                }
+
+                errors.Add($"[{sourceKey}] HTTP {(int)response.StatusCode}");
+                response.Dispose();
+
+                if (!AutoFallbackEnabled) break;
+            }
+            catch (Exception ex) when (ShouldFallbackOnException(ex))
+            {
+                errors.Add($"[{sourceKey}] {ex.Message}");
+                if (!AutoFallbackEnabled) break;
+            }
+            catch (Exception ex)
+            {
+                errors.Add($"[{sourceKey}] {ex.Message}");
+                break;
+            }
+        }
+
+        return FallbackHttpResult.Failed(string.Join("; ", errors), attemptedSources);
+    }
+
     #endregion
 
 
@@ -264,8 +387,74 @@ public class FallbackDownloadManager
             "library" => source.GetResourceUrl("library", originalUrl),
             "client_jar" => source.GetResourceUrl("client", originalUrl),
             "asset" => source.GetResourceUrl("asset", originalUrl),
+            "quilt_meta" => TransformQuiltMetaUrl(originalUrl, source),
+            "fabric_meta" => TransformFabricMetaUrl(originalUrl, source),
+            "forge_bmclapi" => TransformForgeBmclapiUrl(originalUrl, source),
+            "neoforge_bmclapi" => TransformNeoForgeBmclapiUrl(originalUrl, source),
             _ => originalUrl // 不支持的类型，使用原始URL
         };
+    }
+    
+    /// <summary>
+    /// 转换 Quilt Meta URL
+    /// </summary>
+    private string TransformQuiltMetaUrl(string originalUrl, IDownloadSource source)
+    {
+        // 从 URL 中提取 Minecraft 版本
+        // 格式: https://meta.quiltmc.org/v3/versions/loader/{minecraftVersion}
+        var uri = new Uri(originalUrl);
+        var segments = uri.AbsolutePath.Split('/');
+        if (segments.Length >= 5)
+        {
+            var minecraftVersion = segments[4];
+            return source.GetQuiltVersionsUrl(minecraftVersion);
+        }
+        return originalUrl;
+    }
+    
+    /// <summary>
+    /// 转换 Fabric Meta URL
+    /// </summary>
+    private string TransformFabricMetaUrl(string originalUrl, IDownloadSource source)
+    {
+        // 从 URL 中提取 Minecraft 版本
+        // 格式: https://meta.fabricmc.net/v2/versions/loader/{minecraftVersion}
+        var uri = new Uri(originalUrl);
+        var segments = uri.AbsolutePath.Split('/');
+        if (segments.Length >= 5)
+        {
+            var minecraftVersion = segments[4];
+            return source.GetFabricVersionsUrl(minecraftVersion);
+        }
+        return originalUrl;
+    }
+    
+    /// <summary>
+    /// 转换 Forge BMCLAPI URL
+    /// </summary>
+    private string TransformForgeBmclapiUrl(string originalUrl, IDownloadSource source)
+    {
+        // BMCLAPI Forge 版本列表 URL
+        if (source.Key == "bmclapi")
+        {
+            return "https://bmclapi2.bangbang93.com/forge/minecraft";
+        }
+        // 官方源没有统一的 Forge 版本列表 API，返回原始 URL
+        return originalUrl;
+    }
+    
+    /// <summary>
+    /// 转换 NeoForge BMCLAPI URL
+    /// </summary>
+    private string TransformNeoForgeBmclapiUrl(string originalUrl, IDownloadSource source)
+    {
+        // BMCLAPI NeoForge 版本列表 URL
+        if (source.Key == "bmclapi")
+        {
+            return "https://bmclapi2.bangbang93.com/neoforge/list";
+        }
+        // 官方源没有统一的 NeoForge 版本列表 API，返回原始 URL
+        return originalUrl;
     }
 
     /// <summary>
@@ -348,6 +537,21 @@ public class FallbackDownloadManager
             return true;
 
         // 其他异常 - 不回退
+        return false;
+    }
+
+    /// <summary>
+    /// 判断 HTTP 状态码是否应该触发回退
+    /// </summary>
+    private static bool ShouldFallbackOnStatusCode(HttpStatusCode statusCode)
+    {
+        // 404 Not Found - 镜像源可能没有同步
+        if (statusCode == HttpStatusCode.NotFound) return true;
+        
+        // 5xx 服务器错误 - 应该回退
+        if ((int)statusCode >= 500) return true;
+        
+        // 其他状态码不回退（如 400, 401, 403 等客户端错误）
         return false;
     }
 
@@ -470,6 +674,38 @@ public class FallbackStringResult
         ErrorMessage = errorMessage,
         AttemptedSources = attemptedSources
     };
+}
+
+/// <summary>
+/// 带回退信息的 HTTP 响应结果
+/// </summary>
+public class FallbackHttpResult : IDisposable
+{
+    public bool Success { get; init; }
+    public HttpResponseMessage? Response { get; init; }
+    public string? UsedSourceKey { get; init; }
+    public List<string> AttemptedSources { get; init; } = new();
+    public string? ErrorMessage { get; init; }
+
+    public static FallbackHttpResult Succeeded(HttpResponseMessage response, string usedSource, List<string> attemptedSources) => new()
+    {
+        Success = true,
+        Response = response,
+        UsedSourceKey = usedSource,
+        AttemptedSources = attemptedSources
+    };
+
+    public static FallbackHttpResult Failed(string errorMessage, List<string> attemptedSources) => new()
+    {
+        Success = false,
+        ErrorMessage = errorMessage,
+        AttemptedSources = attemptedSources
+    };
+
+    public void Dispose()
+    {
+        Response?.Dispose();
+    }
 }
 
 #endregion
