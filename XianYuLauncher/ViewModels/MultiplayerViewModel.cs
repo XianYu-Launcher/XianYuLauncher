@@ -77,8 +77,8 @@ public partial class MultiplayerViewModel : ObservableRecipient, INavigationAwar
             
             if (File.Exists(profilesFilePath))
             {
-                string json = File.ReadAllText(profilesFilePath);
-                var profiles = JsonConvert.DeserializeObject<List<MinecraftProfile>>(json) ?? new List<MinecraftProfile>();
+                // 🔒 使用安全方法读取（自动解密token）
+                var profiles = XianYuLauncher.Core.Helpers.TokenEncryption.LoadProfilesSecurely(profilesFilePath);
                 
                 // 查找活跃角色
                 var activeProfile = profiles.FirstOrDefault(p => p.IsActive) ?? profiles.FirstOrDefault();

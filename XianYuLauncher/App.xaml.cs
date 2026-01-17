@@ -278,6 +278,21 @@ public partial class App : Application
         base.OnLaunched(args);
         Log.Information("应用程序启动");
         
+        // 🔒 启动时自动检测并迁移明文token（异步，不阻塞启动）
+        _ = Task.Run(async () =>
+        {
+            try
+            {
+                var profileManager = App.GetService<IProfileManager>();
+                await profileManager.LoadProfilesAsync(); // 加载时会自动检测并迁移
+                Log.Information("Token安全检查完成");
+            }
+            catch (Exception ex)
+            {
+                Log.Warning($"Token安全检查失败: {ex.Message}");
+            }
+        });
+        
         // 发送启动统计（异步，不阻塞启动）
         _ = Task.Run(async () =>
         {

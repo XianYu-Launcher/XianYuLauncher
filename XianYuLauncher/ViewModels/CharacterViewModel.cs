@@ -22,6 +22,7 @@ namespace XianYuLauncher.ViewModels
     {
         private readonly MicrosoftAuthService _microsoftAuthService;
         private readonly IFileService _fileService;
+        private readonly IProfileManager _profileManager;
 
         /// <summary>
         /// 角色列表
@@ -91,10 +92,11 @@ namespace XianYuLauncher.ViewModels
         /// </summary>
         private string ProfilesFilePath => Path.Combine(_fileService.GetMinecraftDataPath(), "profiles.json");
 
-        public CharacterViewModel(MicrosoftAuthService microsoftAuthService, IFileService fileService)
+        public CharacterViewModel(MicrosoftAuthService microsoftAuthService, IFileService fileService, IProfileManager profileManager)
         {
             _microsoftAuthService = microsoftAuthService;
             _fileService = fileService;
+            _profileManager = profileManager;
             
             // 手动注册CollectionChanged事件
             Profiles.CollectionChanged += Profiles_CollectionChanged;
@@ -105,37 +107,35 @@ namespace XianYuLauncher.ViewModels
         }
 
         /// <summary>
+        /// <summary>
         /// 加载角色列表
         /// </summary>
-        private void LoadProfiles()
+        private async void LoadProfiles()
         {
             try
             {
-                if (File.Exists(ProfilesFilePath))
+                // 🔒 使用 ProfileManager 安全加载（自动解密token）
+                var profilesList = await _profileManager.LoadProfilesAsync();
+                
+                // 清空现有列表并添加所有角色
+                Profiles.Clear();
+                foreach (var profile in profilesList)
                 {
-                    string json = File.ReadAllText(ProfilesFilePath);
-                    var profilesList = JsonConvert.DeserializeObject<List<MinecraftProfile>>(json) ?? new List<MinecraftProfile>();
-                    
-                    // 清空现有列表并添加所有角色
-                    Profiles.Clear();
-                    foreach (var profile in profilesList)
+                    Profiles.Add(profile);
+                }
+                
+                // 设置活跃角色
+                if (Profiles.Count > 0)
+                {
+                    // 标记所有角色为非活跃
+                    foreach (var profile in Profiles)
                     {
-                        Profiles.Add(profile);
+                        profile.IsActive = false;
                     }
                     
-                    // 设置活跃角色
-                    if (Profiles.Count > 0)
-                    {
-                        // 标记所有角色为非活跃
-                        foreach (var profile in Profiles)
-                        {
-                            profile.IsActive = false;
-                        }
-                        
-                        // 设置第一个角色为活跃
-                        ActiveProfile = Profiles.First();
-                        ActiveProfile.IsActive = true;
-                    }
+                    // 设置第一个角色为活跃
+                    ActiveProfile = Profiles.First();
+                    ActiveProfile.IsActive = true;
                 }
             }
             catch (Exception ex)
@@ -151,16 +151,17 @@ namespace XianYuLauncher.ViewModels
         /// <summary>
         /// 保存角色列表
         /// </summary>
-        public void SaveProfiles()
+        public async void SaveProfiles()
         {
             try
             {
-                string json = JsonConvert.SerializeObject(Profiles, Formatting.Indented);
-                File.WriteAllText(ProfilesFilePath, json);
+                // 🔒 使用 ProfileManager 安全保存（自动加密token）
+                await _profileManager.SaveProfilesAsync(Profiles.ToList());
+                System.Diagnostics.Debug.WriteLine($"[Character] 角色列表已保存（token已加密），共 {Profiles.Count} 个角色");
             }
             catch (Exception ex)
             {
-                // 处理异常
+                System.Diagnostics.Debug.WriteLine($"[Character] 保存角色列表失败: {ex.Message}");
             }
         }
 

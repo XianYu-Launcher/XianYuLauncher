@@ -997,8 +997,8 @@ public partial class LaunchViewModel : ObservableRecipient
         {
             if (File.Exists(ProfilesFilePath))
             {
-                string json = File.ReadAllText(ProfilesFilePath);
-                var profilesList = JsonConvert.DeserializeObject<List<MinecraftProfile>>(json) ?? new List<MinecraftProfile>();
+                // 🔒 使用安全方法读取（自动解密token）
+                var profilesList = XianYuLauncher.Core.Helpers.TokenEncryption.LoadProfilesSecurely(ProfilesFilePath);
                 
                 // 清空现有列表并添加所有角色
                 Profiles.Clear();
@@ -1052,12 +1052,14 @@ public partial class LaunchViewModel : ObservableRecipient
     /// <summary>
     /// 保存角色列表
     /// </summary>
-    private void SaveProfiles()
+    private async void SaveProfiles()
     {
         try
         {
-            string json = JsonConvert.SerializeObject(Profiles, Formatting.Indented);
-            File.WriteAllText(ProfilesFilePath, json);
+            // 🔒 使用 ProfileManager 安全保存（自动加密token）
+            var profileManager = App.GetService<IProfileManager>();
+            await profileManager.SaveProfilesAsync(Profiles.ToList());
+            System.Diagnostics.Debug.WriteLine($"[Launch] 角色列表已保存（token已加密），共 {Profiles.Count} 个角色");
         }
         catch (Exception ex)
         {

@@ -1203,8 +1203,8 @@ public partial class VersionListViewModel : ObservableRecipient
             string profilesFilePath = Path.Combine(_fileService.GetMinecraftDataPath(), "profiles.json");
             if (File.Exists(profilesFilePath))
             {
-                string json = File.ReadAllText(profilesFilePath);
-                var profilesList = Newtonsoft.Json.JsonConvert.DeserializeObject<List<MinecraftProfile>>(json);
+                // 🔒 使用安全方法读取（自动解密token）
+                var profilesList = XianYuLauncher.Core.Helpers.TokenEncryption.LoadProfilesSecurely(profilesFilePath);
                 if (profilesList != null && profilesList.Count > 0)
                 {
                     // 返回活跃角色或第一个角色

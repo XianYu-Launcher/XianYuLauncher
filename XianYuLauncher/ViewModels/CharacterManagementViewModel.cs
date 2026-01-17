@@ -24,6 +24,7 @@ namespace XianYuLauncher.ViewModels
     public partial class CharacterManagementViewModel : ObservableRecipient, INavigationAware
     {
         private readonly IFileService _fileService;
+        private readonly IProfileManager _profileManager;
         private readonly HttpClient _httpClient;
 
         /// <summary>
@@ -232,9 +233,11 @@ namespace XianYuLauncher.ViewModels
         /// 构造函数
         /// </summary>
         /// <param name="fileService">文件服务</param>
-        public CharacterManagementViewModel(IFileService fileService)
+        /// <param name="profileManager">角色管理服务</param>
+        public CharacterManagementViewModel(IFileService fileService, IProfileManager profileManager)
         {
             _fileService = fileService;
+            _profileManager = profileManager;
             _httpClient = new HttpClient();
             _httpClient.BaseAddress = new Uri("https://api.minecraftservices.com/");
         }
@@ -294,23 +297,14 @@ namespace XianYuLauncher.ViewModels
         /// <summary>
         /// 保存角色列表到文件
         /// </summary>
-        private void SaveProfiles()
+        private async void SaveProfiles()
         {
             try
             {
-                // 1. 获取角色数据文件路径
-                var profilesFilePath = Path.Combine(_fileService.GetMinecraftDataPath(), "profiles.json");
+                // 🔒 使用 ProfileManager 安全保存（自动加密token）
+                var profiles = await _profileManager.LoadProfilesAsync();
                 
-                // 2. 读取所有角色
-                List<MinecraftProfile> profiles = new List<MinecraftProfile>();
-                if (_fileService.FileExists(profilesFilePath))
-                {
-                    string json = _fileService.ReadText(profilesFilePath);
-                    profiles = JsonSerializer.Deserialize<List<MinecraftProfile>>(json) ?? new List<MinecraftProfile>();
-                }
-                
-                // 3. 更新当前角色
-                // 使用原始UUID查找要更新的角色，而不是修改后的UUID
+                // 更新当前角色
                 int index = profiles.FindIndex(p => p.Id == _originalUUID);
                 if (index >= 0)
                 {
@@ -323,9 +317,10 @@ namespace XianYuLauncher.ViewModels
                     profiles.Add(CurrentProfile);
                 }
                 
-                // 4. 保存回文件
-                string updatedJson = JsonSerializer.Serialize(profiles, new JsonSerializerOptions { WriteIndented = true });
-                _fileService.WriteText(profilesFilePath, updatedJson);
+                // 保存回文件（自动加密）
+                await _profileManager.SaveProfilesAsync(profiles);
+                
+                System.Diagnostics.Debug.WriteLine($"[CharacterManagement] 角色已保存（token已加密）: {CurrentProfile.Name}");
             }
             catch (Exception ex)
             {
