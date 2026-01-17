@@ -25,6 +25,7 @@ namespace XianYuLauncher.ViewModels
         private readonly MicrosoftAuthService _microsoftAuthService;
         private readonly INavigationService _navigationService;
         private readonly IJavaRuntimeService _javaRuntimeService;
+        private readonly IProfileManager _profileManager;
 
         // 页面导航相关属性
         [ObservableProperty]
@@ -205,6 +206,16 @@ namespace XianYuLauncher.ViewModels
             
             // 添加账户到角色列表
             var characterViewModel = App.GetService<CharacterViewModel>();
+            
+            // 🔒 先加载现有角色，避免覆盖
+            var existingProfiles = await _profileManager.LoadProfilesAsync();
+            
+            // 清空并重新加载
+            characterViewModel.Profiles.Clear();
+            foreach (var profile in existingProfiles)
+            {
+                characterViewModel.Profiles.Add(profile);
+            }
             
             if (IsMicrosoftLogin && _pendingMicrosoftProfile != null)
             {
@@ -606,6 +617,12 @@ namespace XianYuLauncher.ViewModels
             // 保存Minecraft路径
             _localSettingsService.SaveSettingAsync("MinecraftPath", MinecraftPath);
             
+            // 保存Java版本列表
+            if (JavaVersions.Count > 0)
+            {
+                _localSettingsService.SaveSettingAsync("JavaVersions", JavaVersions.ToList());
+            }
+            
             // 保存Java设置 - 保存枚举的整数值而不是字符串
             _localSettingsService.SaveSettingAsync("JavaSelectionMode", (int)JavaSelectionMode);
             if (SelectedJavaVersion != null)
@@ -658,7 +675,8 @@ namespace XianYuLauncher.ViewModels
             IFileService fileService, 
             MicrosoftAuthService microsoftAuthService, 
             INavigationService navigationService,
-            IJavaRuntimeService javaRuntimeService)
+            IJavaRuntimeService javaRuntimeService,
+            IProfileManager profileManager)
         {
             _localSettingsService = localSettingsService;
             _minecraftVersionService = minecraftVersionService;
@@ -666,6 +684,7 @@ namespace XianYuLauncher.ViewModels
             _microsoftAuthService = microsoftAuthService;
             _navigationService = navigationService;
             _javaRuntimeService = javaRuntimeService;
+            _profileManager = profileManager;
             
             // 异步加载现有设置，避免阻塞UI线程
             _ = LoadSettingsAsync();

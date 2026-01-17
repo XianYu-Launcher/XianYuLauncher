@@ -60,9 +60,8 @@ public class FileService : IFileService
             return _customMinecraftDataPath;
         }
         
-        // 返回应用程序本地数据文件夹下的.minecraft文件夹路径
-        string appDataPath = GetAppDataPath();
-        return Path.Combine(appDataPath, ".minecraft");
+        // 默认返回桌面的.minecraft文件夹路径
+        return Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.DesktopDirectory), ".minecraft");
     }
     
     public void SetMinecraftDataPath(string path)
