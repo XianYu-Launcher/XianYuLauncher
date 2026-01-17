@@ -186,19 +186,19 @@
                                                 <ColumnDefinition Width="Auto" />
                                             </Grid.ColumnDefinitions>
                                             <StackPanel Spacing="16" Grid.Column="0">
-                                                <StackPanel Orientation="Horizontal" Spacing="16" VerticalAlignment="Center">
+                                                <StackPanel Orientation="Horizontal" Spacing="12" VerticalAlignment="Center">
                                                 <!-- 玩家头像 -->
                                                 <Border 
-                                                    Width="48" 
-                                                    Height="48" 
-                                                    CornerRadius="24" 
+                                                    Width="32" 
+                                                    Height="32" 
+                                                    CornerRadius="4" 
                                                     Background="#E5E7EB" 
                                                     VerticalAlignment="Center" 
                                                     HorizontalAlignment="Center">
                                                     <Image 
                                                         x:Name="ProfileAvatar" 
-                                                        Width="48" 
-                                                        Height="48" 
+                                                        Width="32" 
+                                                        Height="32" 
                                                         Source="ms-appx:///Assets/DefaultAvatar.png" 
                                                         Stretch="Fill" 
                                                         HorizontalAlignment="Center" 
@@ -209,23 +209,22 @@
                                                 <TextBlock 
                                                     Text="{x:Bind Name}" 
                                                     Style="{StaticResource TitleTextBlockStyle}" 
-                                                    FontSize="22" 
+                                                    FontSize="18" 
                                                     FontWeight="SemiBold" 
-                                                    VerticalAlignment="Center" 
-                                                    Margin="0,4,0,4" />
+                                                    VerticalAlignment="Center" />
                                                 </StackPanel>
                                                 
                                                 <!-- 详细信息 -->
-                                                <StackPanel Spacing="8" Margin="0,8,0,0">
+                                                <StackPanel Spacing="6" Margin="0,4,0,0">
                                                     <StackPanel Orientation="Horizontal" Spacing="4">
                                                         <TextBlock 
                                                             x:Uid="ProfilePage_UuidLabel" 
                                                             Text="UUID: " 
-                                                            FontSize="14" 
+                                                            FontSize="13" 
                                                             Opacity="0.6" />
                                                         <TextBlock 
                                                             Text="{x:Bind Id}" 
-                                                            FontSize="14" 
+                                                            FontSize="13" 
                                                             Opacity="0.6" 
                                                             FontWeight="SemiBold" />
                                                     </StackPanel>
@@ -233,12 +232,12 @@
                                                         <TextBlock 
                                                             x:Uid="ProfilePage_ProfileTypeLabel" 
                                                             Text="角色类型: " 
-                                                            FontSize="14" 
+                                                            FontSize="13" 
                                                             Opacity="0.6" />
                                                         <TextBlock 
                                                             x:Uid="ProfilePage_ProfileTypeValue" 
                                                             Text="{x:Bind Mode=OneWay, Converter={StaticResource ProfileTypeConverter}}" 
-                                                            FontSize="14" 
+                                                            FontSize="13" 
                                                             Opacity="0.6" 
                                                             FontWeight="SemiBold" />
                                                     </StackPanel>

@@ -704,7 +704,7 @@ namespace XianYuLauncher.Views
                     Debug.WriteLine($"[角色Page] 找到角色 {profile.Name} 对应的卡片Border");
                     
                     // 查找头像Border
-                    var avatarBorder = FindChild<Border>(profileCardBorder, null, b => b.Width == 48 && b.Height == 48);
+                    var avatarBorder = FindChild<Border>(profileCardBorder, null, b => b.Width == 32 && b.Height == 32);
                     if (avatarBorder != null)
                     {
                         Debug.WriteLine($"[角色Page] 找到角色 {profile.Name} 对应的头像Border");
@@ -758,7 +758,7 @@ namespace XianYuLauncher.Views
                                 Debug.WriteLine($"[角色Page] 找到角色 {profile.Name} 对应的卡片Border");
                                 
                                 // 查找头像Border
-                                var avatarBorder = FindChild<Border>(profileCardBorder, null, b => b.Width == 48 && b.Height == 48);
+                                var avatarBorder = FindChild<Border>(profileCardBorder, null, b => b.Width == 32 && b.Height == 32);
                                 if (avatarBorder != null)
                                 {
                                     Debug.WriteLine($"[角色Page] 找到角色 {profile.Name} 对应的头像Border");
@@ -823,7 +823,7 @@ namespace XianYuLauncher.Views
                                             Debug.WriteLine($"[角色Page] 通过索引匹配找到角色 {profile.Name} 对应的卡片Border");
                                             
                                             // 查找头像Border
-                                            var avatarBorder = FindChild<Border>(profileCardBorder, null, b => b.Width == 48 && b.Height == 48);
+                                            var avatarBorder = FindChild<Border>(profileCardBorder, null, b => b.Width == 32 && b.Height == 32);
                                             if (avatarBorder != null)
                                             {
                                                 Debug.WriteLine($"[角色Page] 找到角色 {profile.Name} 对应的头像Border");

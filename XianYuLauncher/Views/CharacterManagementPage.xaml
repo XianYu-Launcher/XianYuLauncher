@@ -37,15 +37,15 @@
                 <!-- 角色图标 -->
                 <Border
                     Grid.Column="0"
-                    Width="48"
-                    Height="48"
-                    CornerRadius="24"
+                    Width="40"
+                    Height="40"
+                    CornerRadius="4"
                     Background="#E5E7EB"
                     VerticalAlignment="Center">
                     <Image
                         x:Name="ProfileAvatar"
-                        Width="48"
-                        Height="48"
+                        Width="40"
+                        Height="40"
                         Source="ms-appx:///Assets/DefaultAvatar.png"
                         Stretch="Fill"
                         HorizontalAlignment="Center"
