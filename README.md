@@ -1,5 +1,5 @@
 <div align="center">
-  <img src="XianYuLauncher/Assets/cover.png" alt="XianYu Launcher Cover" width="80%" />
+  <img src="XianYuLauncher/Assets/cover.png" alt="XianYu Launcher Cover" width="90%" />
 </div>
 
 
