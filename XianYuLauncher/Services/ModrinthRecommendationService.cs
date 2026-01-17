@@ -74,7 +74,11 @@ public class ModrinthRecommendationService
     /// </summary>
     private string GetCacheFilePath()
     {
-        var basePath = _fileService.GetMinecraftDataPath();
+        var basePath = Path.Combine(
+            Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+            "XianYuLauncher",
+            "Cache"
+        );
         return Path.Combine(basePath, CacheFileName);
     }
     
