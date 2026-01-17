@@ -1,7 +1,4 @@
-<div align="center">
-  <img src="XianYuLauncher/Assets/cover.png" alt="XianYu Launcher Cover" width="90%" />
-</div>
-
+![XianYu Launcher Cover](/XianYuLauncher/Assets/cover_en.png)
 
 <div align="center">
 
