@@ -63,11 +63,8 @@ public class NeoForgeService
                     source => source.GetNeoForgeVersionsUrl(minecraftVersion),
                     (request, source) =>
                     {
-                        // 为 BMCLAPI 添加 User-Agent
-                        if (source.Name == "BMCLAPI")
-                        {
-                            request.Headers.Add("User-Agent", VersionHelper.GetBmclapiUserAgent());
-                        }
+                        // 所有源都添加 User-Agent（maven.neoforged.net 会拒绝没有 UA 的请求）
+                        request.Headers.Add("User-Agent", VersionHelper.GetBmclapiUserAgent());
                     });
                 
                 if (result.Success && result.Response != null)

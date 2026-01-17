@@ -302,6 +302,24 @@ public class FallbackDownloadManager
             {
                 using var request = new HttpRequestMessage(HttpMethod.Get, url);
                 configureRequest?.Invoke(request, source);
+                
+                // 输出详细的请求信息
+                System.Diagnostics.Debug.WriteLine($"[Fallback] ===== 请求详情 =====");
+                System.Diagnostics.Debug.WriteLine($"[Fallback] Method: {request.Method}");
+                System.Diagnostics.Debug.WriteLine($"[Fallback] RequestUri: {request.RequestUri}");
+                System.Diagnostics.Debug.WriteLine($"[Fallback] Headers:");
+                foreach (var header in request.Headers)
+                {
+                    System.Diagnostics.Debug.WriteLine($"[Fallback]   {header.Key}: {string.Join(", ", header.Value)}");
+                }
+                System.Diagnostics.Debug.WriteLine($"[Fallback] HttpClient BaseAddress: {_httpClient.BaseAddress}");
+                System.Diagnostics.Debug.WriteLine($"[Fallback] HttpClient Timeout: {_httpClient.Timeout}");
+                System.Diagnostics.Debug.WriteLine($"[Fallback] HttpClient DefaultRequestHeaders:");
+                foreach (var header in _httpClient.DefaultRequestHeaders)
+                {
+                    System.Diagnostics.Debug.WriteLine($"[Fallback]   {header.Key}: {string.Join(", ", header.Value)}");
+                }
+                System.Diagnostics.Debug.WriteLine($"[Fallback] ======================");
 
                 var response = await _httpClient.SendAsync(request, cancellationToken);
 
@@ -326,7 +344,10 @@ public class FallbackDownloadManager
             {
                 errors.Add($"[{sourceKey}] {ex.Message}");
                 _logger?.LogWarning("源 {Source} 失败: {Error}，尝试下一个", sourceKey, ex.Message);
-                System.Diagnostics.Debug.WriteLine($"[Fallback] 源 {sourceKey} 异常: {ex.Message}，尝试下一个");
+                System.Diagnostics.Debug.WriteLine($"[Fallback] 源 {sourceKey} 异常: {ex.Message}");
+                System.Diagnostics.Debug.WriteLine($"[Fallback] 异常类型: {ex.GetType().FullName}");
+                System.Diagnostics.Debug.WriteLine($"[Fallback] InnerException: {ex.InnerException?.Message}");
+                System.Diagnostics.Debug.WriteLine($"[Fallback] InnerException类型: {ex.InnerException?.GetType().FullName}");
                 if (!AutoFallbackEnabled) break;
             }
             catch (Exception ex)
@@ -334,6 +355,8 @@ public class FallbackDownloadManager
                 errors.Add($"[{sourceKey}] {ex.Message}");
                 _logger?.LogError(ex, "源 {Source} 不可恢复错误，停止回退", sourceKey);
                 System.Diagnostics.Debug.WriteLine($"[Fallback] 源 {sourceKey} 不可恢复错误: {ex.Message}");
+                System.Diagnostics.Debug.WriteLine($"[Fallback] 异常类型: {ex.GetType().FullName}");
+                System.Diagnostics.Debug.WriteLine($"[Fallback] InnerException: {ex.InnerException?.Message}");
                 break; // 不可回退的错误
             }
         }
