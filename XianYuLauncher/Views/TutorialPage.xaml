@@ -88,7 +88,70 @@
                         <ListBox
                             ItemsSource="{x:Bind ViewModel.JavaVersions, Mode=OneWay}"
                             SelectedItem="{x:Bind ViewModel.SelectedJavaVersion, Mode=TwoWay}"
-                            Height="200">
+                            Height="200"
+                            Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
+                            BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+                            BorderThickness="1"
+                            CornerRadius="8"
+                            Padding="4">
+                            <ListBox.ItemContainerStyle>
+                                <Style TargetType="ListBoxItem">
+                                    <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+                                    <Setter Property="Padding" Value="8,6" />
+                                    <Setter Property="Margin" Value="2" />
+                                    <Setter Property="CornerRadius" Value="4" />
+                                    <Setter Property="Background" Value="Transparent" />
+                                    <Setter Property="Template">
+                                        <Setter.Value>
+                                            <ControlTemplate TargetType="ListBoxItem">
+                                                <Grid
+                                                    x:Name="Root"
+                                                    Background="{TemplateBinding Background}"
+                                                    CornerRadius="{TemplateBinding CornerRadius}"
+                                                    Padding="{TemplateBinding Padding}">
+                                                    <VisualStateManager.VisualStateGroups>
+                                                        <VisualStateGroup x:Name="CommonStates">
+                                                            <VisualState x:Name="Normal" />
+                                                            <VisualState x:Name="PointerOver">
+                                                                <VisualState.Setters>
+                                                                    <Setter Target="Root.Background" Value="{ThemeResource SubtleFillColorSecondaryBrush}" />
+                                                                </VisualState.Setters>
+                                                            </VisualState>
+                                                            <VisualState x:Name="Pressed">
+                                                                <VisualState.Setters>
+                                                                    <Setter Target="Root.Background" Value="{ThemeResource SubtleFillColorTertiaryBrush}" />
+                                                                </VisualState.Setters>
+                                                            </VisualState>
+                                                            <VisualState x:Name="Selected">
+                                                                <VisualState.Setters>
+                                                                    <Setter Target="Root.Background" Value="{ThemeResource SubtleFillColorSecondaryBrush}" />
+                                                                </VisualState.Setters>
+                                                            </VisualState>
+                                                            <VisualState x:Name="SelectedPointerOver">
+                                                                <VisualState.Setters>
+                                                                    <Setter Target="Root.Background" Value="{ThemeResource SubtleFillColorTertiaryBrush}" />
+                                                                </VisualState.Setters>
+                                                            </VisualState>
+                                                            <VisualState x:Name="SelectedPressed">
+                                                                <VisualState.Setters>
+                                                                    <Setter Target="Root.Background" Value="{ThemeResource SubtleFillColorTertiaryBrush}" />
+                                                                </VisualState.Setters>
+                                                            </VisualState>
+                                                        </VisualStateGroup>
+                                                    </VisualStateManager.VisualStateGroups>
+                                                    <ContentPresenter
+                                                        x:Name="ContentPresenter"
+                                                        Content="{TemplateBinding Content}"
+                                                        ContentTemplate="{TemplateBinding ContentTemplate}"
+                                                        ContentTransitions="{TemplateBinding ContentTransitions}"
+                                                        HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}"
+                                                        VerticalAlignment="{TemplateBinding VerticalContentAlignment}" />
+                                                </Grid>
+                                            </ControlTemplate>
+                                        </Setter.Value>
+                                    </Setter>
+                                </Style>
+                            </ListBox.ItemContainerStyle>
                             <ListBox.ItemTemplate>
                                 <DataTemplate x:DataType="viewModels:JavaVersionInfo">
                                     <StackPanel Margin="4">

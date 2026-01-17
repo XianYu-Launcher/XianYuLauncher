@@ -86,6 +86,7 @@ public partial class SettingsViewModel : ObservableRecipient
         private readonly INavigationService _navigationService;
         private readonly ILanguageSelectorService _languageSelectorService;
         private readonly ModInfoService _modInfoService;
+        private readonly IJavaRuntimeService _javaRuntimeService;
         private const string JavaPathKey = "JavaPath";
         private const string SelectedJavaVersionKey = "SelectedJavaVersion";
         private const string JavaVersionsKey = "JavaVersions";
@@ -492,7 +493,17 @@ public partial class SettingsViewModel : ObservableRecipient
         get;
     }
 
-    public SettingsViewModel(IThemeSelectorService themeSelectorService, ILocalSettingsService localSettingsService, IFileService fileService, MaterialService materialService, INavigationService navigationService, ILanguageSelectorService languageSelectorService, ModrinthCacheService modrinthCacheService, CurseForgeCacheService curseForgeCacheService, ModInfoService modInfoService)
+    public SettingsViewModel(
+        IThemeSelectorService themeSelectorService, 
+        ILocalSettingsService localSettingsService, 
+        IFileService fileService, 
+        MaterialService materialService, 
+        INavigationService navigationService, 
+        ILanguageSelectorService languageSelectorService, 
+        ModrinthCacheService modrinthCacheService, 
+        CurseForgeCacheService curseForgeCacheService, 
+        ModInfoService modInfoService,
+        IJavaRuntimeService javaRuntimeService)
     {
         _themeSelectorService = themeSelectorService;
         _localSettingsService = localSettingsService;
@@ -503,6 +514,7 @@ public partial class SettingsViewModel : ObservableRecipient
         _modrinthCacheService = modrinthCacheService;
         _curseForgeCacheService = curseForgeCacheService;
         _modInfoService = modInfoService;
+        _javaRuntimeService = javaRuntimeService;
         _elementTheme = _themeSelectorService.Theme;
         _versionDescription = GetVersionDescription();
         
@@ -1380,31 +1392,30 @@ public partial class SettingsViewModel : ObservableRecipient
             var existingVersions = JavaVersions.ToList();
             Console.WriteLine($"当前列表中有 {existingVersions.Count} 个Java版本");
             
-            // 创建临时列表用于扫描系统Java
-            var tempList = JavaVersions;
-            JavaVersions = new ObservableCollection<JavaVersionInfo>();
+            // 使用JavaRuntimeService扫描系统中的Java版本
+            var scannedJavaVersions = await _javaRuntimeService.DetectJavaVersionsAsync(forceRefresh: true);
+            Console.WriteLine($"系统扫描到 {scannedJavaVersions.Count} 个Java版本");
             
-            // 扫描系统中的Java版本
-            await ScanSystemJavaVersionsAsync();
-            
-            var scannedVersions = JavaVersions.ToList();
-            Console.WriteLine($"系统扫描到 {scannedVersions.Count} 个Java版本");
-            
-            // 恢复原列表
-            JavaVersions = tempList;
+            // 清空当前列表
             JavaVersions.Clear();
             
             // 智能合并：先添加扫描到的系统Java
-            foreach (var scanned in scannedVersions)
+            foreach (var jv in scannedJavaVersions)
             {
-                JavaVersions.Add(scanned);
+                JavaVersions.Add(new JavaVersionInfo
+                {
+                    Version = jv.FullVersion,
+                    MajorVersion = jv.MajorVersion,
+                    Path = jv.Path,
+                    IsJDK = jv.IsJDK
+                });
             }
             
             // 再添加用户手动添加的Java（路径不重复的）
             foreach (var existing in existingVersions)
             {
                 // 检查路径是否已存在于扫描结果中
-                if (!scannedVersions.Any(s => string.Equals(s.Path, existing.Path, StringComparison.OrdinalIgnoreCase)))
+                if (!scannedJavaVersions.Any(s => string.Equals(s.Path, existing.Path, StringComparison.OrdinalIgnoreCase)))
                 {
                     JavaVersions.Add(existing);
                     Console.WriteLine($"保留用户手动添加的Java: {existing.Path}");
@@ -1449,175 +1460,9 @@ public partial class SettingsViewModel : ObservableRecipient
         }
     }
     
-    /// <summary>
-    /// 扫描系统中的Java版本
-    /// </summary>
-    private async Task ScanSystemJavaVersionsAsync()
-    {
-        try
-        {
-            Console.WriteLine("开始扫描系统中的Java版本...");
-            
-            // 1. 从注册表中扫描Java版本
-            await ScanRegistryForJavaVersionsAsync();
-            
-            // 2. 检查环境变量中的JAVA_HOME
-            await CheckJavaHomeEnvVarAsync();
-            
-            Console.WriteLine($"系统Java版本扫描完成，找到{JavaVersions.Count}个版本");
-        }
-        catch (Exception ex)
-        {
-            Console.WriteLine($"扫描系统Java版本失败: {ex.Message}");
-        }
-    }
     
-    /// <summary>
-    /// 从注册表中扫描Java版本
-    /// </summary>
-    private async Task ScanRegistryForJavaVersionsAsync()
-    {
-        try
-        {
-            Console.WriteLine("从注册表中扫描Java版本...");
-            
-            // 检查64位注册表
-            using (var baseKey = RegistryKey.OpenBaseKey(RegistryHive.LocalMachine, RegistryView.Registry64))
-            {
-                // 检查JRE
-                using (var javaKey = baseKey.OpenSubKey(@"SOFTWARE\JavaSoft\Java Runtime Environment"))
-                {
-                    if (javaKey != null)
-                    {
-                        await ScanJavaRegistryKeyAsync(javaKey, false);
-                    }
-                }
-                
-                // 检查JDK
-                using (var jdkKey = baseKey.OpenSubKey(@"SOFTWARE\JavaSoft\Java Development Kit"))
-                {
-                    if (jdkKey != null)
-                    {
-                        await ScanJavaRegistryKeyAsync(jdkKey, true);
-                    }
-                }
-            }
-            
-            // 检查32位注册表（在64位系统上）
-            using (var baseKey = RegistryKey.OpenBaseKey(RegistryHive.LocalMachine, RegistryView.Registry32))
-            {
-                // 检查JRE
-                using (var javaKey = baseKey.OpenSubKey(@"SOFTWARE\JavaSoft\Java Runtime Environment"))
-                {
-                    if (javaKey != null)
-                    {
-                        await ScanJavaRegistryKeyAsync(javaKey, false);
-                    }
-                }
-                
-                // 检查JDK
-                using (var jdkKey = baseKey.OpenSubKey(@"SOFTWARE\JavaSoft\Java Development Kit"))
-                {
-                    if (jdkKey != null)
-                    {
-                        await ScanJavaRegistryKeyAsync(jdkKey, true);
-                    }
-                }
-            }
-        }
-        catch (Exception ex)
-        {
-            Console.WriteLine($"从注册表扫描Java版本失败: {ex.Message}");
-        }
-    }
-    
-    /// <summary>
-    /// 扫描指定的Java注册表项
-    /// </summary>
-    private async Task ScanJavaRegistryKeyAsync(RegistryKey registryKey, bool isJDK)
-    {
-        try
-        {
-            string[] versions = registryKey.GetSubKeyNames();
-            Console.WriteLine($"找到{versions.Length}个{(isJDK ? "JDK" : "JRE")}版本");
-            
-            foreach (string version in versions)
-            {
-                using (var versionKey = registryKey.OpenSubKey(version))
-                {
-                    if (versionKey != null)
-                    {
-                        string javaHomePath = versionKey.GetValue("JavaHome") as string;
-                        string javaVersion = versionKey.GetValue("JavaVersion") as string;
-                        
-                        if (!string.IsNullOrEmpty(javaHomePath))
-                        {
-                            string javaPath = Path.Combine(javaHomePath, "bin", "java.exe");
-                            if (File.Exists(javaPath))
-                            {
-                                // 解析Java版本信息
-                                var javaVersionInfo = await GetJavaVersionFromExecutableAsync(javaPath);
-                                if (javaVersionInfo != null)
-                                {
-                                    // 检查是否已存在相同路径的版本
-                                    var existingVersion = JavaVersions.FirstOrDefault(j => string.Equals(j.Path, javaVersionInfo.Path, StringComparison.OrdinalIgnoreCase));
-                                    if (existingVersion == null)
-                                    {
-                                        JavaVersions.Add(javaVersionInfo);
-                                        Console.WriteLine($"添加{(isJDK ? "JDK" : "JRE")}版本: {javaVersionInfo}");
-                                    }
-                                    else
-                                    {
-                                        Console.WriteLine($"版本已存在: {javaPath}");
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-        }
-        catch (Exception ex)
-        {
-            Console.WriteLine($"扫描Java注册表项失败: {ex.Message}");
-        }
-    }
-    
-    /// <summary>
-    /// 检查环境变量中的JAVA_HOME
-    /// </summary>
-    private async Task CheckJavaHomeEnvVarAsync()
-    {
-        try
-        {
-            Console.WriteLine("检查环境变量中的JAVA_HOME...");
-            
-            string javaHome = Environment.GetEnvironmentVariable("JAVA_HOME");
-            if (!string.IsNullOrEmpty(javaHome))
-            {
-                string javaPath = Path.Combine(javaHome, "bin", "java.exe");
-                if (File.Exists(javaPath))
-                {
-                    // 解析Java版本信息
-                    var javaVersionInfo = await GetJavaVersionFromExecutableAsync(javaPath);
-                    if (javaVersionInfo != null)
-                    {
-                        // 检查是否已存在相同路径的版本
-                        var existingVersion = JavaVersions.FirstOrDefault(j => string.Equals(j.Path, javaVersionInfo.Path, StringComparison.OrdinalIgnoreCase));
-                        if (existingVersion == null)
-                        {
-                            JavaVersions.Add(javaVersionInfo);
-                            Console.WriteLine($"从JAVA_HOME添加版本: {javaVersionInfo}");
-                        }
-                    }
-                }
-            }
-        }
-        catch (Exception ex)
-        {
-            Console.WriteLine($"检查JAVA_HOME环境变量失败: {ex.Message}");
-        }
-    }
+    // 注意：以下Java扫描方法已被JavaRuntimeService替代
+    // 所有Java检测逻辑现在统一在XianYuLauncher.Core/Services/JavaRuntimeService.cs中
     
     /// <summary>
     /// 加载保存的Java版本列表
@@ -1720,44 +1565,13 @@ public partial class SettingsViewModel : ObservableRecipient
     
 
     
+    
     /// <summary>
-    /// 解析Java版本号
+    /// 解析Java版本号（已废弃，使用JavaRuntimeService.TryParseJavaVersion）
     /// </summary>
     private bool TryParseJavaVersion(string javaVersionString, out int majorVersion)
     {
-        majorVersion = 0;
-        
-        if (string.IsNullOrEmpty(javaVersionString))
-        {
-            return false;
-        }
-        
-        try
-        {
-            // 处理不同格式的版本字符串
-            // 格式1: 1.8.0_301
-            if (javaVersionString.StartsWith("1."))
-            {
-                string[] parts = javaVersionString.Split('.');
-                if (parts.Length >= 2)
-                {
-                    return int.TryParse(parts[1], out majorVersion);
-                }
-            }
-            // 格式2: 17.0.1
-            // 格式3: 17
-            else
-            {
-                string[] parts = javaVersionString.Split('.');
-                return int.TryParse(parts[0], out majorVersion);
-            }
-        }
-        catch (Exception)
-        {
-            // 忽略解析错误
-        }
-        
-        return false;
+        return _javaRuntimeService.TryParseJavaVersion(javaVersionString, out majorVersion);
     }
     
     /// <summary>
@@ -1828,22 +1642,29 @@ public partial class SettingsViewModel : ObservableRecipient
             try
             {
                 Console.WriteLine($"正在解析Java可执行文件: {file.Path}");
-                // 解析Java版本信息
-                var javaVersion = await GetJavaVersionFromExecutableAsync(file.Path);
+                // 使用JavaRuntimeService解析Java版本信息
+                var javaVersion = await _javaRuntimeService.GetJavaVersionInfoAsync(file.Path);
                 if (javaVersion != null)
                 {
-                    Console.WriteLine($"解析成功: {javaVersion}");
+                    Console.WriteLine($"解析成功: Java {javaVersion.MajorVersion} ({javaVersion.FullVersion})");
                     
                     // 检查是否已存在相同路径的版本
                     var existingVersion = JavaVersions.FirstOrDefault(j => string.Equals(j.Path, javaVersion.Path, StringComparison.OrdinalIgnoreCase));
                     if (existingVersion == null)
                     {
                         // 添加到列表
-                        JavaVersions.Add(javaVersion);
+                        var newVersion = new JavaVersionInfo
+                        {
+                            Version = javaVersion.FullVersion,
+                            MajorVersion = javaVersion.MajorVersion,
+                            Path = javaVersion.Path,
+                            IsJDK = javaVersion.IsJDK
+                        };
+                        JavaVersions.Add(newVersion);
                         Console.WriteLine("已添加到Java版本列表");
                         
                         // 自动选择刚添加的版本
-                        SelectedJavaVersion = javaVersion;
+                        SelectedJavaVersion = newVersion;
                     }
                     else
                     {
@@ -1940,181 +1761,8 @@ public partial class SettingsViewModel : ObservableRecipient
         _navigationService.NavigateTo(typeof(TutorialPageViewModel).FullName!);
     }
 
-    /// <summary>
-    /// 从java.exe文件解析版本信息
-    /// </summary>
-    private async Task<JavaVersionInfo?> GetJavaVersionFromExecutableAsync(string javaExePath)
-    {
-        try
-        {
-            Console.WriteLine($"开始解析Java可执行文件: {javaExePath}");
-            
-            // 验证文件存在且是.exe文件
-            if (!File.Exists(javaExePath))
-            {
-                Console.WriteLine($"文件不存在: {javaExePath}");
-                return null;
-            }
-            if (!Path.GetExtension(javaExePath).Equals(".exe", StringComparison.OrdinalIgnoreCase))
-            {
-                Console.WriteLine($"不是.exe文件: {javaExePath}");
-                return null;
-            }
-
-            // 执行java -version命令获取版本信息
-            var processStartInfo = new System.Diagnostics.ProcessStartInfo
-            {
-                FileName = javaExePath,
-                Arguments = "-version",
-                RedirectStandardError = true,  // java -version输出到stderr
-                RedirectStandardOutput = true, // 同时捕获stdout
-                UseShellExecute = false,
-                CreateNoWindow = true
-            };
-
-            Console.WriteLine($"启动进程: {javaExePath} -version");
-            using (var process = System.Diagnostics.Process.Start(processStartInfo))
-            {
-                if (process == null)
-                {
-                    Console.WriteLine("无法启动进程");
-                    return null;
-                }
-
-                string stderrOutput = await process.StandardError.ReadToEndAsync();
-                string stdoutOutput = await process.StandardOutput.ReadToEndAsync();
-                await process.WaitForExitAsync();
-
-                Console.WriteLine($"进程退出代码: {process.ExitCode}");
-                Console.WriteLine($"stderr输出: {stderrOutput}");
-                Console.WriteLine($"stdout输出: {stdoutOutput}");
-
-                // 优先使用stderr，因为java -version通常输出到stderr
-                string output = stderrOutput;
-                if (string.IsNullOrEmpty(output))
-                {
-                    output = stdoutOutput;
-                    Console.WriteLine("使用stdout输出进行解析");
-                }
-
-                if (!string.IsNullOrEmpty(output))
-                {
-                    Console.WriteLine($"开始解析输出: {output}");
-                    
-                    // 处理多行输出，找到包含版本信息的行
-                    string[] lines = output.Split(new[] { '\n', '\r' }, StringSplitOptions.RemoveEmptyEntries);
-                    string versionLine = string.Empty;
-                    
-                    // 查找包含版本信息的行
-                    foreach (var line in lines)
-                    {
-                        if (line.Contains("version", StringComparison.OrdinalIgnoreCase))
-                        {
-                            versionLine = line;
-                            break;
-                        }
-                    }
-                    
-                    Console.WriteLine($"找到版本行: {versionLine}");
-                    
-                    if (!string.IsNullOrEmpty(versionLine))
-                    {
-                        // 提取版本号，支持多种格式
-                        int startQuote = versionLine.IndexOf('"');
-                        int endQuote = versionLine.LastIndexOf('"');
-                        
-                        Console.WriteLine($"引号位置: start={startQuote}, end={endQuote}");
-                        
-                        if (startQuote >= 0 && endQuote > startQuote)
-                        {
-                            string version = versionLine.Substring(startQuote + 1, endQuote - startQuote - 1);
-                            Console.WriteLine($"提取的版本号: {version}");
-                            
-                            if (TryParseJavaVersion(version, out int majorVersion))
-                            {
-                                Console.WriteLine($"解析主版本号成功: {majorVersion}");
-                                
-                                // 简单判断是否为JDK：检查路径中是否包含"jdk"或"java development kit"
-                                bool isJDK = javaExePath.IndexOf("jdk", StringComparison.OrdinalIgnoreCase) >= 0 ||
-                                             output.IndexOf("development", StringComparison.OrdinalIgnoreCase) >= 0;
-
-                                var javaVersionInfo = new JavaVersionInfo
-                                {
-                                    Version = version,
-                                    MajorVersion = majorVersion,
-                                    Path = javaExePath,
-                                    IsJDK = isJDK
-                                };
-                                
-                                Console.WriteLine($"创建JavaVersionInfo: {javaVersionInfo}");
-                                return javaVersionInfo;
-                            }
-                            else
-                            {
-                                Console.WriteLine($"解析主版本号失败: {version}");
-                            }
-                        }
-                        else
-                        {
-                            // 尝试其他格式解析，例如 "openjdk version 17.0.1" 或 "java version 1.8.0_301"
-                            Console.WriteLine("尝试其他格式解析");
-                            
-                            // 移除 "java version " 或 "openjdk version " 前缀
-                            string versionPart = versionLine;
-                            if (versionPart.StartsWith("java version ", StringComparison.OrdinalIgnoreCase))
-                            {
-                                versionPart = versionPart.Substring("java version ".Length);
-                            }
-                            else if (versionPart.StartsWith("openjdk version ", StringComparison.OrdinalIgnoreCase))
-                            {
-                                versionPart = versionPart.Substring("openjdk version ".Length);
-                            }
-                            
-                            Console.WriteLine($"移除前缀后的版本部分: {versionPart}");
-                            
-                            // 再次尝试解析
-                            if (TryParseJavaVersion(versionPart, out int majorVersion))
-                            {
-                                Console.WriteLine($"解析主版本号成功: {majorVersion}");
-                                
-                                bool isJDK = javaExePath.IndexOf("jdk", StringComparison.OrdinalIgnoreCase) >= 0;
-                                
-                                var javaVersionInfo = new JavaVersionInfo
-                                {
-                                    Version = versionPart,
-                                    MajorVersion = majorVersion,
-                                    Path = javaExePath,
-                                    IsJDK = isJDK
-                                };
-                                
-                                Console.WriteLine($"创建JavaVersionInfo: {javaVersionInfo}");
-                                return javaVersionInfo;
-                            }
-                            else
-                            {
-                                Console.WriteLine($"解析失败，无法提取版本号");
-                            }
-                        }
-                    }
-                    else
-                    {
-                        Console.WriteLine("未找到包含版本信息的行");
-                    }
-                }
-                else
-                {
-                    Console.WriteLine("命令没有输出");
-                }
-            }
-        }
-        catch (Exception ex)
-        {
-            Console.WriteLine($"解析Java版本信息失败: {ex.Message}");
-            Console.WriteLine($"异常堆栈: {ex.StackTrace}");
-        }
-
-        return null;
-    }
+    
+    // GetJavaVersionFromExecutableAsync方法已被JavaRuntimeService.GetJavaVersionInfoAsync替代
     
     private static string GetVersionDescription()
     {

@@ -24,6 +24,7 @@ namespace XianYuLauncher.ViewModels
         private readonly IFileService _fileService;
         private readonly MicrosoftAuthService _microsoftAuthService;
         private readonly INavigationService _navigationService;
+        private readonly IJavaRuntimeService _javaRuntimeService;
 
         // 页面导航相关属性
         [ObservableProperty]
@@ -299,315 +300,32 @@ namespace XianYuLauncher.ViewModels
                 // 清空当前列表
                 JavaVersions.Clear();
                 
-                // 扫描系统中的Java版本
-                await ScanSystemJavaVersionsAsync();
+                // 使用JavaRuntimeService扫描系统中的Java版本
+                var javaVersions = await _javaRuntimeService.DetectJavaVersionsAsync(forceRefresh: true);
+                
+                // 转换为JavaVersionInfo并添加到列表
+                foreach (var jv in javaVersions)
+                {
+                    JavaVersions.Add(new JavaVersionInfo
+                    {
+                        Version = jv.FullVersion,
+                        MajorVersion = jv.MajorVersion,
+                        Path = jv.Path,
+                        IsJDK = jv.IsJDK
+                    });
+                }
+                
+                System.Diagnostics.Debug.WriteLine($"刷新Java版本列表完成，找到 {JavaVersions.Count} 个版本");
             }
             catch (Exception ex)
             {
                 System.Diagnostics.Debug.WriteLine($"刷新Java版本列表失败: {ex.Message}");
-                // 刷新失败时保持列表为空，不使用示例数据
             }
             finally
             {
                 IsLoadingJavaVersions = false;
                 CanRefreshJavaVersions = true;
             }
-        }
-        
-        /// <summary>
-        /// 扫描系统中的所有Java版本
-        /// </summary>
-        private async Task ScanSystemJavaVersionsAsync()
-        {
-            try
-            {
-                // 从注册表中扫描Java版本
-                await ScanRegistryForJavaVersionsAsync();
-                
-                // 检查环境变量中的JAVA_HOME
-                string javaHome = Environment.GetEnvironmentVariable("JAVA_HOME");
-                if (!string.IsNullOrEmpty(javaHome))
-                {
-                    string javaPath = Path.Combine(javaHome, "bin", "java.exe");
-                    if (File.Exists(javaPath))
-                    {
-                        var javaVersionInfo = await GetJavaVersionFromExecutableAsync(javaPath);
-                        if (javaVersionInfo != null)
-                        {
-                            // 检查是否已存在相同路径的版本
-                            var existingVersion = JavaVersions.FirstOrDefault(j => string.Equals(j.Path, javaVersionInfo.Path, StringComparison.OrdinalIgnoreCase));
-                            if (existingVersion == null)
-                            {
-                                JavaVersions.Add(javaVersionInfo);
-                            }
-                        }
-                    }
-                }
-            }
-            catch (Exception ex)
-            {
-                System.Diagnostics.Debug.WriteLine($"扫描系统Java版本失败: {ex.Message}");
-            }
-        }
-        
-        /// <summary>
-        /// 从注册表中扫描Java版本
-        /// </summary>
-        private async Task ScanRegistryForJavaVersionsAsync()
-        {
-            try
-            {
-                // 检查64位注册表
-                using (var baseKey = RegistryKey.OpenBaseKey(RegistryHive.LocalMachine, RegistryView.Registry64))
-                {
-                    // 检查JRE
-                    using (var javaKey = baseKey.OpenSubKey(@"SOFTWARE\JavaSoft\Java Runtime Environment"))
-                    {
-                        if (javaKey != null)
-                        {
-                            await ScanJavaRegistryKeyAsync(javaKey, false);
-                        }
-                    }
-                    
-                    // 检查JDK
-                    using (var jdkKey = baseKey.OpenSubKey(@"SOFTWARE\JavaSoft\Java Development Kit"))
-                    {
-                        if (jdkKey != null)
-                        {
-                            await ScanJavaRegistryKeyAsync(jdkKey, true);
-                        }
-                    }
-                }
-                
-                // 检查32位注册表（在64位系统上）
-                using (var baseKey = RegistryKey.OpenBaseKey(RegistryHive.LocalMachine, RegistryView.Registry32))
-                {
-                    // 检查JRE
-                    using (var javaKey = baseKey.OpenSubKey(@"SOFTWARE\JavaSoft\Java Runtime Environment"))
-                    {
-                        if (javaKey != null)
-                        {
-                            await ScanJavaRegistryKeyAsync(javaKey, false);
-                        }
-                    }
-                    
-                    // 检查JDK
-                    using (var jdkKey = baseKey.OpenSubKey(@"SOFTWARE\JavaSoft\Java Development Kit"))
-                    {
-                        if (jdkKey != null)
-                        {
-                            await ScanJavaRegistryKeyAsync(jdkKey, true);
-                        }
-                    }
-                }
-            }
-            catch (Exception ex)
-            {
-                System.Diagnostics.Debug.WriteLine($"从注册表扫描Java版本失败: {ex.Message}");
-            }
-        }
-        
-        /// <summary>
-        /// 扫描指定的Java注册表项
-        /// </summary>
-        private async Task ScanJavaRegistryKeyAsync(RegistryKey registryKey, bool isJDK)
-        {
-            try
-            {
-                string[] versions = registryKey.GetSubKeyNames();
-                
-                foreach (string version in versions)
-                {
-                    using (var versionKey = registryKey.OpenSubKey(version))
-                    {
-                        if (versionKey != null)
-                        {
-                            string javaHomePath = versionKey.GetValue("JavaHome") as string;
-                            
-                            if (!string.IsNullOrEmpty(javaHomePath))
-                            {
-                                string javaPath = Path.Combine(javaHomePath, "bin", "java.exe");
-                                if (File.Exists(javaPath))
-                                {
-                                    // 解析Java版本信息
-                                    var javaVersionInfo = await GetJavaVersionFromExecutableAsync(javaPath);
-                                    if (javaVersionInfo != null)
-                                    {
-                                        // 检查是否已存在相同路径的版本
-                                        var existingVersion = JavaVersions.FirstOrDefault(j => string.Equals(j.Path, javaVersionInfo.Path, StringComparison.OrdinalIgnoreCase));
-                                        if (existingVersion == null)
-                                        {
-                                            JavaVersions.Add(javaVersionInfo);
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-            catch (Exception ex)
-            {
-                System.Diagnostics.Debug.WriteLine($"扫描Java注册表项失败: {ex.Message}");
-            }
-        }
-        
-        /// <summary>
-        /// 从java.exe文件解析版本信息
-        /// </summary>
-        private async Task<JavaVersionInfo?> GetJavaVersionFromExecutableAsync(string javaExePath)
-        {
-            try
-            {
-                // 验证文件存在且是.exe文件
-                if (!File.Exists(javaExePath))
-                {
-                    return null;
-                }
-                if (!Path.GetExtension(javaExePath).Equals(".exe", StringComparison.OrdinalIgnoreCase))
-                {
-                    return null;
-                }
-
-                // 执行java -version命令获取版本信息
-                var processStartInfo = new ProcessStartInfo
-                {
-                    FileName = javaExePath,
-                    Arguments = "-version",
-                    RedirectStandardError = true,  // java -version输出到stderr
-                    RedirectStandardOutput = true, // 同时捕获stdout
-                    UseShellExecute = false,
-                    CreateNoWindow = true
-                };
-
-                using (var process = Process.Start(processStartInfo))
-                {
-                    if (process == null)
-                    {
-                        return null;
-                    }
-
-                    // 异步读取输出
-                    string stderrOutput = await process.StandardError.ReadToEndAsync();
-                    string stdoutOutput = await process.StandardOutput.ReadToEndAsync();
-                    await process.WaitForExitAsync();
-
-                    // 合并输出
-                    string output = stderrOutput + stdoutOutput;
-                    string versionLine = string.Empty;
-
-                    // 查找包含版本信息的行
-                    string[] lines = output.Split(new[] { '\n', '\r' }, StringSplitOptions.RemoveEmptyEntries);
-                    foreach (string line in lines)
-                    {
-                        if (line.Contains("version", StringComparison.OrdinalIgnoreCase))
-                        {
-                            versionLine = line;
-                            break;
-                        }
-                    }
-
-                    if (!string.IsNullOrEmpty(versionLine))
-                    {
-                        // 提取版本号，支持多种格式
-                        int startQuote = versionLine.IndexOf('"');
-                        int endQuote = versionLine.LastIndexOf('"');
-                        
-                        if (startQuote >= 0 && endQuote > startQuote)
-                        {
-                            string version = versionLine.Substring(startQuote + 1, endQuote - startQuote - 1);
-                            
-                            if (TryParseJavaVersion(version, out int majorVersion))
-                            {
-                                bool isJDK = javaExePath.IndexOf("jdk", StringComparison.OrdinalIgnoreCase) >= 0;
-                                
-                                return new JavaVersionInfo
-                                {
-                                    Version = version,
-                                    MajorVersion = majorVersion,
-                                    Path = javaExePath,
-                                    IsJDK = isJDK
-                                };
-                            }
-                        }
-                        // 处理OpenJDK格式
-                        else if (versionLine.Contains("openjdk version", StringComparison.OrdinalIgnoreCase))
-                        {
-                            string versionPart = versionLine.Substring("openjdk version ".Length);
-                            if (TryParseJavaVersion(versionPart, out int majorVersion))
-                            {
-                                bool isJDK = javaExePath.IndexOf("jdk", StringComparison.OrdinalIgnoreCase) >= 0;
-                                
-                                return new JavaVersionInfo
-                                {
-                                    Version = versionPart,
-                                    MajorVersion = majorVersion,
-                                    Path = javaExePath,
-                                    IsJDK = isJDK
-                                };
-                            }
-                        }
-                    }
-                }
-            }
-            catch (Exception ex)
-            {
-                System.Diagnostics.Debug.WriteLine($"解析Java可执行文件失败: {ex.Message}");
-            }
-
-            return null;
-        }
-        
-        /// <summary>
-        /// 尝试解析Java版本号，提取主版本号
-        /// </summary>
-        /// <param name="versionString">完整的版本字符串</param>
-        /// <param name="majorVersion">提取的主版本号</param>
-        /// <returns>是否解析成功</returns>
-        private bool TryParseJavaVersion(string versionString, out int majorVersion)
-        {
-            majorVersion = 0;
-            
-            try
-            {
-                // 移除可能的前缀，如"1.8.0_301"或"17.0.1"或"21.0.1+12-LTS"
-                string cleanedVersion = versionString;
-                
-                // 处理包含"-"的版本，如"17.0.1-LTS"
-                if (cleanedVersion.Contains("-"))
-                {
-                    cleanedVersion = cleanedVersion.Split('-')[0];
-                }
-                
-                // 处理包含"+"的版本，如"21.0.1+12-LTS"
-                if (cleanedVersion.Contains("+"))
-                {
-                    cleanedVersion = cleanedVersion.Split('+')[0];
-                }
-                
-                // 分割版本号
-                string[] versionParts = cleanedVersion.Split('.');
-                
-                if (versionParts.Length > 0)
-                {
-                    // 对于Java 1.8.x，主版本号是8
-                    if (versionParts[0] == "1" && versionParts.Length > 1)
-                    {
-                        return int.TryParse(versionParts[1], out majorVersion);
-                    }
-                    // 对于Java 9+，主版本号就是第一个数字
-                    else
-                    {
-                        return int.TryParse(versionParts[0], out majorVersion);
-                    }
-                }
-            }
-            catch (Exception ex)
-            {
-                System.Diagnostics.Debug.WriteLine($"解析Java版本失败: {ex.Message}");
-            }
-            
-            return false;
         }
 
         [RelayCommand]
@@ -632,22 +350,29 @@ namespace XianYuLauncher.ViewModels
                 try
                 {
                     Console.WriteLine($"正在解析Java可执行文件: {file.Path}");
-                    // 解析Java版本信息
-                    var javaVersion = await GetJavaVersionFromExecutableAsync(file.Path);
+                    // 使用JavaRuntimeService解析Java版本信息
+                    var javaVersion = await _javaRuntimeService.GetJavaVersionInfoAsync(file.Path);
                     if (javaVersion != null)
                     {
-                        Console.WriteLine($"解析成功: {javaVersion}");
+                        Console.WriteLine($"解析成功: Java {javaVersion.MajorVersion} ({javaVersion.FullVersion})");
                         
                         // 检查是否已存在相同路径的版本
                         var existingVersion = JavaVersions.FirstOrDefault(j => string.Equals(j.Path, javaVersion.Path, StringComparison.OrdinalIgnoreCase));
                         if (existingVersion == null)
                         {
                             // 添加到列表
-                            JavaVersions.Add(javaVersion);
+                            var newVersion = new JavaVersionInfo
+                            {
+                                Version = javaVersion.FullVersion,
+                                MajorVersion = javaVersion.MajorVersion,
+                                Path = javaVersion.Path,
+                                IsJDK = javaVersion.IsJDK
+                            };
+                            JavaVersions.Add(newVersion);
                             Console.WriteLine("已添加到Java版本列表");
                             
                             // 自动选择刚添加的版本
-                            SelectedJavaVersion = javaVersion;
+                            SelectedJavaVersion = newVersion;
                         }
                         else
                         {
@@ -927,13 +652,20 @@ namespace XianYuLauncher.ViewModels
         }
 
         // 构造函数
-        public TutorialPageViewModel(ILocalSettingsService localSettingsService, IMinecraftVersionService minecraftVersionService, IFileService fileService, MicrosoftAuthService microsoftAuthService, INavigationService navigationService)
+        public TutorialPageViewModel(
+            ILocalSettingsService localSettingsService, 
+            IMinecraftVersionService minecraftVersionService, 
+            IFileService fileService, 
+            MicrosoftAuthService microsoftAuthService, 
+            INavigationService navigationService,
+            IJavaRuntimeService javaRuntimeService)
         {
             _localSettingsService = localSettingsService;
             _minecraftVersionService = minecraftVersionService;
             _fileService = fileService;
             _microsoftAuthService = microsoftAuthService;
             _navigationService = navigationService;
+            _javaRuntimeService = javaRuntimeService;
             
             // 异步加载现有设置，避免阻塞UI线程
             _ = LoadSettingsAsync();
