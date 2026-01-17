@@ -2404,8 +2404,8 @@ public partial class VersionManagementViewModel
     [RelayCommand]
     private void NavigateToMapPage()
     {
-        // 地图下载页面尚未实现，暂时导航到资源下载页面
-        XianYuLauncher.Views.ResourceDownloadPage.TargetTabIndex = 0;
+        // 设置ResourceDownloadPage的TargetTabIndex为6（世界下载标签页）
+        XianYuLauncher.Views.ResourceDownloadPage.TargetTabIndex = 6;
         
         // 导航到ResourceDownloadPage
         _navigationService.NavigateTo(typeof(ResourceDownloadViewModel).FullName!);

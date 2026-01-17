@@ -140,6 +140,18 @@ namespace XianYuLauncher.Views
 
         private void BackButton_Click(object sender, Microsoft.UI.Xaml.RoutedEventArgs e)
         {
+            // 根据当前资源类型设置返回的Tab索引
+            ResourceDownloadPage.TargetTabIndex = ViewModel.ProjectType switch
+            {
+                "mod" => 1,           // Mod下载
+                "shader" => 2,        // 光影下载
+                "resourcepack" => 3,  // 资源包下载
+                "datapack" => 4,      // 数据包下载
+                "modpack" => 5,       // 整合包下载
+                "world" => 6,         // 世界下载
+                _ => 0                // 默认：版本下载
+            };
+            
             // 返回上一页
             if (Frame.CanGoBack)
             {
