@@ -171,7 +171,8 @@ public partial class App : Application
                 var httpClientFactory = sp.GetRequiredService<IHttpClientFactory>();
                 var httpClient = httpClientFactory.CreateClient(nameof(ModrinthService));
                 var downloadSourceFactory = sp.GetRequiredService<DownloadSourceFactory>();
-                return new ModrinthService(httpClient, downloadSourceFactory);
+                var fallbackDownloadManager = sp.GetRequiredService<FallbackDownloadManager>();
+                return new ModrinthService(httpClient, downloadSourceFactory, fallbackDownloadManager);
             });
             
             // Modrinth Cache Service
