@@ -1,6 +1,7 @@
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Logging;
 using Microsoft.UI.Xaml;
 using Serilog;
 using Serilog.Settings.Configuration;
@@ -135,7 +136,24 @@ public partial class App : Application
             services.AddSingleton<IModLoaderInstaller, XianYuLauncher.Core.Services.ModLoaderInstallers.CleanroomInstaller>();
             services.AddSingleton<IModLoaderInstallerFactory, XianYuLauncher.Core.Services.ModLoaderInstallers.ModLoaderInstallerFactory>();
             
-            services.AddSingleton<IMinecraftVersionService, MinecraftVersionService>();
+            services.AddSingleton<IMinecraftVersionService, MinecraftVersionService>(sp =>
+            {
+                var logger = sp.GetRequiredService<ILogger<MinecraftVersionService>>();
+                var fileService = sp.GetRequiredService<IFileService>();
+                var localSettingsService = sp.GetRequiredService<ILocalSettingsService>();
+                var downloadSourceFactory = sp.GetRequiredService<DownloadSourceFactory>();
+                var versionInfoService = sp.GetRequiredService<IVersionInfoService>();
+                var downloadManager = sp.GetRequiredService<IDownloadManager>();
+                var libraryManager = sp.GetRequiredService<ILibraryManager>();
+                var assetManager = sp.GetRequiredService<IAssetManager>();
+                var versionInfoManager = sp.GetRequiredService<IVersionInfoManager>();
+                var modLoaderInstallerFactory = sp.GetRequiredService<IModLoaderInstallerFactory>();
+                var fallbackDownloadManager = sp.GetRequiredService<FallbackDownloadManager>();
+                return new MinecraftVersionService(
+                    logger, fileService, localSettingsService, downloadSourceFactory,
+                    versionInfoService, downloadManager, libraryManager, assetManager,
+                    versionInfoManager, modLoaderInstallerFactory, fallbackDownloadManager);
+            });
             services.AddSingleton<IVersionInfoService, VersionInfoService>();
             services.AddSingleton<MaterialService>();
             services.AddSingleton<UpdateService>();

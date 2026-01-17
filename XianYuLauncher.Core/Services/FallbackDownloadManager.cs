@@ -240,25 +240,67 @@ public class FallbackDownloadManager
         Action<HttpRequestMessage, IDownloadSource>? configureRequest = null,
         CancellationToken cancellationToken = default)
     {
+        // 使用内置的 URL 转换逻辑
+        return await SendGetWithFallbackAsync(
+            source => TransformUrl(originalUrl, source, resourceType),
+            configureRequest,
+            cancellationToken);
+    }
+
+    /// <summary>
+    /// 发送 HTTP GET 请求，支持自动回退到备用源（使用自定义 URL 生成函数）
+    /// </summary>
+    /// <param name="urlGenerator">根据下载源生成 URL 的函数，返回 null 表示该源不支持</param>
+    /// <param name="configureRequest">配置请求的回调（可选，用于设置 Headers 等）</param>
+    /// <param name="cancellationToken">取消令牌</param>
+    /// <returns>HTTP 响应结果</returns>
+    public async Task<FallbackHttpResult> SendGetWithFallbackAsync(
+        Func<IDownloadSource, string?> urlGenerator,
+        Action<HttpRequestMessage, IDownloadSource>? configureRequest = null,
+        CancellationToken cancellationToken = default)
+    {
         var attemptedSources = new List<string>();
         var errors = new List<string>();
 
         var primarySource = _sourceFactory.GetDefaultSource();
         var sourcesToTry = GetSourceOrder(primarySource.Key);
+        
+        // 只用 logger，不用 Debug.WriteLine
+        _logger?.LogDebug("回退顺序: {Sources}", string.Join(" -> ", sourcesToTry));
+        System.Diagnostics.Debug.WriteLine($"[Fallback] 回退顺序: {string.Join(" -> ", sourcesToTry)}");
 
         foreach (var sourceKey in sourcesToTry)
         {
             cancellationToken.ThrowIfCancellationRequested();
 
             var source = _sourceFactory.GetSource(sourceKey);
+            
+            // 使用 URL 生成函数获取 URL
+            string? url;
+            try
+            {
+                url = urlGenerator(source);
+            }
+            catch (Exception ex)
+            {
+                _logger?.LogWarning(ex, "源 {Source} URL生成失败", sourceKey);
+                continue;
+            }
+            
+            // 如果返回 null，表示该源不支持，跳过
+            if (string.IsNullOrEmpty(url))
+            {
+                _logger?.LogDebug("源 {Source} 不支持，跳过", sourceKey);
+                continue;
+            }
+            
             attemptedSources.Add(sourceKey);
-
-            var transformedUrl = TransformUrl(originalUrl, source, resourceType);
-            _logger?.LogDebug("尝试源 {Source}: {Url}", sourceKey, transformedUrl);
+            _logger?.LogDebug("尝试 {Source}: {Url}", sourceKey, url);
+            System.Diagnostics.Debug.WriteLine($"[Fallback] 尝试 {sourceKey}: {url}");
 
             try
             {
-                using var request = new HttpRequestMessage(HttpMethod.Get, transformedUrl);
+                using var request = new HttpRequestMessage(HttpMethod.Get, url);
                 configureRequest?.Invoke(request, source);
 
                 var response = await _httpClient.SendAsync(request, cancellationToken);
@@ -266,11 +308,16 @@ public class FallbackDownloadManager
                 // 成功或不应该回退的状态码
                 if (response.IsSuccessStatusCode || !ShouldFallbackOnStatusCode(response.StatusCode))
                 {
-                    return FallbackHttpResult.Succeeded(response, sourceKey, attemptedSources);
+                    _logger?.LogInformation("源 {Source} 成功 (HTTP {StatusCode})", sourceKey, (int)response.StatusCode);
+                    System.Diagnostics.Debug.WriteLine($"[Fallback] 源 {sourceKey} 成功 (HTTP {(int)response.StatusCode})");
+                    return FallbackHttpResult.Succeeded(response, sourceKey, url, attemptedSources);
                 }
 
                 // 失败，记录错误并尝试下一个源
-                errors.Add($"[{sourceKey}] HTTP {(int)response.StatusCode}");
+                var errorMsg = $"HTTP {(int)response.StatusCode}";
+                errors.Add($"[{sourceKey}] {errorMsg}");
+                _logger?.LogWarning("源 {Source} 失败: {Error}，尝试下一个", sourceKey, errorMsg);
+                System.Diagnostics.Debug.WriteLine($"[Fallback] 源 {sourceKey} 失败: {errorMsg}，尝试下一个");
                 response.Dispose();
 
                 if (!AutoFallbackEnabled) break;
@@ -278,15 +325,21 @@ public class FallbackDownloadManager
             catch (Exception ex) when (ShouldFallbackOnException(ex))
             {
                 errors.Add($"[{sourceKey}] {ex.Message}");
+                _logger?.LogWarning("源 {Source} 失败: {Error}，尝试下一个", sourceKey, ex.Message);
+                System.Diagnostics.Debug.WriteLine($"[Fallback] 源 {sourceKey} 异常: {ex.Message}，尝试下一个");
                 if (!AutoFallbackEnabled) break;
             }
             catch (Exception ex)
             {
                 errors.Add($"[{sourceKey}] {ex.Message}");
+                _logger?.LogError(ex, "源 {Source} 不可恢复错误，停止回退", sourceKey);
+                System.Diagnostics.Debug.WriteLine($"[Fallback] 源 {sourceKey} 不可恢复错误: {ex.Message}");
                 break; // 不可回退的错误
             }
         }
 
+        _logger?.LogError("所有源都失败: {Errors}", string.Join("; ", errors));
+        System.Diagnostics.Debug.WriteLine($"[Fallback] 所有源都失败!");
         return FallbackHttpResult.Failed(string.Join("; ", errors), attemptedSources);
     }
 
@@ -326,7 +379,7 @@ public class FallbackDownloadManager
 
                 if (response.IsSuccessStatusCode || !ShouldFallbackOnStatusCode(response.StatusCode))
                 {
-                    return FallbackHttpResult.Succeeded(response, sourceKey, attemptedSources);
+                    return FallbackHttpResult.Succeeded(response, sourceKey, transformedUrl, attemptedSources);
                 }
 
                 errors.Add($"[{sourceKey}] HTTP {(int)response.StatusCode}");
@@ -684,14 +737,21 @@ public class FallbackHttpResult : IDisposable
     public bool Success { get; init; }
     public HttpResponseMessage? Response { get; init; }
     public string? UsedSourceKey { get; init; }
+    public string? UsedUrl { get; init; }
     public List<string> AttemptedSources { get; init; } = new();
     public string? ErrorMessage { get; init; }
+    
+    /// <summary>
+    /// 获取实际使用的 URL 的域名（用于日志显示）
+    /// </summary>
+    public string? UsedDomain => string.IsNullOrEmpty(UsedUrl) ? null : new Uri(UsedUrl).Host;
 
-    public static FallbackHttpResult Succeeded(HttpResponseMessage response, string usedSource, List<string> attemptedSources) => new()
+    public static FallbackHttpResult Succeeded(HttpResponseMessage response, string usedSource, string usedUrl, List<string> attemptedSources) => new()
     {
         Success = true,
         Response = response,
         UsedSourceKey = usedSource,
+        UsedUrl = usedUrl,
         AttemptedSources = attemptedSources
     };
 

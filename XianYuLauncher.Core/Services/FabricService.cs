@@ -39,17 +39,13 @@ public class FabricService
     {
         try
         {
-            // 构建官方源URL（FallbackDownloadManager 会自动转换）
-            string officialUrl = $"https://meta.fabricmc.net/v2/versions/loader/{minecraftVersion}";
-            
             // 如果有 FallbackDownloadManager，使用它来请求（支持自动回退）
             if (_fallbackDownloadManager != null)
             {
                 System.Diagnostics.Debug.WriteLine($"[FabricService] 使用 FallbackDownloadManager 获取 Fabric 版本列表");
                 
                 var result = await _fallbackDownloadManager.SendGetWithFallbackAsync(
-                    officialUrl,
-                    "fabric_meta",
+                    source => source.GetFabricVersionsUrl(minecraftVersion),
                     (request, source) =>
                     {
                         // 为 BMCLAPI 添加 User-Agent
@@ -63,7 +59,7 @@ public class FabricService
                 {
                     result.Response.EnsureSuccessStatusCode();
                     string json = await result.Response.Content.ReadAsStringAsync();
-                    System.Diagnostics.Debug.WriteLine($"[FabricService] 成功获取 Fabric 版本列表 (使用源: {result.UsedSourceKey})");
+                    System.Diagnostics.Debug.WriteLine($"[FabricService] 成功获取 Fabric 版本列表 (使用源: {result.UsedSourceKey} -> {result.UsedDomain})");
                     return JsonSerializer.Deserialize<List<FabricLoaderVersion>>(json);
                 }
                 else

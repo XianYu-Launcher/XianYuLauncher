@@ -62,12 +62,8 @@ public class ForgeService
             {
                 System.Diagnostics.Debug.WriteLine($"[ForgeService] 使用 FallbackDownloadManager 获取 Forge 版本列表");
                 
-                // 先尝试 BMCLAPI（JSON格式，更易解析）
-                var bmclapiUrl = $"https://bmclapi2.bangbang93.com/forge/minecraft/{minecraftVersion}";
-                
                 var result = await _fallbackDownloadManager.SendGetWithFallbackAsync(
-                    bmclapiUrl,
-                    "forge_bmclapi",
+                    source => source.GetForgeVersionsUrl(minecraftVersion),
                     (request, source) =>
                     {
                         // 为 BMCLAPI 添加 User-Agent
@@ -81,7 +77,7 @@ public class ForgeService
                 {
                     result.Response.EnsureSuccessStatusCode();
                     string content = await result.Response.Content.ReadAsStringAsync();
-                    System.Diagnostics.Debug.WriteLine($"[ForgeService] 成功获取 Forge 版本列表 (使用源: {result.UsedSourceKey})");
+                    System.Diagnostics.Debug.WriteLine($"[ForgeService] 成功获取 Forge 版本列表 (使用源: {result.UsedSourceKey} -> {result.UsedDomain})");
                     
                     // 根据源类型解析响应
                     if (result.UsedSourceKey == "bmclapi")

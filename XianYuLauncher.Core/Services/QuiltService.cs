@@ -39,17 +39,13 @@ public class QuiltService
     {
         try
         {
-            // 构建官方源URL（FallbackDownloadManager 会自动转换）
-            string officialUrl = $"https://meta.quiltmc.org/v3/versions/loader/{minecraftVersion}";
-            
             // 如果有 FallbackDownloadManager，使用它来请求（支持自动回退）
             if (_fallbackDownloadManager != null)
             {
                 System.Diagnostics.Debug.WriteLine($"[QuiltService] 使用 FallbackDownloadManager 获取 Quilt 版本列表");
                 
                 var result = await _fallbackDownloadManager.SendGetWithFallbackAsync(
-                    officialUrl,
-                    "quilt_meta",
+                    source => source.GetQuiltVersionsUrl(minecraftVersion),
                     (request, source) =>
                     {
                         // 为 BMCLAPI 添加 User-Agent
@@ -63,7 +59,7 @@ public class QuiltService
                 {
                     result.Response.EnsureSuccessStatusCode();
                     string json = await result.Response.Content.ReadAsStringAsync();
-                    System.Diagnostics.Debug.WriteLine($"[QuiltService] 成功获取 Quilt 版本列表 (使用源: {result.UsedSourceKey})");
+                    System.Diagnostics.Debug.WriteLine($"[QuiltService] 成功获取 Quilt 版本列表 (使用源: {result.UsedSourceKey} -> {result.UsedDomain})");
                     return JsonSerializer.Deserialize<List<QuiltLoaderVersion>>(json);
                 }
                 else

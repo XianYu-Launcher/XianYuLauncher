@@ -36,6 +36,7 @@ public partial class MinecraftVersionService : IMinecraftVersionService
     private readonly IAssetManager _assetManager;
     private readonly IVersionInfoManager _versionInfoManager;
     private readonly IModLoaderInstallerFactory _modLoaderInstallerFactory;
+    private readonly FallbackDownloadManager? _fallbackDownloadManager;
 
     public MinecraftVersionService(
         ILogger<MinecraftVersionService> logger, 
@@ -47,7 +48,8 @@ public partial class MinecraftVersionService : IMinecraftVersionService
         ILibraryManager libraryManager,
         IAssetManager assetManager,
         IVersionInfoManager versionInfoManager,
-        IModLoaderInstallerFactory modLoaderInstallerFactory)
+        IModLoaderInstallerFactory modLoaderInstallerFactory,
+        FallbackDownloadManager? fallbackDownloadManager = null)
     {
         _httpClient = new HttpClient();
         _httpClient.DefaultRequestHeaders.Add("User-Agent", "XianYuLauncher/1.2.5");
@@ -61,6 +63,7 @@ public partial class MinecraftVersionService : IMinecraftVersionService
         _assetManager = assetManager;
         _versionInfoManager = versionInfoManager;
         _modLoaderInstallerFactory = modLoaderInstallerFactory;
+        _fallbackDownloadManager = fallbackDownloadManager;
     }
 
     /// <summary>
@@ -138,6 +141,38 @@ public partial class MinecraftVersionService : IMinecraftVersionService
         {
             _logger.LogInformation("正在获取Minecraft版本清单");
             
+            // 如果有 FallbackDownloadManager，使用它来请求（支持自动回退）
+            if (_fallbackDownloadManager != null)
+            {
+                System.Diagnostics.Debug.WriteLine($"[MinecraftVersionService] 使用 FallbackDownloadManager 获取版本清单");
+                
+                var result = await _fallbackDownloadManager.SendGetWithFallbackAsync(
+                    source => source.GetVersionManifestUrl(),
+                    (request, source) =>
+                    {
+                        // 为 BMCLAPI 添加 User-Agent
+                        if (source.Name == "BMCLAPI")
+                        {
+                            request.Headers.Add("User-Agent", XianYuLauncher.Core.Helpers.VersionHelper.GetBmclapiUserAgent());
+                        }
+                    });
+                
+                if (result.Success && result.Response != null)
+                {
+                    result.Response.EnsureSuccessStatusCode();
+                    string json = await result.Response.Content.ReadAsStringAsync();
+                    var manifest = JsonConvert.DeserializeObject<VersionManifest>(json);
+                    _logger.LogInformation("成功获取Minecraft版本清单 (使用源: {Source} -> {Domain})，共{VersionCount}个版本", 
+                        result.UsedSourceKey, result.UsedDomain, manifest.Versions.Count);
+                    return manifest;
+                }
+                else
+                {
+                    throw new Exception($"获取版本清单失败: {result.ErrorMessage}");
+                }
+            }
+            
+            // 回退到原有逻辑（兼容模式）
             // 获取当前版本列表源设置（字符串类型）
             var versionListSource = await _localSettingsService.ReadSettingAsync<string>("VersionListSource") ?? "Official";
             _logger.LogInformation("当前版本列表源: {VersionListSource}", versionListSource);
