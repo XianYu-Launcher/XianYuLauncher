@@ -1664,6 +1664,10 @@ namespace XianYuLauncher.ViewModels
         // 执行实际下载操作
         private async Task PerformDownload(ModVersionViewModel modVersion, string savePath)
         {
+            // 创建取消令牌
+            _downloadCancellationTokenSource = new CancellationTokenSource();
+            var cancellationToken = _downloadCancellationTokenSource.Token;
+            
             try
             {
                 // 打开下载进度弹窗
@@ -1672,22 +1676,26 @@ namespace XianYuLauncher.ViewModels
                 // 使用HttpClient下载文件
                 using (HttpClient client = new HttpClient())
                 {
+                    client.Timeout = TimeSpan.FromMinutes(30); // 30分钟超时
+                    
                     // 获取文件大小
-                    using (HttpResponseMessage response = await client.GetAsync(modVersion.DownloadUrl, HttpCompletionOption.ResponseHeadersRead))
+                    using (HttpResponseMessage response = await client.GetAsync(modVersion.DownloadUrl, HttpCompletionOption.ResponseHeadersRead, cancellationToken))
                     {
                         response.EnsureSuccessStatusCode();
                         long totalBytes = response.Content.Headers.ContentLength ?? 0;
                         
-                        using (Stream contentStream = await response.Content.ReadAsStreamAsync())
+                        using (Stream contentStream = await response.Content.ReadAsStreamAsync(cancellationToken))
                         using (Stream fileStream = new FileStream(savePath, FileMode.Create, FileAccess.Write, FileShare.None))
                         {
                             long totalRead = 0;
                             byte[] buffer = new byte[8192];
                             int bytesRead;
                             
-                            while ((bytesRead = await contentStream.ReadAsync(buffer, 0, buffer.Length)) > 0)
+                            while ((bytesRead = await contentStream.ReadAsync(buffer, 0, buffer.Length, cancellationToken)) > 0)
                             {
-                                await fileStream.WriteAsync(buffer, 0, bytesRead);
+                                cancellationToken.ThrowIfCancellationRequested();
+                                
+                                await fileStream.WriteAsync(buffer, 0, bytesRead, cancellationToken);
                                 totalRead += bytesRead;
                                 
                                 // 更新下载进度
@@ -1708,7 +1716,7 @@ namespace XianYuLauncher.ViewModels
                     }
                 }
                 
-                // 下载图标到本地
+                // 下载图标到本地（带超时，失败不阻塞）
                 if (!string.IsNullOrEmpty(ModIconUrl) && !ModIconUrl.StartsWith("ms-appx:"))
                 {
                     try
@@ -1722,22 +1730,39 @@ namespace XianYuLauncher.ViewModels
                         string iconFileName = $"{ModId}_{Path.GetFileNameWithoutExtension(modVersion.FileName)}_icon.png";
                         string iconSavePath = Path.Combine(iconDir, iconFileName);
                         
-                        // 下载图标
+                        // 下载图标（带 10 秒超时）
                         DownloadStatus = "正在下载图标...";
                         using (HttpClient client = new HttpClient())
                         {
-                            var iconBytes = await client.GetByteArrayAsync(ModIconUrl);
+                            client.Timeout = TimeSpan.FromSeconds(10); // 10秒超时
+                            using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+                            var iconBytes = await client.GetByteArrayAsync(ModIconUrl, cts.Token);
                             await File.WriteAllBytesAsync(iconSavePath, iconBytes);
                         }
                     }
                     catch (Exception ex)
                     {
                         // 图标下载失败不影响主文件下载，记录错误即可
-                        System.Diagnostics.Debug.WriteLine("图标下载失败: " + ex.Message);
+                        System.Diagnostics.Debug.WriteLine($"[图标下载] 失败（已忽略）: {ex.Message}");
                     }
                 }
                 
                 DownloadStatus = "下载完成！";
+            }
+            catch (OperationCanceledException)
+            {
+                // 用户取消下载，删除未完成的文件
+                try
+                {
+                    if (File.Exists(savePath))
+                    {
+                        File.Delete(savePath);
+                    }
+                }
+                catch { }
+                
+                DownloadStatus = "下载已取消";
+                throw; // 重新抛出以便上层处理
             }
             catch (Exception ex)
             {
@@ -1747,6 +1772,10 @@ namespace XianYuLauncher.ViewModels
             {
                 // 关闭下载进度弹窗
                 IsDownloadProgressDialogOpen = false;
+                
+                // 清理取消令牌
+                _downloadCancellationTokenSource?.Dispose();
+                _downloadCancellationTokenSource = null;
             }
         }
 
@@ -2049,8 +2078,13 @@ namespace XianYuLauncher.ViewModels
         [RelayCommand]
         public void CancelDownload()
         {
+            // 取消正在进行的下载任务
+            _downloadCancellationTokenSource?.Cancel();
+            _downloadCancellationTokenSource = null;
+            
             SelectedModVersion = null;
             IsDownloading = false;
+            IsDownloadProgressDialogOpen = false; // 关闭下载进度弹窗
             DownloadStatus = "下载已取消";
         }
 
@@ -3257,6 +3291,13 @@ namespace XianYuLauncher.ViewModels
         [RelayCommand]
         private async Task QuickInstallAsync()
         {
+            // 如果正在下载，不允许再次安装
+            if (IsDownloading)
+            {
+                await ShowMessageAsync("当前有下载任务正在进行，请等待完成或取消后再试。");
+                return;
+            }
+            
             try
             {
                 // 加载已安装的游戏版本

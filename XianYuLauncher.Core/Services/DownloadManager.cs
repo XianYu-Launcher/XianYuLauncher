@@ -207,12 +207,15 @@ public class DownloadManager : IDownloadManager
 
         if (totalCount == 0)
         {
+            _logger.LogInformation("[DownloadManager] 下载任务列表为空，无需下载");
+            System.Diagnostics.Debug.WriteLine($"[DEBUG][DownloadManager] 下载任务列表为空，无需下载，直接完成");
             progressCallback?.Invoke(100);
             return results;
         }
 
-        _logger.LogInformation("开始批量下载 {TotalCount} 个文件，最大并发数: {MaxConcurrency}", 
+        _logger.LogInformation("[DownloadManager] 开始批量下载 {TotalCount} 个文件，最大并发数: {MaxConcurrency}", 
             totalCount, maxConcurrency);
+        System.Diagnostics.Debug.WriteLine($"[DEBUG][DownloadManager] 开始批量下载 {totalCount} 个文件，最大并发数: {maxConcurrency}");
 
         using var semaphore = new SemaphoreSlim(maxConcurrency);
         var downloadTasks = taskList.Select(async task =>
