@@ -44,7 +44,7 @@ public class QuiltInstaller : ModLoaderInstallerBase
         _downloadSourceFactory = downloadSourceFactory;
         _localSettingsService = localSettingsService;
         _httpClient = new HttpClient();
-        _httpClient.DefaultRequestHeaders.Add("User-Agent", "XianYuLauncher/1.2.5");
+        _httpClient.DefaultRequestHeaders.Add("User-Agent", Helpers.VersionHelper.GetUserAgent());
     }
 
     /// <inheritdoc/>

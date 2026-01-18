@@ -59,7 +59,7 @@ public partial class VersionManagementViewModel : ObservableRecipient, INavigati
                 return ua;
             }
         }
-        return XianYuLauncher.Core.Helpers.VersionHelper.GetBmclapiUserAgent();
+        return XianYuLauncher.Core.Helpers.VersionHelper.GetUserAgent();
     }
     
     /// <summary>

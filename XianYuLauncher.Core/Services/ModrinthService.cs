@@ -72,7 +72,7 @@ public class ModrinthService
             }
         }
         // 默认使用带版本号的UA
-        return VersionHelper.GetBmclapiUserAgent();
+        return VersionHelper.GetUserAgent();
     }
     
     /// <summary>

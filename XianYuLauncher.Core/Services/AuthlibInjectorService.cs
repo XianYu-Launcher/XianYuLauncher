@@ -17,6 +17,7 @@ namespace XianYuLauncher.Core.Services
         {
             _localSettingsService = localSettingsService;
             _httpClient = new HttpClient();
+            _httpClient.DefaultRequestHeaders.Add("User-Agent", Helpers.VersionHelper.GetUserAgent());
             
             // 获取应用缓存目录 - 使用 LocalApplicationData 替代 Windows.Storage
             var localAppData = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
@@ -151,7 +152,7 @@ namespace XianYuLauncher.Core.Services
                 using var request = new HttpRequestMessage(HttpMethod.Get, apiUrl);
                 if (isBmclapi)
                 {
-                    request.Headers.Add("User-Agent", VersionHelper.GetBmclapiUserAgent());
+                    request.Headers.Add("User-Agent", VersionHelper.GetUserAgent());
                 }
                 
                 var response = await _httpClient.SendAsync(request);
@@ -183,7 +184,7 @@ namespace XianYuLauncher.Core.Services
             using var request = new HttpRequestMessage(HttpMethod.Get, downloadUrl);
             if (isBmclapi)
             {
-                request.Headers.Add("User-Agent", VersionHelper.GetBmclapiUserAgent());
+                request.Headers.Add("User-Agent", VersionHelper.GetUserAgent());
             }
             
             var response = await _httpClient.SendAsync(request, HttpCompletionOption.ResponseHeadersRead);

@@ -64,7 +64,7 @@ public class NeoForgeService
                     (request, source) =>
                     {
                         // 所有源都添加 User-Agent（maven.neoforged.net 会拒绝没有 UA 的请求）
-                        request.Headers.Add("User-Agent", VersionHelper.GetBmclapiUserAgent());
+                        request.Headers.Add("User-Agent", VersionHelper.GetUserAgent());
                     });
                 
                 if (result.Success && result.Response != null)
@@ -170,7 +170,7 @@ public class NeoForgeService
         using var request = new HttpRequestMessage(HttpMethod.Get, url);
         if (downloadSource.Name == "BMCLAPI")
         {
-            request.Headers.Add("User-Agent", VersionHelper.GetBmclapiUserAgent());
+            request.Headers.Add("User-Agent", VersionHelper.GetUserAgent());
         }
         
         // 发送HTTP请求

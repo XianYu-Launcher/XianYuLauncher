@@ -69,7 +69,7 @@ public class ForgeService
                         // 为 BMCLAPI 添加 User-Agent
                         if (source.Name == "BMCLAPI")
                         {
-                            request.Headers.Add("User-Agent", VersionHelper.GetBmclapiUserAgent());
+                            request.Headers.Add("User-Agent", VersionHelper.GetUserAgent());
                         }
                     });
                 
@@ -167,7 +167,7 @@ public class ForgeService
         using var request = new HttpRequestMessage(HttpMethod.Get, url);
         if (downloadSource.Name == "BMCLAPI")
         {
-            request.Headers.Add("User-Agent", VersionHelper.GetBmclapiUserAgent());
+            request.Headers.Add("User-Agent", VersionHelper.GetUserAgent());
         }
         
         // 发送HTTP请求

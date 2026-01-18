@@ -1676,6 +1676,7 @@ namespace XianYuLauncher.ViewModels
                 // 使用HttpClient下载文件
                 using (HttpClient client = new HttpClient())
                 {
+                    client.DefaultRequestHeaders.Add("User-Agent", XianYuLauncher.Core.Helpers.VersionHelper.GetUserAgent());
                     client.Timeout = TimeSpan.FromMinutes(30); // 30分钟超时
                     
                     // 获取文件大小
@@ -1734,6 +1735,7 @@ namespace XianYuLauncher.ViewModels
                         DownloadStatus = "正在下载图标...";
                         using (HttpClient client = new HttpClient())
                         {
+                            client.DefaultRequestHeaders.Add("User-Agent", XianYuLauncher.Core.Helpers.VersionHelper.GetUserAgent());
                             client.Timeout = TimeSpan.FromSeconds(10); // 10秒超时
                             using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
                             var iconBytes = await client.GetByteArrayAsync(ModIconUrl, cts.Token);
@@ -2318,6 +2320,7 @@ namespace XianYuLauncher.ViewModels
                         // 远程文件：使用HttpClient下载
                         using (HttpClient client = new HttpClient())
                         {
+                            client.DefaultRequestHeaders.Add("User-Agent", XianYuLauncher.Core.Helpers.VersionHelper.GetUserAgent());
                             using (HttpResponseMessage response = await client.GetAsync(modVersion.DownloadUrl, HttpCompletionOption.ResponseHeadersRead, _installCancellationTokenSource.Token))
                             {
                                 response.EnsureSuccessStatusCode();
@@ -2582,7 +2585,7 @@ namespace XianYuLauncher.ViewModels
                                                 
                                                 using (HttpClient client = new HttpClient())
                                                 {
-                                                    client.DefaultRequestHeaders.UserAgent.ParseAdd("XianYuLauncher/1.0");
+                                                    client.DefaultRequestHeaders.Add("User-Agent", XianYuLauncher.Core.Helpers.VersionHelper.GetUserAgent());
                                                     client.Timeout = TimeSpan.FromMinutes(5);
                                                     
                                                     using (HttpResponseMessage response = await client.GetAsync(downloadUrl, HttpCompletionOption.ResponseHeadersRead, _installCancellationTokenSource.Token))
@@ -2709,6 +2712,7 @@ namespace XianYuLauncher.ViewModels
 
                     using (HttpClient client = new HttpClient())
                     {
+                        client.DefaultRequestHeaders.Add("User-Agent", XianYuLauncher.Core.Helpers.VersionHelper.GetUserAgent());
                         using (HttpResponseMessage response = await client.GetAsync(modVersion.DownloadUrl, HttpCompletionOption.ResponseHeadersRead))
                         {
                             response.EnsureSuccessStatusCode();
@@ -3714,6 +3718,7 @@ namespace XianYuLauncher.ViewModels
                 
                 using (var httpClient = new HttpClient())
                 {
+                    httpClient.DefaultRequestHeaders.Add("User-Agent", XianYuLauncher.Core.Helpers.VersionHelper.GetUserAgent());
                     httpClient.Timeout = TimeSpan.FromMinutes(30);
                     
                     using (var response = await httpClient.GetAsync(modVersion.DownloadUrl, HttpCompletionOption.ResponseHeadersRead, _downloadCancellationTokenSource.Token))

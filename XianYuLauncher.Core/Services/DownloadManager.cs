@@ -39,6 +39,7 @@ public class DownloadManager : IDownloadManager
     public DownloadManager(ILogger<DownloadManager> logger)
     {
         _httpClient = new HttpClient();
+        _httpClient.DefaultRequestHeaders.Add("User-Agent", Helpers.VersionHelper.GetUserAgent());
         _httpClient.Timeout = TimeSpan.FromMinutes(30); // 30分钟超时，适合大文件下载
         _logger = logger;
     }
@@ -124,7 +125,7 @@ public class DownloadManager : IDownloadManager
                 using var request = new HttpRequestMessage(HttpMethod.Get, url);
                 if (IsBmclapiUrl(url))
                 {
-                    request.Headers.Add("User-Agent", VersionHelper.GetBmclapiUserAgent());
+                    request.Headers.Add("User-Agent", VersionHelper.GetUserAgent());
                 }
 
                 using var response = await _httpClient.SendAsync(request, cancellationToken);
@@ -169,7 +170,7 @@ public class DownloadManager : IDownloadManager
                 using var request = new HttpRequestMessage(HttpMethod.Get, url);
                 if (IsBmclapiUrl(url))
                 {
-                    request.Headers.Add("User-Agent", VersionHelper.GetBmclapiUserAgent());
+                    request.Headers.Add("User-Agent", VersionHelper.GetUserAgent());
                 }
 
                 using var response = await _httpClient.SendAsync(request, cancellationToken);
@@ -294,7 +295,7 @@ public class DownloadManager : IDownloadManager
             using var request = new HttpRequestMessage(HttpMethod.Get, url);
             if (IsBmclapiUrl(url))
             {
-                request.Headers.Add("User-Agent", VersionHelper.GetBmclapiUserAgent());
+                request.Headers.Add("User-Agent", VersionHelper.GetUserAgent());
             }
 
             using var response = await _httpClient.SendAsync(request, HttpCompletionOption.ResponseHeadersRead, cancellationToken);

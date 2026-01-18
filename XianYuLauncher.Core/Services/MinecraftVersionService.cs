@@ -52,7 +52,7 @@ public partial class MinecraftVersionService : IMinecraftVersionService
         FallbackDownloadManager? fallbackDownloadManager = null)
     {
         _httpClient = new HttpClient();
-        _httpClient.DefaultRequestHeaders.Add("User-Agent", "XianYuLauncher/1.2.5");
+        _httpClient.DefaultRequestHeaders.Add("User-Agent", Helpers.VersionHelper.GetUserAgent());
         _logger = logger;
         _fileService = fileService;
         _localSettingsService = localSettingsService;
@@ -153,7 +153,7 @@ public partial class MinecraftVersionService : IMinecraftVersionService
                         // 为 BMCLAPI 添加 User-Agent
                         if (source.Name == "BMCLAPI")
                         {
-                            request.Headers.Add("User-Agent", XianYuLauncher.Core.Helpers.VersionHelper.GetBmclapiUserAgent());
+                            request.Headers.Add("User-Agent", XianYuLauncher.Core.Helpers.VersionHelper.GetUserAgent());
                         }
                     });
                 
@@ -1918,7 +1918,7 @@ public partial class MinecraftVersionService : IMinecraftVersionService
             };
             using var httpClient = new HttpClient(handler);
             httpClient.Timeout = TimeSpan.FromSeconds(60); // HttpClient 总超时 60 秒
-            httpClient.DefaultRequestHeaders.Add("User-Agent", "XianYuLauncher/1.0");
+            httpClient.DefaultRequestHeaders.Add("User-Agent", Helpers.VersionHelper.GetUserAgent());
 
             var downloadTasks = assetsToDownload.Select(async asset =>
             {

@@ -34,6 +34,7 @@ public class OptifineInstaller : ModLoaderInstallerBase
         : base(downloadManager, libraryManager, versionInfoManager, logger)
     {
         _httpClient = new HttpClient();
+        _httpClient.DefaultRequestHeaders.Add("User-Agent", Helpers.VersionHelper.GetUserAgent());
     }
 
     /// <inheritdoc/>
@@ -275,7 +276,7 @@ public class OptifineInstaller : ModLoaderInstallerBase
             
             // 创建请求消息并添加BMCLAPI User-Agent
             using var request = new HttpRequestMessage(HttpMethod.Get, url);
-            request.Headers.Add("User-Agent", VersionHelper.GetBmclapiUserAgent());
+            request.Headers.Add("User-Agent", VersionHelper.GetUserAgent());
             
             using var response = await _httpClient.SendAsync(request, cancellationToken);
             response.EnsureSuccessStatusCode();
